@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>La Tribu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#FBF7F1; --paper:#FFFFFF; --ink:#2B2420; --ink-soft:#6B6058;
+  --terracota:#C1662F; --terracota-soft:#F1DDCB; --sage:#6B8F71; --sage-soft:#E3EDE3;
+  --gold:#D9A441; --line:#E9E1D6; --danger:#C1462F; --radius:18px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--cream);color:var(--ink);}
+h1,h2,h3,.serif{font-family:'Fraunces',serif;}
+button{font-family:inherit;cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+.hidden{display:none !important;}
+
+/* Login */
+#login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-card{background:var(--paper);border-radius:var(--radius);padding:48px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(43,36,32,.08);border:1px solid var(--line);}
+.login-card h1{font-size:32px;margin:0 0 6px;color:var(--terracota);}
+.login-card p.sub{color:var(--ink-soft);margin:0 0 32px;}
+.field{margin-bottom:18px;}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink-soft);}
+.field input, .field select, .field textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--cream);font-size:15px;}
+.field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--terracota);outline-offset:1px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:999px;border:none;font-weight:600;font-size:15px;transition:transform .15s ease;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--terracota);color:#fff;width:100%;}
+.btn-secondary{background:var(--sage-soft);color:var(--sage);}
+.btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
+.btn-danger{background:var(--terracota-soft);color:var(--danger);}
+.error-msg{background:#FBEAE3;color:var(--danger);padding:10px 14px;border-radius:10px;font-size:14px;margin-bottom:16px;}
+.link-btn{background:none;border:none;color:var(--terracota);font-weight:600;text-decoration:underline;padding:0;}
+
+/* App shell */
+#app-view{display:none;min-height:100vh;}
+#app-view.active{display:flex;}
+.sidebar{width:250px;background:var(--paper);border-right:1px solid var(--line);padding:28px 18px;display:flex;flex-direction:column;flex-shrink:0;}
+.brand{font-size:22px;color:var(--terracota);margin:0 8px 30px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;color:var(--ink-soft);font-weight:600;font-size:14px;margin-bottom:4px;background:none;border:none;width:100%;text-align:left;}
+.nav-item:hover{background:var(--cream);}
+.nav-item.active{background:var(--terracota-soft);color:var(--terracota);}
+.sidebar-footer{margin-top:auto;padding:14px;}
+.user-chip{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:0 4px;}
+.main{flex:1;padding:36px 44px;overflow-y:auto;max-height:100vh;}
+.page-header{margin-bottom:28px;}
+.page-header h2{font-size:28px;margin:0 0 6px;}
+.page-header p{color:var(--ink-soft);margin:0;}
+
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin-bottom:20px;}
+.card-title{font-size:18px;font-weight:700;margin:0 0 16px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+@media(max-width:800px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+.chip{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--cream);font-size:13px;font-weight:600;margin:4px 6px 4px 0;cursor:pointer;color:var(--ink-soft);}
+.chip.selected{background:var(--terracota);border-color:var(--terracota);color:#fff;}
+
+.wizard-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px;}
+.wizard-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--cream);color:var(--ink-soft);border:1px solid var(--line);}
+.wizard-dot.done{background:var(--sage);color:#fff;border-color:var(--sage);}
+.wizard-dot.current{background:var(--terracota);color:#fff;border-color:var(--terracota);}
+
+.list-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);}
+.list-row:last-child{border-bottom:none;}
+.badge{padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;background:var(--sage-soft);color:var(--sage);}
+.badge.warn{background:var(--terracota-soft);color:var(--terracota);}
+table{width:100%;border-collapse:collapse;}
+th{text-align:left;font-size:12px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;padding:10px 8px;border-bottom:1px solid var(--line);}
+td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
+.small-btn{padding:6px 12px;font-size:13px;border-radius:999px;border:1px solid var(--line);background:var(--cream);}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+@media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+.kpi-tile{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;}
+.kpi-tile .val{font-size:26px;font-weight:700;color:var(--terracota);}
+.kpi-tile .lbl{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+.photo-thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;border:1px solid var(--line);}
+.empty-state{text-align:center;padding:40px 20px;color:var(--ink-soft);}
+</style>
+</head>
+<body>
+
+<div id="login-view">
+  <div class="login-card">
+    <h1>La Tribu</h1>
+    <p class="sub">Comunidad de bienestar y alto rendimiento.</p>
+    <div id="login-error"></div>
+    <div id="login-form">
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tucorreo@ejemplo.com"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
+      <button class="btn btn-primary" onclick="handleLogin()">Ingresar</button>
+      <p style="text-align:center;margin-top:18px;font-size:14px;color:var(--ink-soft);">
+        ¿Aún no tienes cuenta? <button class="link-btn" onclick="showRegister()">Regístrate</button>
+      </p>
+    </div>
+    <div id="register-form" class="hidden">
+      <div class="field"><label>Nombre completo</label><input type="text" id="reg-name"></div>
+      <div class="field"><label>Email</label><input type="email" id="reg-email"></div>
+      <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
+      <button class="btn btn-primary" onclick="handleRegister()">Crear cuenta</button>
+      <p style="text-align:center;margin-top:18px;font-size:14px;color:var(--ink-soft);">
+        <button class="link-btn" onclick="showLogin()">Volver a iniciar sesión</button>
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="app-view">
+  <div class="sidebar">
+    <h2 class="brand">La Tribu</h2>
+    <div id="nav-items"></div>
+    <div class="sidebar-footer">
+      <div class="user-chip" id="user-chip"></div>
+      <button class="btn btn-ghost" style="width:100%" onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+  <div class="main" id="main-content"></div>
+</div>
+
+<script>
+const API = '';
+let state = { token: localStorage.getItem('lt_token') || null, role: null, user: null, permissions: {}, view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (state.token && !(opts.body instanceof FormData)) headers['Authorization'] = `Bearer ${state.token}`;
+  else if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+  const finalOpts = { ...opts, headers };
+  if (opts.body instanceof FormData) delete finalOpts.headers['Content-Type'];
+  const res = await fetch(API + path, finalOpts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) throw new Error(data.error || 'Error de red.');
+  return data;
+}
+
+function showRegister(){ document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); }
+function showLogin(){ document.getElementById('register-form').classList.add('hidden'); document.getElementById('login-form').classList.remove('hidden'); }
+
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('login-error');
+  errBox.innerHTML = '';
+  try {
+    const data = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
+    onAuthSuccess(data);
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  }
+}
+
+async function handleRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const errBox = document.getElementById('login-error');
+  errBox.innerHTML = '';
+  try {
+    const data = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) });
+    onAuthSuccess(data);
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  }
+}
+
+function onAuthSuccess(data) {
+  state.token = data.token;
+  state.role = data.role;
+  state.user = data.user;
+  state.permissions = data.permissions || {};
+  localStorage.setItem('lt_token', data.token);
+  state.view = data.role === 'admin' ? 'admin-clients' : 'personal-info';
+  boot();
+}
+
+function logout() {
+  localStorage.removeItem('lt_token');
+  state = { token: null, role: null, user: null, permissions: {}, view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
+  document.getElementById('app-view').classList.remove('active');
+  document.getElementById('login-view').style.display = 'flex';
+}
+
+async function boot() {
+  if (!state.token) return;
+  try {
+    const data = await api('/api/auth/me');
+    state.role = data.role; state.user = data.user; state.permissions = data.permissions || {};
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('app-view').classList.add('active');
+    if (!state.view || state.view === 'personal-info' && state.role === 'admin') state.view = 'admin-clients';
+    renderNav();
+    renderMain();
+  } catch (e) {
+    logout();
+  }
+}
+
+// ---------------- Navigation ----------------
+
+const CLIENT_NAV = [
+  { key: 'personal-info', label: 'Información Personal' },
+  { key: 'body', label: 'Composición Corporal' },
+  { key: 'training', label: 'Entrenamiento' },
+  { key: 'nutrition', label: 'Nutrición' },
+  { key: 'supplementation', label: 'Suplementación' },
+  { key: 'cortisol', label: 'Gestión de Cortisol' },
+  { key: 'community', label: 'Comunidad' },
+  { key: 'evolution', label: 'Mi Evolución' },
+];
+const ADMIN_NAV = [
+  { key: 'admin-clients', label: 'Clientes' },
+  { key: 'admin-community', label: 'Comunidad' },
+];
+
+function renderNav() {
+  const nav = state.role === 'admin' ? ADMIN_NAV : CLIENT_NAV;
+  document.getElementById('nav-items').innerHTML = nav.map(item => `
+    <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}</button>
+  `).join('');
+  document.getElementById('user-chip').innerText = `${state.user?.name || ''} · ${state.role === 'admin' ? 'Admin' : 'Miembro'}`;
+}
+
+function setView(view, extra) {
+  state.view = view;
+  if (extra) Object.assign(state, extra);
+  renderNav();
+  renderMain();
+}
+
+function renderMain() {
+  const el = document.getElementById('main-content');
+  el.innerHTML = '<div class="empty-state">Cargando…</div>';
+  const routes = {
+    'personal-info': renderPersonalInfo,
+    'body': renderBody,
+    'training': renderTraining,
+    'nutrition': renderNutrition,
+    'supplementation': renderSupplementation,
+    'cortisol': renderCortisol,
+    'community': renderCommunity,
+    'evolution': renderEvolution,
+    'admin-clients': renderAdminClients,
+    'admin-client-detail': renderAdminClientDetail,
+    'admin-community': renderAdminCommunity,
+  };
+  (routes[state.view] || renderPersonalInfo)(el);
+}
+
+function currentClientId() {
+  return state.role === 'admin' ? state.currentClientId : state.user.id;
+}
+
+// ---------------- Módulo: Información Personal (wizard, diseño propio) ----------------
+
+const ONBOARDING_MODULES = [
+  { n: 1, title: 'Perfil Personal', fields: [
+    { id: 'birthdate', label: 'Fecha de nacimiento', type: 'date' },
+    { id: 'gender', label: 'Género', type: 'select', options: ['Masculino', 'Femenino', 'Otro'] },
+    { id: 'occupation', label: 'Ocupación', type: 'text' },
+    { id: 'country', label: 'País de residencia', type: 'text' },
+    { id: 'city', label: 'Ciudad', type: 'text' },
+    { id: 'phone_number', label: 'Celular (WhatsApp)', type: 'text' },
+    { id: 'marital_status', label: 'Estado civil', type: 'select', options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Divorciado/a'] },
+  ]},
+  { n: 2, title: 'Vida Profesional', fields: [
+    { id: 'work_hours', label: 'Horas de trabajo al día', type: 'number' },
+    { id: 'cognitive_demand', label: 'Demanda cognitiva (1-10)', type: 'number' },
+    { id: 'travel', label: 'Frecuencia de viajes', type: 'select', options: ['Nunca', '1-2 veces al mes', 'Semanal', 'Muy frecuente'] },
+    { id: 'work_place', label: 'Lugar de trabajo', type: 'select', options: ['Oficina', 'Remoto', 'Híbrido', 'Campo/Obra'] },
+    { id: 'time_control', label: 'Control sobre tu horario', type: 'select', options: ['Alto', 'Medio', 'Bajo'] },
+  ]},
+  { n: 3, title: 'Composición Corporal', fields: [
+    { id: 'weight', label: 'Peso (kg)', type: 'number', structured: true },
+    { id: 'height', label: 'Estatura (cm)', type: 'number', structured: true },
+    { id: 'body_fat', label: '% Grasa corporal (si lo conoces)', type: 'number', structured: true },
+  ], note: 'Las medidas de cintura, brazos, hombros, piernas y glúteo, además de tus fotos de progreso, se registran en el módulo "Composición Corporal" del menú principal.' },
+  { n: 4, title: 'Historial de Salud', fields: [
+    { id: 'condition', label: 'Condición médica diagnosticada', type: 'select', options: ['Ninguna', 'Diabetes', 'Hipertensión', 'Hipotiroidismo', 'Síndrome metabólico', 'PCOS', 'Otra'] },
+    { id: 'meds', label: '¿Tomas medicamentos actualmente?', type: 'text' },
+    { id: 'allergies', label: 'Alergias', type: 'text' },
+    { id: 'injury', label: 'Lesiones que limiten tu actividad', type: 'text' },
+    { id: 'mental_health', label: 'Salud mental diagnosticada', type: 'select', options: ['Sin diagnóstico', 'Ansiedad', 'Depresión', 'TDAH', 'Burnout', 'Otro'] },
+    { id: 'last_checkup', label: 'Último chequeo médico', type: 'select', options: ['Menos de 6 meses', '1 año', '2+ años', 'Nunca'] },
+  ]},
+  { n: 5, title: 'Alimentación', fields: [
+    { id: 'meals_per_day', label: 'Comidas por día', type: 'number' },
+    { id: 'water_liters', label: 'Litros de agua al día', type: 'number' },
+    { id: 'diet_type', label: 'Tipo de dieta', type: 'select', options: ['Omnívoro', 'Vegetariano', 'Vegano', 'Keto', 'Paleo', 'Otra'] },
+    { id: 'fasting', label: '¿Practicas ayuno intermitente?', type: 'select', options: ['No', '16/8', '18/6', '20/4', '24h', 'Otro'] },
+    { id: 'caffeine_cups', label: 'Tazas de café/cafeína al día', type: 'number' },
+    { id: 'alcohol', label: 'Consumo de alcohol', type: 'select', options: ['Nunca', 'Ocasional', '1-2x semana', '3+ veces semana'] },
+  ]},
+  { n: 6, title: 'Sueño', fields: [
+    { id: 'sleep_hours', label: 'Horas de sueño promedio', type: 'number' },
+    { id: 'bedtime', label: 'Hora de dormir', type: 'time' },
+    { id: 'wakeup', label: 'Hora de despertar', type: 'time' },
+    { id: 'sleep_quality', label: 'Calidad del sueño (1-10)', type: 'number' },
+    { id: 'wakeups', label: 'Despertares nocturnos', type: 'select', options: ['Ninguno', '1-2', '3+'] },
+  ]},
+  { n: 7, title: 'Energía y Cognición', fields: [
+    { id: 'energy_am', label: 'Energía en la mañana (1-10)', type: 'number' },
+    { id: 'energy_pm', label: 'Energía en la tarde (1-10)', type: 'number' },
+    { id: 'brain_fog', label: 'Niebla mental', type: 'select', options: ['Siempre', 'Frecuentemente', 'A veces', 'Nunca'] },
+    { id: 'focus_time', label: 'Tiempo de foco sostenido', type: 'select', options: ['<15min', '15-30min', '30-60min', '>1h'] },
+    { id: 'memory', label: '¿Sientes la memoria afectada?', type: 'select', options: ['Sí notablemente', 'Un poco', 'No'] },
+  ]},
+  { n: 8, title: 'Estrés y Emociones', fields: [
+    { id: 'stress_level', label: 'Nivel de estrés crónico (1-10)', type: 'number' },
+    { id: 'anxiety', label: 'Frecuencia de ansiedad', type: 'select', options: ['Nunca', 'Raramente', 'A veces', 'Frecuentemente', 'Diario'] },
+    { id: 'mood', label: 'Estado de ánimo general', type: 'select', options: ['Estable', 'Variable', 'Generalmente bajo', 'Generalmente alto'] },
+    { id: 'coping_techniques', label: 'Técnicas de manejo del estrés que usas', type: 'text' },
+    { id: 'work_life_balance', label: '¿El trabajo invade tu vida personal?', type: 'select', options: ['No', 'A veces', 'Frecuentemente', 'Siempre'] },
+  ]},
+  { n: 9, title: 'Entrenamiento Físico', fields: [
+    { id: 'active', label: '¿Realizas actividad física regular?', type: 'select', options: ['Sí', 'No'] },
+    { id: 'training_types', label: 'Tipos de entrenamiento', type: 'text' },
+    { id: 'frequency', label: 'Frecuencia semanal', type: 'select', options: ['No entrena', '1-2 x sem', '3-4 x sem', '5+ x sem'] },
+    { id: 'duration', label: 'Duración promedio por sesión', type: 'text' },
+    { id: 'goals', label: 'Objetivos principales', type: 'text' },
+  ]},
+];
+
+let onboardingData = {};
+
+async function renderPersonalInfo(el) {
+  const clientId = currentClientId();
+  try {
+    const { personalInfo } = await api(`/api/clients/${clientId}/personal-info`);
+    onboardingData = personalInfo.onboarding_report || {};
+    for (const f of ['birthdate','gender','occupation','country','city','phone_number','marital_status']) {
+      if (personalInfo[f] !== undefined && personalInfo[f] !== null) onboardingData[f] = personalInfo[f];
+    }
+    for (const f of ['weight','height','body_fat']) if (personalInfo[f] != null) onboardingData[f] = personalInfo[f];
+
+    const step = state.wizardStep || 1;
+    const mod = ONBOARDING_MODULES.find(m => m.n === step);
+
+    el.innerHTML = `
+      <div class="page-header">
+        <h2>Información Personal</h2>
+        <p>Conocerte nos permite diseñar tu experiencia dentro de La Tribu.</p>
+      </div>
+      <div class="wizard-steps">
+        ${ONBOARDING_MODULES.map(m => `<div class="wizard-dot ${m.n < step ? 'done' : ''} ${m.n === step ? 'current' : ''}" onclick="setStep(${m.n})">${m.n}</div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
+        ${mod.note ? `<p style="color:var(--ink-soft);font-size:14px;margin-top:-8px;">${mod.note}</p>` : ''}
+        <div class="grid-2" id="module-fields">
+          ${mod.fields.map(f => renderField(f)).join('')}
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn btn-ghost" ${step === 1 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step - 1})">Anterior</button>
+          <button class="btn btn-primary" style="width:auto" onclick="saveOnboardingStep(${step})">${step === 9 ? 'Finalizar' : 'Guardar y continuar'}</button>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  }
+}
+
+function renderField(f) {
+  const val = onboardingData[f.id] ?? '';
+  if (f.type === 'select') {
+    return `<div class="field"><label>${f.label}</label><select id="field-${f.id}">
+      <option value="">Selecciona…</option>
+      ${f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
+    </select></div>`;
+  }
+  return `<div class="field"><label>${f.label}</label><input type="${f.type}" id="field-${f.id}" value="${val}"></div>`;
+}
+
+function setStep(n) {
+  if (n < 1 || n > 9) return;
+  state.wizardStep = n;
+  renderMain();
+}
+
+async function saveOnboardingStep(step) {
+  const mod = ONBOARDING_MODULES.find(m => m.n === step);
+  const clientId = currentClientId();
+  const structuredKeys = ['birthdate','gender','occupation','country','city','phone_number','marital_status','weight','height','body_fat'];
+  const payload = { onboarding_report: onboardingData };
+  mod.fields.forEach(f => {
+    const input = document.getElementById(`field-${f.id}`);
+    const v = input.value;
+    onboardingData[f.id] = v;
+    if (structuredKeys.includes(f.id)) payload[f.id] = v;
+  });
+  payload.onboarding_report = onboardingData;
+  payload.complete = step === 9;
+  try {
+    await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
+    if (step < 9) setStep(step + 1);
+    else { setStep(1); alert('¡Información personal guardada!'); }
+  } catch (e) {
+    alert('Error al guardar: ' + e.message);
+  }
+}
+
+// ---------------- Módulo: Composición Corporal (medidas + fotos) ----------------
+
+async function renderBody(el) {
+  const clientId = currentClientId();
+  try {
+    const [{ records }, { photos }] = await Promise.all([
+      api(`/api/clients/${clientId}/anthropometrics`),
+      api(`/api/clients/${clientId}/photos`)
+    ]);
+    el.innerHTML = `
+      <div class="page-header"><h2>Composición Corporal</h2><p>Registra tus medidas y fotos para comparar tu progreso.</p></div>
+      <div class="card">
+        <div class="card-title">Nueva medición</div>
+        <div class="grid-3">
+          <div class="field"><label>Fecha</label><input type="date" id="am-fecha" value="${new Date().toISOString().slice(0,10)}"></div>
+          <div class="field"><label>Peso (kg)</label><input type="number" id="am-peso"></div>
+          <div class="field"><label>Cintura (cm)</label><input type="number" id="am-cintura"></div>
+          <div class="field"><label>Brazos (cm)</label><input type="number" id="am-brazos"></div>
+          <div class="field"><label>Hombros (cm)</label><input type="number" id="am-hombros"></div>
+          <div class="field"><label>Piernas (cm)</label><input type="number" id="am-piernas"></div>
+          <div class="field"><label>Glúteo (cm)</label><input type="number" id="am-gluteo"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto" onclick="saveAnthropometrics()">Guardar medición</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Subir foto de progreso</div>
+        <div class="grid-2">
+          <div class="field"><label>Ángulo</label><select id="photo-angle">
+            <option value="frente">Frente</option><option value="perfil">Perfil</option><option value="espalda">Espalda</option>
+          </select></div>
+          <div class="field"><label>Foto</label><input type="file" id="photo-file" accept="image/*"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto" onclick="uploadPhoto()">Subir foto</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Historial de medidas</div>
+        ${records.length ? `<table><thead><tr><th>Fecha</th><th>Peso</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
+        <tbody>${records.map(r => `<tr><td>${r.fecha}</td><td>${r.peso ?? '-'}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="empty-state">Aún no tienes mediciones registradas.</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title">Galería de progreso</div>
+        ${photos.length ? `<div class="grid-3">${photos.map(p => `<div><img class="photo-thumb" src="${p.photo_url}"><p style="text-align:center;font-size:12px;color:var(--ink-soft);">${p.angle} · ${p.fecha}</p></div>`).join('')}</div>`
+        : '<div class="empty-state">Aún no has subido fotos.</div>'}
+      </div>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  }
+}
+
+async function saveAnthropometrics() {
+  const clientId = currentClientId();
+  const payload = {
+    fecha: document.getElementById('am-fecha').value,
+    peso: document.getElementById('am-peso').value || null,
+    cintura: document.getElementById('am-cintura').value || null,
+    brazos: document.getElementById('am-brazos').value || null,
+    hombros: document.getElementById('am-hombros').value || null,
+    piernas: document.getElementById('am-piernas').value || null,
+    gluteo: document.getElementById('am-gluteo').value || null,
+  };
+  try {
+    await api(`/api/clients/${clientId}/anthropometrics`, { method: 'POST', body: JSON.stringify(payload) });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function uploadPhoto() {
+  const clientId = currentClientId();
+  const fileInput = document.getElementById('photo-file');
+  if (!fileInput.files[0]) return alert('Selecciona una foto.');
+  const fd = new FormData();
+  fd.append('photo', fileInput.files[0]);
+  fd.append('angle', document.getElementById('photo-angle').value);
+  try {
+    await api(`/api/clients/${clientId}/photos`, { method: 'POST', body: fd });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo: Entrenamiento ----------------
+
+async function renderTraining(el) {
+  const clientId = currentClientId();
+  const isAdmin = state.role === 'admin';
+  try {
+    const { exercises } = await api(`/api/clients/${clientId}/exercises`);
+    el.innerHTML = `
+      <div class="page-header"><h2>Entrenamiento</h2><p>Tu programa de ejercicios personalizado.</p></div>
+      ${isAdmin ? `<div class="card">
+        <div class="card-title">Agregar ejercicio</div>
+        <div class="grid-3">
+          <div class="field"><label>Título</label><input id="ex-title"></div>
+          <div class="field"><label>Método</label><select id="ex-method">${['Fuerza','HIIT','Funcional','Cardio','Movilidad'].map(o=>`<option>${o}</option>`).join('')}</select></div>
+          <div class="field"><label>Sección</label><select id="ex-section">${['Movilidad articular','Entrenamiento de fuerza','Estiramientos','Cardio'].map(o=>`<option>${o}</option>`).join('')}</select></div>
+          <div class="field"><label>Series</label><input type="number" id="ex-series" value="3"></div>
+          <div class="field"><label>Repeticiones</label><input id="ex-reps"></div>
+          <div class="field"><label>Descanso</label><input id="ex-rest"></div>
+          <div class="field"><label>Video (YouTube)</label><input id="ex-youtube"></div>
+        </div>
+        <div class="field"><label>Descripción</label><textarea id="ex-desc" rows="2"></textarea></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createExercise()">Agregar</button>
+      </div>` : ''}
+      <div class="card">
+        <div class="card-title">Tu rutina</div>
+        ${exercises.length ? exercises.map(x => `
+          <div class="list-row">
+            <div>
+              <strong>${x.title}</strong> <span class="badge">${x.method}</span>
+              <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${x.section} · ${x.series} series · ${x.reps || '-'} reps · descanso ${x.rest_time || '-'}</div>
+              ${x.description ? `<p style="font-size:14px;margin:6px 0 0;">${x.description}</p>` : ''}
+              ${x.youtube_url ? `<a href="${x.youtube_url}" target="_blank">Ver video</a>` : ''}
+            </div>
+            ${isAdmin ? `<button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>` : ''}
+          </div>
+        `).join('') : '<div class="empty-state">Aún no hay ejercicios asignados.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+
+async function createExercise() {
+  const clientId = currentClientId();
+  const payload = {
+    title: document.getElementById('ex-title').value,
+    method: document.getElementById('ex-method').value,
+    section: document.getElementById('ex-section').value,
+    series: document.getElementById('ex-series').value,
+    reps: document.getElementById('ex-reps').value,
+    rest_time: document.getElementById('ex-rest').value,
+    youtube_url: document.getElementById('ex-youtube').value,
+    description: document.getElementById('ex-desc').value,
+  };
+  try { await api(`/api/clients/${clientId}/exercises`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteExercise(id) {
+  const clientId = currentClientId();
+  try { await api(`/api/clients/${clientId}/exercises/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo: Nutrición ----------------
+
+async function renderNutrition(el) {
+  const clientId = currentClientId();
+  const isAdmin = state.role === 'admin';
+  try {
+    const { plan, meals } = await api(`/api/clients/${clientId}/nutrition`);
+    el.innerHTML = `
+      <div class="page-header"><h2>Nutrición</h2><p>Plan de alimentación y protocolos asignados por tu mentor.</p></div>
+      <div class="card">
+        <div class="card-title">Macros diarios</div>
+        <div class="grid-3">
+          <div class="field"><label>Calorías</label><input type="number" id="nt-cals" value="${plan.daily_cals ?? ''}" ${!isAdmin?'disabled':''}></div>
+          <div class="field"><label>Proteína (g)</label><input type="number" id="nt-protein" value="${plan.protein_g ?? ''}" ${!isAdmin?'disabled':''}></div>
+          <div class="field"><label>Carbohidratos (g)</label><input type="number" id="nt-carbs" value="${plan.carbs_g ?? ''}" ${!isAdmin?'disabled':''}></div>
+          <div class="field"><label>Grasas (g)</label><input type="number" id="nt-fat" value="${plan.fat_g ?? ''}" ${!isAdmin?'disabled':''}></div>
+        </div>
+        <div class="field"><label>Notas / protocolo</label><textarea id="nt-notes" rows="2" ${!isAdmin?'disabled':''}>${plan.notes ?? ''}</textarea></div>
+        ${isAdmin ? `<button class="btn btn-primary" style="width:auto" onclick="saveNutritionPlan()">Guardar plan</button>` : ''}
+      </div>
+      ${isAdmin ? `<div class="card">
+        <div class="card-title">Agregar comida</div>
+        <div class="grid-3">
+          <div class="field"><label>Momento</label><input id="meal-time" placeholder="Desayuno, Almuerzo…"></div>
+          <div class="field"><label>Nombre</label><input id="meal-name"></div>
+          <div class="field"><label>Calorías</label><input type="number" id="meal-cals"></div>
+          <div class="field"><label>Proteína</label><input type="number" id="meal-protein"></div>
+          <div class="field"><label>Carbos</label><input type="number" id="meal-carbs"></div>
+          <div class="field"><label>Grasas</label><input type="number" id="meal-fat"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto" onclick="createMeal()">Agregar comida</button>
+      </div>` : ''}
+      <div class="card">
+        <div class="card-title">Plan de comidas</div>
+        ${meals.length ? meals.map(m => `
+          <div class="list-row">
+            <div><strong>${m.meal_time}</strong> — ${m.name}<div style="font-size:13px;color:var(--ink-soft);">${m.calories} kcal · P${m.protein_g} C${m.carbs_g} G${m.fat_g}</div></div>
+            ${isAdmin ? `<button class="small-btn" onclick="deleteMeal('${m.id}')">Eliminar</button>` : ''}
+          </div>`).join('') : '<div class="empty-state">Tu mentor aún no ha cargado el plan de alimentación.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function saveNutritionPlan() {
+  const clientId = currentClientId();
+  const payload = {
+    daily_cals: document.getElementById('nt-cals').value || 0,
+    protein_g: document.getElementById('nt-protein').value || 0,
+    carbs_g: document.getElementById('nt-carbs').value || 0,
+    fat_g: document.getElementById('nt-fat').value || 0,
+    notes: document.getElementById('nt-notes').value,
+  };
+  try { await api(`/api/clients/${clientId}/nutrition`, { method: 'PUT', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function createMeal() {
+  const clientId = currentClientId();
+  const payload = {
+    meal_time: document.getElementById('meal-time').value,
+    name: document.getElementById('meal-name').value,
+    calories: document.getElementById('meal-cals').value || 0,
+    protein_g: document.getElementById('meal-protein').value || 0,
+    carbs_g: document.getElementById('meal-carbs').value || 0,
+    fat_g: document.getElementById('meal-fat').value || 0,
+  };
+  try { await api(`/api/clients/${clientId}/meals`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteMeal(id) {
+  const clientId = currentClientId();
+  try { await api(`/api/clients/${clientId}/meals/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo: Suplementación ----------------
+
+async function renderSupplementation(el) {
+  const clientId = currentClientId();
+  const isAdmin = state.role === 'admin';
+  try {
+    const { supplements } = await api(`/api/clients/${clientId}/supplements`);
+    el.innerHTML = `
+      <div class="page-header"><h2>Suplementación</h2><p>Protocolo de suplementos asignado por tu mentor.</p></div>
+      ${isAdmin ? `<div class="card">
+        <div class="card-title">Asignar suplemento</div>
+        <div class="grid-3">
+          <div class="field"><label>Nombre</label><input id="sp-name"></div>
+          <div class="field"><label>Marca</label><input id="sp-brand"></div>
+          <div class="field"><label>Dosis</label><input id="sp-dose"></div>
+          <div class="field"><label>Momento</label><input id="sp-timing"></div>
+          <div class="field"><label>Categoría</label><select id="sp-category">${['Nootrópico','Adaptógeno','Sueño','Rendimiento','Base'].map(o=>`<option>${o}</option>`).join('')}</select></div>
+        </div>
+        <div class="field"><label>Beneficio</label><textarea id="sp-benefit" rows="2"></textarea></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createSupplement()">Asignar</button>
+      </div>` : ''}
+      <div class="card">
+        <div class="card-title">Tu protocolo</div>
+        ${supplements.length ? supplements.map(s => `
+          <div class="list-row">
+            <div><strong>${s.name}</strong> <span class="badge">${s.category || ''}</span>
+              <div style="font-size:13px;color:var(--ink-soft);">${s.brand || ''} · ${s.dose || ''} · ${s.timing || ''}</div>
+              ${s.benefit ? `<p style="font-size:14px;margin:4px 0 0;">${s.benefit}</p>` : ''}
+            </div>
+            ${isAdmin ? `<button class="small-btn" onclick="deleteSupplement('${s.id}')">Eliminar</button>` : ''}
+          </div>`).join('') : '<div class="empty-state">Aún no tienes suplementos asignados.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function createSupplement() {
+  const clientId = currentClientId();
+  const payload = {
+    name: document.getElementById('sp-name').value,
+    brand: document.getElementById('sp-brand').value,
+    dose: document.getElementById('sp-dose').value,
+    timing: document.getElementById('sp-timing').value,
+    category: document.getElementById('sp-category').value,
+    benefit: document.getElementById('sp-benefit').value,
+  };
+  try { await api(`/api/clients/${clientId}/supplements`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteSupplement(id) {
+  const clientId = currentClientId();
+  try { await api(`/api/clients/${clientId}/supplements/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo: Gestión de Cortisol ----------------
+
+async function renderCortisol(el) {
+  const clientId = currentClientId();
+  const isAdmin = state.role === 'admin';
+  try {
+    const { techniques } = await api(`/api/clients/${clientId}/cortisol-techniques`);
+    el.innerHTML = `
+      <div class="page-header"><h2>Gestión de Cortisol</h2><p>Técnicas de regulación asignadas por tu mentor.</p></div>
+      ${isAdmin ? `<div class="card">
+        <div class="card-title">Asignar técnica</div>
+        <div class="grid-3">
+          <div class="field"><label>Título</label><input id="ct-title"></div>
+          <div class="field"><label>Tipo</label><select id="ct-type">${['Respiración','Breathwork','Meditación','Mindfulness'].map(o=>`<option>${o}</option>`).join('')}</select></div>
+          <div class="field"><label>Duración</label><input id="ct-duration"></div>
+          <div class="field"><label>Video (YouTube)</label><input id="ct-youtube"></div>
+        </div>
+        <div class="field"><label>Descripción</label><textarea id="ct-desc" rows="2"></textarea></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createTechnique()">Asignar</button>
+      </div>` : ''}
+      <div class="card">
+        <div class="card-title">Tus técnicas</div>
+        ${techniques.length ? techniques.map(t => `
+          <div class="list-row">
+            <div><strong>${t.title}</strong> <span class="badge">${t.type || ''}</span>
+              <div style="font-size:13px;color:var(--ink-soft);">${t.duration || ''}</div>
+              ${t.description ? `<p style="font-size:14px;margin:4px 0 0;">${t.description}</p>` : ''}
+              ${t.youtube_url ? `<a href="${t.youtube_url}" target="_blank">Ver video</a>` : ''}
+            </div>
+            ${isAdmin ? `<button class="small-btn" onclick="deleteTechnique('${t.id}')">Eliminar</button>` : ''}
+          </div>`).join('') : '<div class="empty-state">Aún no tienes técnicas asignadas.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function createTechnique() {
+  const clientId = currentClientId();
+  const payload = {
+    title: document.getElementById('ct-title').value,
+    type: document.getElementById('ct-type').value,
+    duration: document.getElementById('ct-duration').value,
+    youtube_url: document.getElementById('ct-youtube').value,
+    description: document.getElementById('ct-desc').value,
+  };
+  try { await api(`/api/clients/${clientId}/cortisol-techniques`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteTechnique(id) {
+  const clientId = currentClientId();
+  try { await api(`/api/clients/${clientId}/cortisol-techniques/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo: Comunidad (Eventos + Terapias) ----------------
+
+let communityTab = 'events';
+
+async function renderCommunity(el) {
+  try {
+    const [{ events }, { therapies }] = await Promise.all([api('/api/community/events'), api('/api/community/therapies')]);
+    el.innerHTML = `
+      <div class="page-header"><h2>Comunidad</h2><p>Eventos de bienestar y terapias con descuentos especiales.</p></div>
+      <div style="margin-bottom:20px;">
+        <button class="btn ${communityTab==='events'?'btn-primary':'btn-ghost'}" style="width:auto;margin-right:10px;" onclick="setCommunityTab('events')">Eventos</button>
+        <button class="btn ${communityTab==='therapies'?'btn-primary':'btn-ghost'}" style="width:auto;" onclick="setCommunityTab('therapies')">Terapias</button>
+      </div>
+      ${communityTab === 'events' ? `
+        <div class="grid-2">
+          ${events.length ? events.map(ev => `
+            <div class="card">
+              <div class="card-title">${ev.title}</div>
+              <p style="color:var(--ink-soft);font-size:14px;">${ev.description || ''}</p>
+              <p style="font-size:13px;"><strong>Fecha:</strong> ${ev.event_date ? new Date(ev.event_date).toLocaleString() : '-'}<br><strong>Lugar:</strong> ${ev.location || '-'}</p>
+              <button class="btn btn-secondary" style="width:auto" onclick="reserveEvent('${ev.id}')">Reservar</button>
+            </div>`).join('') : '<div class="empty-state">No hay eventos disponibles por ahora.</div>'}
+        </div>` : `
+        <div class="grid-2">
+          ${therapies.length ? therapies.map(t => `
+            <div class="card">
+              <div class="card-title">${t.title} ${t.discount_pct ? `<span class="badge">-${t.discount_pct}%</span>` : ''}</div>
+              <p style="color:var(--ink-soft);font-size:14px;">${t.description || ''}</p>
+              <p style="font-size:13px;"><strong>Proveedor:</strong> ${t.provider || '-'}</p>
+              <button class="btn btn-secondary" style="width:auto" onclick="reserveTherapy('${t.id}')">Reservar</button>
+            </div>`).join('') : '<div class="empty-state">No hay terapias disponibles por ahora.</div>'}
+        </div>`}
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+function setCommunityTab(tab) { communityTab = tab; renderMain(); }
+async function reserveEvent(id) {
+  try { await api(`/api/community/events/${id}/reserve`, { method: 'POST' }); alert('Reserva confirmada.'); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function reserveTherapy(id) {
+  try { await api(`/api/community/therapies/${id}/reserve`, { method: 'POST' }); alert('Reserva confirmada.'); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo: Mi Evolución ----------------
+
+async function renderEvolution(el) {
+  const clientId = currentClientId();
+  try {
+    const { checkins, anthropometrics } = await api(`/api/clients/${clientId}/evolution`);
+    const last = checkins[checkins.length - 1] || {};
+    const firstAnthro = anthropometrics[0] || {};
+    const lastAnthro = anthropometrics[anthropometrics.length - 1] || {};
+    el.innerHTML = `
+      <div class="page-header"><h2>Mi Evolución</h2><p>Tu progreso a lo largo del tiempo, en un solo lugar.</p></div>
+      <div class="card">
+        <div class="card-title">Cómo te sientes hoy</div>
+        <div class="grid-3">
+          <div class="field"><label>Fuerza (1-10)</label><input type="number" min="1" max="10" id="ev-strength"></div>
+          <div class="field"><label>Estado de ánimo (1-10)</label><input type="number" min="1" max="10" id="ev-mood"></div>
+          <div class="field"><label>Confianza (1-10)</label><input type="number" min="1" max="10" id="ev-confidence"></div>
+          <div class="field"><label>Seguridad (1-10)</label><input type="number" min="1" max="10" id="ev-security"></div>
+          <div class="field"><label>Energía (1-10)</label><input type="number" min="1" max="10" id="ev-energy"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto" onclick="saveCheckin()">Guardar check-in</button>
+      </div>
+      <div class="card">
+        <div class="card-title">KPIs más recientes</div>
+        <div class="kpi-row">
+          <div class="kpi-tile"><div class="val">${last.strength_score ?? '-'}</div><div class="lbl">Fuerza</div></div>
+          <div class="kpi-tile"><div class="val">${last.mood_score ?? '-'}</div><div class="lbl">Ánimo</div></div>
+          <div class="kpi-tile"><div class="val">${last.confidence_score ?? '-'}</div><div class="lbl">Confianza</div></div>
+          <div class="kpi-tile"><div class="val">${last.security_score ?? '-'}</div><div class="lbl">Seguridad</div></div>
+          <div class="kpi-tile"><div class="val">${last.energy_score ?? '-'}</div><div class="lbl">Energía</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Comparativa antropométrica</div>
+        <table><thead><tr><th></th><th>Primera medición</th><th>Última medición</th><th>Diferencia</th></tr></thead>
+        <tbody>
+          ${['peso','cintura','brazos','hombros','piernas','gluteo'].map(k => `
+            <tr><td>${k}</td><td>${firstAnthro[k] ?? '-'}</td><td>${lastAnthro[k] ?? '-'}</td>
+            <td>${(firstAnthro[k] != null && lastAnthro[k] != null) ? (lastAnthro[k]-firstAnthro[k]).toFixed(1) : '-'}</td></tr>
+          `).join('')}
+        </tbody></table>
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function saveCheckin() {
+  const clientId = currentClientId();
+  const payload = {
+    fecha: new Date().toISOString().slice(0,10),
+    strength_score: document.getElementById('ev-strength').value || null,
+    mood_score: document.getElementById('ev-mood').value || null,
+    confidence_score: document.getElementById('ev-confidence').value || null,
+    security_score: document.getElementById('ev-security').value || null,
+    energy_score: document.getElementById('ev-energy').value || null,
+  };
+  try { await api(`/api/clients/${clientId}/evolution`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Admin: gestión de clientes ----------------
+
+async function renderAdminClients(el) {
+  try {
+    const { clients } = await api('/api/clients');
+    state.clients = clients;
+    el.innerHTML = `
+      <div class="page-header"><h2>Clientes</h2><p>Gestiona los miembros de La Tribu.</p></div>
+      <div class="card">
+        <div class="card-title">Nuevo cliente</div>
+        <div class="grid-3">
+          <div class="field"><label>Nombre</label><input id="nc-name"></div>
+          <div class="field"><label>Email</label><input id="nc-email"></div>
+          <div class="field"><label>Contraseña</label><input type="password" id="nc-password"></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto" onclick="createClient()">Crear cliente</button>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>Nombre</th><th>Email</th><th>Estado</th><th>Plan</th><th></th></tr></thead>
+        <tbody>
+          ${clients.map(c => `
+            <tr>
+              <td>${c.name}</td><td>${c.email}</td>
+              <td><span class="badge ${c.status==='inactive'?'warn':''}">${c.status}</span></td>
+              <td>${c.plan}</td>
+              <td><button class="small-btn" onclick="openClient('${c.id}')">Abrir</button></td>
+            </tr>`).join('')}
+        </tbody></table>
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function createClient() {
+  const payload = {
+    name: document.getElementById('nc-name').value,
+    email: document.getElementById('nc-email').value,
+    password: document.getElementById('nc-password').value,
+  };
+  try { await api('/api/clients', { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+function openClient(id) {
+  state.currentClientId = id;
+  setView('admin-client-detail');
+}
+async function renderAdminClientDetail(el) {
+  const client = state.clients.find(c => c.id === state.currentClientId);
+  el.innerHTML = `
+    <div class="page-header"><h2>${client ? client.name : 'Cliente'}</h2><p>${client ? client.email : ''}</p></div>
+    <button class="btn btn-ghost" style="width:auto;margin-bottom:20px;" onclick="setView('admin-clients')">← Volver a clientes</button>
+    <div style="margin-bottom:20px;">
+      ${CLIENT_NAV.map(item => `<button class="btn btn-ghost" style="width:auto;margin:0 8px 8px 0;" onclick="setView('${item.key}')">${item.label}</button>`).join('')}
+    </div>
+  `;
+}
+
+// ---------------- Admin: comunidad (eventos y terapias) ----------------
+
+async function renderAdminCommunity(el) {
+  try {
+    const [{ events }, { therapies }] = await Promise.all([api('/api/community/events'), api('/api/community/therapies')]);
+    el.innerHTML = `
+      <div class="page-header"><h2>Comunidad — Administración</h2><p>Publica eventos y terapias disponibles.</p></div>
+      <div class="card">
+        <div class="card-title">Nuevo evento</div>
+        <div class="grid-3">
+          <div class="field"><label>Título</label><input id="ev-new-title"></div>
+          <div class="field"><label>Fecha</label><input type="datetime-local" id="ev-new-date"></div>
+          <div class="field"><label>Lugar</label><input id="ev-new-location"></div>
+        </div>
+        <div class="field"><label>Descripción</label><textarea id="ev-new-desc" rows="2"></textarea></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createEvent()">Publicar evento</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Eventos publicados</div>
+        ${events.map(e => `<div class="list-row"><div>${e.title}</div><button class="small-btn" onclick="deleteEvent('${e.id}')">Eliminar</button></div>`).join('') || '<div class="empty-state">Sin eventos.</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title">Nueva terapia</div>
+        <div class="grid-3">
+          <div class="field"><label>Título</label><input id="th-new-title"></div>
+          <div class="field"><label>Proveedor</label><input id="th-new-provider"></div>
+          <div class="field"><label>Descuento (%)</label><input type="number" id="th-new-discount"></div>
+        </div>
+        <div class="field"><label>Descripción</label><textarea id="th-new-desc" rows="2"></textarea></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createTherapy()">Publicar terapia</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Terapias publicadas</div>
+        ${therapies.map(t => `<div class="list-row"><div>${t.title}</div><button class="small-btn" onclick="deleteTherapy('${t.id}')">Eliminar</button></div>`).join('') || '<div class="empty-state">Sin terapias.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function createEvent() {
+  const payload = {
+    title: document.getElementById('ev-new-title').value,
+    event_date: document.getElementById('ev-new-date').value || null,
+    location: document.getElementById('ev-new-location').value,
+    description: document.getElementById('ev-new-desc').value,
+  };
+  try { await api('/api/community/events', { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteEvent(id) {
+  try { await api(`/api/community/events/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function createTherapy() {
+  const payload = {
+    title: document.getElementById('th-new-title').value,
+    provider: document.getElementById('th-new-provider').value,
+    discount_pct: document.getElementById('th-new-discount').value || 0,
+    description: document.getElementById('th-new-desc').value,
+  };
+  try { await api('/api/community/therapies', { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteTherapy(id) {
+  try { await api(`/api/community/therapies/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+
+boot();
+</script>
+</body>
+</html>
