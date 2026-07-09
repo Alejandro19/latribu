@@ -963,6 +963,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`La Tribu — servidor escuchando en el puerto ${PORT}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`La Tribu — servidor escuchando en el puerto ${PORT}`);
+  });
+}
+
+module.exports = app;
