@@ -952,6 +952,17 @@ app.post('/api/clients/:id/ocr-vision', authMiddleware, ownerOrAdmin, async (req
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/') || req.path === '/health') {
+    return res.status(404).json({ success: false, error: 'Ruta no encontrada.' });
+  }
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 app.listen(PORT, () => {
   console.log(`La Tribu — servidor escuchando en el puerto ${PORT}`);
 });
