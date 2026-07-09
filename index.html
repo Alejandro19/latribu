@@ -61,6 +61,12 @@ input,select,textarea{font-family:inherit;}
 .chip{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--cream);font-size:13px;font-weight:600;margin:4px 6px 4px 0;cursor:pointer;color:var(--ink-soft);}
 .chip.selected{background:var(--terracota);border-color:var(--terracota);color:#fff;}
 
+.city-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--paper);border:1px solid var(--line);border-radius:10px;max-height:200px;overflow-y:auto;z-index:20;box-shadow:0 8px 24px rgba(43,36,32,.12);margin-top:4px;}
+.city-dropdown-item{padding:10px 14px;font-size:14px;cursor:pointer;}
+.city-dropdown-item:hover{background:var(--cream);}
+.bf-drop{border:2px dashed var(--line);border-radius:14px;padding:22px;text-align:center;cursor:pointer;color:var(--ink-soft);font-weight:600;background:var(--cream);}
+.bf-drop:hover{border-color:var(--terracota);color:var(--terracota);}
+
 .wizard-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px;}
 .wizard-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--cream);color:var(--ink-soft);border:1px solid var(--line);}
 .wizard-dot.done{background:var(--sage);color:#fff;border-color:var(--sage);}
@@ -204,7 +210,6 @@ async function boot() {
 
 const CLIENT_NAV = [
   { key: 'personal-info', label: 'Información Personal' },
-  { key: 'body', label: 'Composición Corporal' },
   { key: 'training', label: 'Entrenamiento' },
   { key: 'nutrition', label: 'Nutrición' },
   { key: 'supplementation', label: 'Suplementación' },
@@ -237,7 +242,6 @@ function renderMain() {
   el.innerHTML = '<div class="empty-state">Cargando…</div>';
   const routes = {
     'personal-info': renderPersonalInfo,
-    'body': renderBody,
     'training': renderTraining,
     'nutrition': renderNutrition,
     'supplementation': renderSupplementation,
@@ -258,13 +262,10 @@ function currentClientId() {
 // ---------------- Módulo: Información Personal (wizard, diseño propio) ----------------
 
 const ONBOARDING_MODULES = [
-  { n: 1, title: 'Perfil Personal', fields: [
+  { n: 1, title: 'Perfil Personal', custom: 'country', fields: [
     { id: 'birthdate', label: 'Fecha de nacimiento', type: 'date' },
     { id: 'gender', label: 'Género', type: 'select', options: ['Masculino', 'Femenino', 'Otro'] },
     { id: 'occupation', label: 'Ocupación', type: 'text' },
-    { id: 'country', label: 'País de residencia', type: 'text' },
-    { id: 'city', label: 'Ciudad', type: 'text' },
-    { id: 'phone_number', label: 'Celular (WhatsApp)', type: 'text' },
     { id: 'marital_status', label: 'Estado civil', type: 'select', options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Divorciado/a'] },
   ]},
   { n: 2, title: 'Vida Profesional', fields: [
@@ -274,11 +275,7 @@ const ONBOARDING_MODULES = [
     { id: 'work_place', label: 'Lugar de trabajo', type: 'select', options: ['Oficina', 'Remoto', 'Híbrido', 'Campo/Obra'] },
     { id: 'time_control', label: 'Control sobre tu horario', type: 'select', options: ['Alto', 'Medio', 'Bajo'] },
   ]},
-  { n: 3, title: 'Composición Corporal', fields: [
-    { id: 'weight', label: 'Peso (kg)', type: 'number', structured: true },
-    { id: 'height', label: 'Estatura (cm)', type: 'number', structured: true },
-    { id: 'body_fat', label: '% Grasa corporal (si lo conoces)', type: 'number', structured: true },
-  ], note: 'Las medidas de cintura, brazos, hombros, piernas y glúteo, además de tus fotos de progreso, se registran en el módulo "Composición Corporal" del menú principal.' },
+  { n: 3, title: 'Composición Corporal', custom: 'body', fields: [] },
   { n: 4, title: 'Historial de Salud', fields: [
     { id: 'condition', label: 'Condición médica diagnosticada', type: 'select', options: ['Ninguna', 'Diabetes', 'Hipertensión', 'Hipotiroidismo', 'Síndrome metabólico', 'PCOS', 'Otra'] },
     { id: 'meds', label: '¿Tomas medicamentos actualmente?', type: 'text' },
@@ -289,11 +286,27 @@ const ONBOARDING_MODULES = [
   ]},
   { n: 5, title: 'Alimentación', fields: [
     { id: 'meals_per_day', label: 'Comidas por día', type: 'number' },
+    { id: 'first_meal', label: 'Primera comida (hora)', type: 'time' },
+    { id: 'last_meal', label: 'Última comida (hora)', type: 'time' },
     { id: 'water_liters', label: 'Litros de agua al día', type: 'number' },
+    { id: 'proteins', label: 'Proteínas que más consumes', type: 'chips', options: ['Pollo', 'Res', 'Pescado', 'Huevo', 'Legumbres', 'Tofu', 'Otro'] },
+    { id: 'carbs', label: 'Carbohidratos que más consumes', type: 'chips', options: ['Arroz', 'Papa', 'Avena', 'Pan integral', 'Quinoa', 'Fruta', 'Otro'] },
+    { id: 'fats', label: 'Grasas que más consumes', type: 'chips', options: ['Aguacate', 'Aceite de oliva', 'Frutos secos', 'Mantequilla', 'Otro'] },
+    { id: 'dairy', label: 'Tolerancia a lácteos', type: 'select', options: ['Sin problema', 'Leve intolerancia', 'Intolerante', 'No consumo'] },
+    { id: 'probiotics', label: '¿Consumes probióticos?', type: 'select', options: ['Sí', 'No'] },
+    { id: 'probiotics_types', label: '¿Cuáles probióticos?', type: 'chips', options: ['Yogur griego', 'Kéfir', 'Kombucha', 'Suplemento', 'Otro'] },
+    { id: 'eating_out', label: 'Frecuencia de comer fuera', type: 'select', options: ['Nunca', '1-2 veces/semana', '3+ veces/semana', 'Diario'] },
+    { id: 'snacks', label: 'Consumo de snacks entre comidas', type: 'select', options: ['Nunca', 'A veces', 'Siempre'] },
+    { id: 'caffeine_cups', label: 'Tazas de café/cafeína al día', type: 'number' },
+    { id: 'last_coffee', label: 'Hora del último café', type: 'time' },
+    { id: 'alcohol', label: 'Consumo de alcohol', type: 'select', options: ['Nunca', 'Ocasional', '1-2x semana', '3+ veces semana'] },
     { id: 'diet_type', label: 'Tipo de dieta', type: 'select', options: ['Omnívoro', 'Vegetariano', 'Vegano', 'Keto', 'Paleo', 'Otra'] },
     { id: 'fasting', label: '¿Practicas ayuno intermitente?', type: 'select', options: ['No', '16/8', '18/6', '20/4', '24h', 'Otro'] },
-    { id: 'caffeine_cups', label: 'Tazas de café/cafeína al día', type: 'number' },
-    { id: 'alcohol', label: 'Consumo de alcohol', type: 'select', options: ['Nunca', 'Ocasional', '1-2x semana', '3+ veces semana'] },
+    { id: 'ultraproc', label: 'Consumo de ultraprocesados', type: 'select', options: ['Bajo', 'Moderado', 'Alto'] },
+    { id: 'veggies', label: 'Consumo de verduras', type: 'select', options: ['Bajo', 'Moderado', 'Alto'] },
+    { id: 'supps_active', label: '¿Tomas suplementos actualmente?', type: 'select', options: ['Sí', 'No'] },
+    { id: 'supps_list', label: '¿Cuáles suplementos?', type: 'chips', options: ['Proteína', 'Creatina', 'Omega 3', 'Vitamina D', 'Magnesio', 'Zinc', 'B12', 'Colágeno', 'Otro'] },
+    { id: 'substances', label: 'Consumo de otras sustancias', type: 'select', options: ['No', 'Tabaco', 'Alcohol frecuente', 'Cannabis', 'Otra'] },
   ]},
   { n: 6, title: 'Sueño', fields: [
     { id: 'sleep_hours', label: 'Horas de sueño promedio', type: 'number' },
@@ -332,48 +345,85 @@ async function renderPersonalInfo(el) {
   try {
     const { personalInfo } = await api(`/api/clients/${clientId}/personal-info`);
     onboardingData = personalInfo.onboarding_report || {};
-    for (const f of ['birthdate','gender','occupation','country','city','phone_number','marital_status']) {
+    for (const f of ['birthdate','gender','occupation','country','city','phone_code','phone_number','marital_status']) {
       if (personalInfo[f] !== undefined && personalInfo[f] !== null) onboardingData[f] = personalInfo[f];
     }
     for (const f of ['weight','height','body_fat']) if (personalInfo[f] != null) onboardingData[f] = personalInfo[f];
-
-    const step = state.wizardStep || 1;
-    const mod = ONBOARDING_MODULES.find(m => m.n === step);
-
-    el.innerHTML = `
-      <div class="page-header">
-        <h2>Información Personal</h2>
-        <p>Conocerte nos permite diseñar tu experiencia dentro de La Tribu.</p>
-      </div>
-      <div class="wizard-steps">
-        ${ONBOARDING_MODULES.map(m => `<div class="wizard-dot ${m.n < step ? 'done' : ''} ${m.n === step ? 'current' : ''}" onclick="setStep(${m.n})">${m.n}</div>`).join('')}
-      </div>
-      <div class="card">
-        <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
-        ${mod.note ? `<p style="color:var(--ink-soft);font-size:14px;margin-top:-8px;">${mod.note}</p>` : ''}
-        <div class="grid-2" id="module-fields">
-          ${mod.fields.map(f => renderField(f)).join('')}
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:24px;">
-          <button class="btn btn-ghost" ${step === 1 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step - 1})">Anterior</button>
-          <button class="btn btn-primary" style="width:auto" onclick="saveOnboardingStep(${step})">${step === 9 ? 'Finalizar' : 'Guardar y continuar'}</button>
-        </div>
-      </div>
-    `;
+    renderPersonalInfoBody(el);
   } catch (e) {
     el.innerHTML = `<div class="error-msg">${e.message}</div>`;
   }
 }
 
+function renderPersonalInfoBody(el) {
+  const step = state.wizardStep || 1;
+  const mod = ONBOARDING_MODULES.find(m => m.n === step);
+  const saveFn = mod.custom === 'country' ? 'saveModule1()' : mod.custom === 'body' ? 'saveModule3()' : `saveOnboardingStep(${step})`;
+  el.innerHTML = `
+    <div class="page-header">
+      <h2>Información Personal</h2>
+      <p>Conocerte nos permite diseñar tu experiencia dentro de La Tribu.</p>
+    </div>
+    <div class="wizard-steps">
+      ${ONBOARDING_MODULES.map(m => `<div class="wizard-dot ${m.n < step ? 'done' : ''} ${m.n === step ? 'current' : ''}" onclick="setStep(${m.n})">${m.n}</div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
+      <div class="grid-2" id="module-fields">
+        ${mod.fields.map(f => renderField(f)).join('')}
+      </div>
+      ${mod.custom === 'country' ? renderCountryBlock() : ''}
+      ${mod.custom === 'body' ? renderBodyModuleBlock() : ''}
+      <div style="display:flex;justify-content:space-between;margin-top:24px;">
+        <button class="btn btn-ghost" ${step === 1 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step - 1})">Anterior</button>
+        <button class="btn btn-primary" style="width:auto" onclick="${saveFn}">${step === 9 ? 'Finalizar' : 'Guardar y continuar'}</button>
+      </div>
+    </div>
+  `;
+  if (mod.custom === 'country') m1Init();
+  if (mod.custom === 'body') initModule3();
+}
+
 function renderField(f) {
-  const val = onboardingData[f.id] ?? '';
+  const val = onboardingData[f.id];
   if (f.type === 'select') {
     return `<div class="field"><label>${f.label}</label><select id="field-${f.id}">
       <option value="">Selecciona…</option>
       ${f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
     </select></div>`;
   }
-  return `<div class="field"><label>${f.label}</label><input type="${f.type}" id="field-${f.id}" value="${val}"></div>`;
+  if (f.type === 'chips') {
+    const selected = Array.isArray(val) ? val : [];
+    return `<div class="field" style="grid-column:1 / -1;">
+      <label>${f.label}</label>
+      <div>${f.options.map(o => `<span class="chip ${selected.includes(o) ? 'selected' : ''}" onclick="toggleChip('${f.id}','${o.replace(/'/g,"\\'")}')">${o}</span>`).join('')}</div>
+      ${selected.includes('Otro') ? `<input type="text" style="margin-top:8px" placeholder="Especifica…" id="field-${f.id}-otro" value="${onboardingData[f.id + '_otro'] || ''}">` : ''}
+    </div>`;
+  }
+  return `<div class="field"><label>${f.label}</label><input type="${f.type}" id="field-${f.id}" value="${val ?? ''}"></div>`;
+}
+
+function toggleChip(fieldId, option) {
+  syncStepFieldsFromDOM(state.wizardStep);
+  const cur = Array.isArray(onboardingData[fieldId]) ? onboardingData[fieldId].slice() : [];
+  const idx = cur.indexOf(option);
+  if (idx >= 0) cur.splice(idx, 1); else cur.push(option);
+  onboardingData[fieldId] = cur;
+  renderPersonalInfoBody(document.getElementById('main-content'));
+}
+
+function syncStepFieldsFromDOM(step) {
+  const mod = ONBOARDING_MODULES.find(m => m.n === step);
+  if (!mod) return;
+  mod.fields.forEach(f => {
+    if (f.type === 'chips') {
+      const otroInput = document.getElementById(`field-${f.id}-otro`);
+      if (otroInput) onboardingData[f.id + '_otro'] = otroInput.value;
+      return;
+    }
+    const input = document.getElementById(`field-${f.id}`);
+    if (input) onboardingData[f.id] = input.value;
+  });
 }
 
 function setStep(n) {
@@ -385,16 +435,8 @@ function setStep(n) {
 async function saveOnboardingStep(step) {
   const mod = ONBOARDING_MODULES.find(m => m.n === step);
   const clientId = currentClientId();
-  const structuredKeys = ['birthdate','gender','occupation','country','city','phone_number','marital_status','weight','height','body_fat'];
-  const payload = { onboarding_report: onboardingData };
-  mod.fields.forEach(f => {
-    const input = document.getElementById(`field-${f.id}`);
-    const v = input.value;
-    onboardingData[f.id] = v;
-    if (structuredKeys.includes(f.id)) payload[f.id] = v;
-  });
-  payload.onboarding_report = onboardingData;
-  payload.complete = step === 9;
+  syncStepFieldsFromDOM(step);
+  const payload = { onboarding_report: onboardingData, complete: step === 9 };
   try {
     await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
     if (step < 9) setStep(step + 1);
@@ -404,85 +446,556 @@ async function saveOnboardingStep(step) {
   }
 }
 
-// ---------------- Módulo: Composición Corporal (medidas + fotos) ----------------
+// ---------------- Módulo 1: País / Ciudad / Indicativo telefónico ----------------
 
-async function renderBody(el) {
+let _m1Countries = null;
+let _m1CitiesCache = {};
+
+function renderCountryBlock() {
+  return `
+    <div class="grid-2" style="margin-top:16px">
+      <div class="field">
+        <label>País de residencia</label>
+        <select id="m1-pais" onchange="m1OnCountryChange(this)">
+          <option value="">Cargando países…</option>
+        </select>
+      </div>
+      <div class="field" style="position:relative">
+        <label>Ciudad</label>
+        <input id="m1-city" type="text" disabled style="opacity:.4" placeholder="Primero selecciona tu país"
+          oninput="m1FilterCities(this)"
+          onblur="setTimeout(function(){var d=document.getElementById('m1-city-dropdown');if(d)d.remove();},200)">
+      </div>
+      <div class="field">
+        <label>Celular (WhatsApp)</label>
+        <div style="display:flex;gap:8px">
+          <select id="m1-phone-code" style="width:120px"><option value="+57">+57</option></select>
+          <input id="m1-phone-num" type="tel" placeholder="300 123 4567" style="flex:1">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function m1Init() {
+  if (!_m1Countries) {
+    const r = await api('/api/countries');
+    _m1Countries = r.data || { priority: [], rest: [] };
+  }
+  const sel = document.getElementById('m1-pais');
+  if (!sel) return;
+  const cur = onboardingData.country || '';
+  const makeOpt = c => `<option value="${c.isoCode}" ${cur === c.isoCode ? 'selected' : ''}>${c.flag} ${c.name}</option>`;
+  let opts = '<option value="">Selecciona tu país…</option>';
+  opts += `<optgroup label="Países frecuentes">${(_m1Countries.priority || []).map(makeOpt).join('')}</optgroup>`;
+  opts += `<optgroup label="Todos los países">${(_m1Countries.rest || []).map(makeOpt).join('')}</optgroup>`;
+  sel.innerHTML = opts;
+
+  m1PopulatePhoneCodes();
+  const numInput = document.getElementById('m1-phone-num');
+  if (numInput) {
+    const stored = onboardingData.phone_number || '';
+    const m = stored.match(/^\+\d+\s(.*)$/);
+    numInput.value = m ? m[1] : stored;
+  }
+  if (cur) m1LoadCities(cur, onboardingData.city || '');
+}
+
+function m1PopulatePhoneCodes() {
+  const sel = document.getElementById('m1-phone-code');
+  if (!sel || !_m1Countries) return;
+  const savedMatch = (onboardingData.phone_number || '').match(/^(\+\d+)/);
+  const savedCode = savedMatch ? savedMatch[1] : (onboardingData.phone_code || '+57');
+  const all = (_m1Countries.priority || []).concat(_m1Countries.rest || []);
+  const seen = {};
+  sel.innerHTML = all.filter(c => c.phonecode && !seen[c.phonecode] && (seen[c.phonecode] = 1))
+    .map(c => `<option value="+${c.phonecode}" ${savedCode === '+' + c.phonecode ? 'selected' : ''}>${c.flag} +${c.phonecode}</option>`).join('');
+}
+
+async function m1LoadCities(isoCode, preselected) {
+  const input = document.getElementById('m1-city');
+  if (!input) return;
+  input.disabled = false; input.style.opacity = '1';
+  if (!_m1CitiesCache[isoCode]) {
+    input.placeholder = 'Cargando ciudades…';
+    const r = await api('/api/cities/' + isoCode);
+    _m1CitiesCache[isoCode] = r.data || [];
+  }
+  input.placeholder = 'Busca tu ciudad…';
+  if (preselected) input.value = preselected;
+}
+
+function m1FilterCities(input) {
+  const iso = (document.getElementById('m1-pais') || {}).value;
+  const existing = document.getElementById('m1-city-dropdown');
+  if (existing) existing.remove();
+  if (!iso || !_m1CitiesCache[iso]) return;
+  const q = input.value.toLowerCase().trim();
+  const filtered = _m1CitiesCache[iso].filter(c => c.toLowerCase().startsWith(q)).slice(0, 15);
+  if (!filtered.length) return;
+  const dd = document.createElement('div');
+  dd.id = 'm1-city-dropdown';
+  dd.className = 'city-dropdown';
+  dd.innerHTML = filtered.map(c => `<div class="city-dropdown-item" onmousedown="m1SelectCity('${c.replace(/'/g,"\\'")}')">${c}</div>`).join('');
+  input.parentNode.style.position = 'relative';
+  input.parentNode.appendChild(dd);
+}
+
+function m1SelectCity(name) {
+  const input = document.getElementById('m1-city');
+  input.value = name;
+  onboardingData.city = name;
+  const dd = document.getElementById('m1-city-dropdown');
+  if (dd) dd.remove();
+}
+
+function m1OnCountryChange(sel) {
+  const iso = sel.value;
+  onboardingData.country = iso;
+  const cityInput = document.getElementById('m1-city');
+  cityInput.value = ''; onboardingData.city = '';
+  if (!iso) {
+    cityInput.disabled = true; cityInput.style.opacity = '.4';
+    cityInput.placeholder = 'Primero selecciona tu país';
+    return;
+  }
+  m1LoadCities(iso);
+}
+
+async function saveModule1() {
+  const clientId = currentClientId();
+  syncStepFieldsFromDOM(1);
+  const country = document.getElementById('m1-pais').value;
+  const city = document.getElementById('m1-city').value;
+  const phoneCode = document.getElementById('m1-phone-code').value;
+  const phoneNum = document.getElementById('m1-phone-num').value;
+  onboardingData.country = country;
+  onboardingData.city = city;
+  onboardingData.phone_code = phoneCode;
+  onboardingData.phone_number = phoneNum ? `${phoneCode} ${phoneNum}` : '';
+  const payload = {
+    birthdate: onboardingData.birthdate, gender: onboardingData.gender,
+    occupation: onboardingData.occupation, marital_status: onboardingData.marital_status,
+    country, city, phone_code: phoneCode, phone_number: onboardingData.phone_number,
+    onboarding_report: onboardingData, complete: false
+  };
+  try {
+    await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
+    setStep(2);
+  } catch (e) { alert('Error al guardar: ' + e.message); }
+}
+
+// ---------------- Módulo 3: Composición Corporal (dentro de Información Personal) ----------------
+
+function renderBodyModuleBlock() {
+  return `
+    <div class="grid-2">
+      <div class="field"><label>Peso (kg)</label><input type="number" id="field-weight" value="${onboardingData.weight ?? ''}"></div>
+      <div class="field"><label>Estatura (cm)</label><input type="number" id="field-height" value="${onboardingData.height ?? ''}"></div>
+      <div class="field"><label>% Grasa corporal (si lo conoces)</label><input type="number" id="field-body_fat" value="${onboardingData.body_fat ?? ''}"></div>
+    </div>
+
+    <div style="margin:24px 0 8px;font-weight:700;">Cargar análisis InBody</div>
+    <p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">Sube el PDF o una foto de tu reporte InBody y completaremos los campos automáticamente.</p>
+    <div class="bf-drop" onclick="document.getElementById('m3-pdf-input').click()">
+      Subir PDF o foto del análisis InBody
+      <input type="file" id="m3-pdf-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="m3HandlePdf(this)">
+    </div>
+    <div id="m3-ocr-status" style="font-size:13px;margin:8px 0;"></div>
+    <div id="m3-version-label" style="font-size:12px;color:var(--ink-soft);display:none;margin-bottom:8px;"></div>
+    <div class="grid-3">
+      <div class="field"><label>Peso total (InBody)</label><input type="number" id="m3-peso-total" onchange="m3UpdateIMC()"></div>
+      <div class="field"><label>Masa muscular esquelética</label><input type="number" id="m3-smm"></div>
+      <div class="field"><label>% Grasa corporal</label><input type="number" id="m3-grasa-pct"></div>
+      <div class="field"><label>Peso objetivo</label><input type="number" id="m3-peso-objetivo"></div>
+      <div class="field"><label>Grasa visceral</label><input type="number" id="m3-grasa-visceral"></div>
+      <div class="field"><label>Metabolismo basal (BMR)</label><input type="number" id="m3-bmr"></div>
+      <div class="field"><label>Ángulo de fase</label><input type="number" step="0.01" id="m3-angulo-fase"></div>
+      <div class="field"><label>Agua corporal total (L)</label><input type="number" step="0.1" id="m3-ecw-tbw"></div>
+      <div class="field"><label>Masa ósea</label><input type="number" step="0.01" id="m3-masa-osea"></div>
+      <div class="field"><label>Estatura (InBody)</label><input type="number" id="m3-height" onchange="m3UpdateIMC()"></div>
+      <div class="field"><label>IMC calculado</label><input type="text" id="m3-imc-display" disabled></div>
+    </div>
+    <div id="m3-inbody-history"></div>
+
+    <div style="margin:24px 0 8px;font-weight:700;">Medidas antropométricas</div>
+    <div class="grid-3">
+      <div class="field"><label>Cintura (cm)</label><input type="number" id="am-cintura"></div>
+      <div class="field"><label>Brazos (cm)</label><input type="number" id="am-brazos"></div>
+      <div class="field"><label>Hombros (cm)</label><input type="number" id="am-hombros"></div>
+      <div class="field"><label>Piernas (cm)</label><input type="number" id="am-piernas"></div>
+      <div class="field"><label>Glúteo (cm)</label><input type="number" id="am-gluteo"></div>
+    </div>
+    <div id="m3-history" class="empty-state">Cargando historial…</div>
+
+    <div style="margin:24px 0 8px;font-weight:700;">Fotos de progreso</div>
+    <div class="grid-2">
+      <div class="field"><label>Ángulo</label><select id="photo-angle">
+        <option value="frente">Frente</option><option value="perfil">Perfil</option><option value="espalda">Espalda</option>
+      </select></div>
+      <div class="field"><label>Foto</label><input type="file" id="photo-file" accept="image/*"></div>
+    </div>
+    <div id="m3-gallery" style="margin-top:8px;"></div>
+  `;
+}
+
+async function initModule3() {
   const clientId = currentClientId();
   try {
-    const [{ records }, { photos }] = await Promise.all([
+    const [{ records }, { photos }, { records: inbodyRecords }] = await Promise.all([
       api(`/api/clients/${clientId}/anthropometrics`),
-      api(`/api/clients/${clientId}/photos`)
+      api(`/api/clients/${clientId}/photos`),
+      api(`/api/clients/${clientId}/inbody-records`)
     ]);
-    el.innerHTML = `
-      <div class="page-header"><h2>Composición Corporal</h2><p>Registra tus medidas y fotos para comparar tu progreso.</p></div>
-      <div class="card">
-        <div class="card-title">Nueva medición</div>
-        <div class="grid-3">
-          <div class="field"><label>Fecha</label><input type="date" id="am-fecha" value="${new Date().toISOString().slice(0,10)}"></div>
-          <div class="field"><label>Peso (kg)</label><input type="number" id="am-peso"></div>
-          <div class="field"><label>Cintura (cm)</label><input type="number" id="am-cintura"></div>
-          <div class="field"><label>Brazos (cm)</label><input type="number" id="am-brazos"></div>
-          <div class="field"><label>Hombros (cm)</label><input type="number" id="am-hombros"></div>
-          <div class="field"><label>Piernas (cm)</label><input type="number" id="am-piernas"></div>
-          <div class="field"><label>Glúteo (cm)</label><input type="number" id="am-gluteo"></div>
-        </div>
-        <button class="btn btn-primary" style="width:auto" onclick="saveAnthropometrics()">Guardar medición</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Subir foto de progreso</div>
-        <div class="grid-2">
-          <div class="field"><label>Ángulo</label><select id="photo-angle">
-            <option value="frente">Frente</option><option value="perfil">Perfil</option><option value="espalda">Espalda</option>
-          </select></div>
-          <div class="field"><label>Foto</label><input type="file" id="photo-file" accept="image/*"></div>
-        </div>
-        <button class="btn btn-primary" style="width:auto" onclick="uploadPhoto()">Subir foto</button>
-      </div>
-      <div class="card">
-        <div class="card-title">Historial de medidas</div>
-        ${records.length ? `<table><thead><tr><th>Fecha</th><th>Peso</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
-        <tbody>${records.map(r => `<tr><td>${r.fecha}</td><td>${r.peso ?? '-'}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>`
-        : '<div class="empty-state">Aún no tienes mediciones registradas.</div>'}
-      </div>
-      <div class="card">
-        <div class="card-title">Galería de progreso</div>
-        ${photos.length ? `<div class="grid-3">${photos.map(p => `<div><img class="photo-thumb" src="${p.photo_url}"><p style="text-align:center;font-size:12px;color:var(--ink-soft);">${p.angle} · ${p.fecha}</p></div>`).join('')}</div>`
-        : '<div class="empty-state">Aún no has subido fotos.</div>'}
-      </div>
-    `;
+    const histEl = document.getElementById('m3-history');
+    if (histEl) {
+      histEl.outerHTML = records.length ? `<table id="m3-history"><thead><tr><th>Fecha</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
+        <tbody>${records.map(r => `<tr><td>${r.fecha}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>`
+        : '<div class="empty-state" id="m3-history">Aún no tienes medidas registradas.</div>';
+    }
+    const galEl = document.getElementById('m3-gallery');
+    if (galEl) {
+      galEl.innerHTML = photos.length ? `<div class="grid-3">${photos.map(p => `<div><img class="photo-thumb" src="${p.photo_url}"><p style="text-align:center;font-size:12px;color:var(--ink-soft);">${p.angle} · ${p.fecha}</p></div>`).join('')}</div>` : '<div class="empty-state">Aún no has subido fotos.</div>';
+    }
+    const ibEl = document.getElementById('m3-inbody-history');
+    if (ibEl) {
+      ibEl.innerHTML = inbodyRecords.length ? `<p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">Últimos registros InBody: ${inbodyRecords.slice(-3).map(r => `${r.fecha} (${r.peso_total ?? '-'} kg, ${r.grasa_pct ?? '-'}% grasa)`).join(' · ')}</p>` : '';
+    }
+  } catch (e) { console.error(e); }
+}
+
+async function saveModule3() {
+  const clientId = currentClientId();
+  const weight = document.getElementById('field-weight').value || null;
+  const payload = {
+    weight, height: document.getElementById('field-height').value || null,
+    body_fat: document.getElementById('field-body_fat').value || null,
+    onboarding_report: onboardingData, complete: false
+  };
+  try {
+    await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
+
+    const cintura = document.getElementById('am-cintura').value;
+    const brazos = document.getElementById('am-brazos').value;
+    const hombros = document.getElementById('am-hombros').value;
+    const piernas = document.getElementById('am-piernas').value;
+    const gluteo = document.getElementById('am-gluteo').value;
+    if (cintura || brazos || hombros || piernas || gluteo) {
+      await api(`/api/clients/${clientId}/anthropometrics`, { method: 'POST', body: JSON.stringify({
+        fecha: new Date().toISOString().slice(0, 10), peso: weight,
+        cintura: cintura || null, brazos: brazos || null, hombros: hombros || null, piernas: piernas || null, gluteo: gluteo || null
+      })});
+    }
+
+    const fileInput = document.getElementById('photo-file');
+    if (fileInput && fileInput.files[0]) {
+      const fd = new FormData();
+      fd.append('photo', fileInput.files[0]);
+      fd.append('angle', document.getElementById('photo-angle').value);
+      await api(`/api/clients/${clientId}/photos`, { method: 'POST', body: fd });
+    }
+
+    const pesoTotal = document.getElementById('m3-peso-total').value;
+    if (window._m3OcrDone && pesoTotal) {
+      await api(`/api/clients/${clientId}/inbody-records`, { method: 'POST', body: JSON.stringify({
+        fecha: new Date().toISOString().slice(0, 10), version: window._m3InbodyVersion || null,
+        peso_total: pesoTotal || null, smm: document.getElementById('m3-smm').value || null,
+        grasa_pct: document.getElementById('m3-grasa-pct').value || null,
+        imc: (document.getElementById('m3-imc-display').value || null),
+        peso_objetivo: document.getElementById('m3-peso-objetivo').value || null,
+        grasa_visceral: document.getElementById('m3-grasa-visceral').value || null,
+        bmr: document.getElementById('m3-bmr').value || null,
+        angulo_fase: document.getElementById('m3-angulo-fase').value || null,
+        ecw_tbw: document.getElementById('m3-ecw-tbw').value || null,
+        masa_osea: document.getElementById('m3-masa-osea').value || null,
+        altura: document.getElementById('m3-height').value || null,
+      })});
+      window._m3OcrDone = false;
+    }
+    setStep(4);
   } catch (e) {
-    el.innerHTML = `<div class="error-msg">${e.message}</div>`;
+    alert('Error al guardar: ' + e.message);
   }
 }
 
-async function saveAnthropometrics() {
-  const clientId = currentClientId();
-  const payload = {
-    fecha: document.getElementById('am-fecha').value,
-    peso: document.getElementById('am-peso').value || null,
-    cintura: document.getElementById('am-cintura').value || null,
-    brazos: document.getElementById('am-brazos').value || null,
-    hombros: document.getElementById('am-hombros').value || null,
-    piernas: document.getElementById('am-piernas').value || null,
-    gluteo: document.getElementById('am-gluteo').value || null,
-  };
-  try {
-    await api(`/api/clients/${clientId}/anthropometrics`, { method: 'POST', body: JSON.stringify(payload) });
-    renderMain();
-  } catch (e) { alert('Error: ' + e.message); }
+function m3UpdateIMC() {
+  const w = parseFloat(document.getElementById('m3-peso-total').value || 0);
+  const h = parseFloat(document.getElementById('m3-height').value || 0);
+  const el = document.getElementById('m3-imc-display');
+  if (!el) return;
+  el.value = (w > 0 && h > 0) ? (w / Math.pow(h / 100, 2)).toFixed(1) : '';
 }
 
-async function uploadPhoto() {
+async function m3HandlePdf(input) {
+  const file = input.files[0]; if (!file) return;
+  const st = document.getElementById('m3-ocr-status');
   const clientId = currentClientId();
-  const fileInput = document.getElementById('photo-file');
-  if (!fileInput.files[0]) return alert('Selecciona una foto.');
-  const fd = new FormData();
-  fd.append('photo', fileInput.files[0]);
-  fd.append('angle', document.getElementById('photo-angle').value);
+
+  if (file.size > 25 * 1024 * 1024) {
+    if (st) { st.style.color = 'var(--danger)'; st.textContent = '✗ El archivo excede 25 MB.'; }
+    return;
+  }
+  if (st) { st.style.color = 'var(--sage)'; st.textContent = 'Procesando archivo…'; }
+
   try {
-    await api(`/api/clients/${clientId}/photos`, { method: 'POST', body: fd });
-    renderMain();
-  } catch (e) { alert('Error: ' + e.message); }
+    const base64 = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = (e) => {
+        const s = e.target.result;
+        const raw = s.includes(',') ? s.split(',')[1] : s;
+        if (file.type && file.type.startsWith('image/')) {
+          const img = new Image();
+          img.onload = () => {
+            const MAX = 1600;
+            let w = img.width, h = img.height;
+            if (w > MAX || h > MAX) { if (w > h) { h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; } }
+            const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+            cv.getContext('2d').drawImage(img, 0, 0, w, h);
+            try { resolve(cv.toDataURL('image/jpeg', 0.85).split(',')[1]); } catch (ex) { resolve(raw); }
+          };
+          img.onerror = () => resolve(raw);
+          img.src = s;
+        } else {
+          resolve(raw);
+        }
+      };
+      r.onerror = reject;
+      r.readAsDataURL(file);
+    });
+
+    if (st) st.textContent = 'Enviando a análisis…';
+    const result = await api(`/api/clients/${clientId}/ocr-vision`, { method: 'POST', body: JSON.stringify({ base64 }) });
+    const text = result.text || '';
+    if (!text.trim()) throw new Error('No se pudo extraer texto. Exporta el reporte como JPG/PNG e intenta de nuevo.');
+
+    const parsed = m3ParseOcrText(text);
+    const count = Object.keys(parsed).filter(k => k.charAt(0) !== '_').length;
+    if (count === 0) throw new Error('No se detectaron campos. Intenta con una captura JPG/PNG del reporte InBody.');
+
+    const FIELD_MAP = {
+      peso_total: 'm3-peso-total', smm: 'm3-smm', grasa_pct: 'm3-grasa-pct',
+      peso_objetivo: 'm3-peso-objetivo', grasa_visceral: 'm3-grasa-visceral',
+      bmr: 'm3-bmr', angulo_fase: 'm3-angulo-fase', ecw_tbw: 'm3-ecw-tbw',
+      masa_osea: 'm3-masa-osea', height: 'm3-height'
+    };
+    Object.values(FIELD_MAP).forEach(elId => { const el = document.getElementById(elId); if (el) el.value = ''; });
+    Object.keys(parsed).forEach(k => {
+      const elId = FIELD_MAP[k]; if (!elId) return;
+      const el = document.getElementById(elId); if (!el) return;
+      el.value = parsed[k];
+    });
+    m3UpdateIMC();
+    window._m3OcrDone = true;
+    window._m3InbodyVersion = parsed._version || null;
+    const verLbl = document.getElementById('m3-version-label');
+    if (parsed._version && verLbl) { verLbl.textContent = 'Detectado: ' + parsed._version; verLbl.style.display = 'block'; }
+    if (st) { st.style.color = 'var(--sage)'; st.textContent = '✓ ' + count + ' campos detectados y rellenados'; }
+  } catch (e) {
+    let msg = e.message || 'Error al procesar el archivo.';
+    if (msg.toLowerCase().includes('forbidden') || msg.toLowerCase().includes('cloud vision api no habilitada')) msg = 'Cloud Vision API no habilitada en Google Cloud Console.';
+    else if (msg.toLowerCase().includes('no está configurada')) msg = 'Google Vision no está configurado en el servidor (falta GOOGLE_VISION_API_KEY).';
+    if (st) { st.style.color = 'var(--danger)'; st.textContent = '✗ ' + msg; }
+  }
+}
+
+// Parser InBody — mismo algoritmo que BIO360 (regex/heurísticas sobre el texto OCR),
+// portado tal cual porque su valor está en los rangos/ventanas de búsqueda ya validados.
+function m3ParseOcrText(text) {
+  const result = {};
+
+  function parseNum(s) {
+    if (s == null) return undefined;
+    const n = parseFloat(String(s).replace(',', '.'));
+    return isNaN(n) ? undefined : n;
+  }
+  function firstDecimal(str, min, max) {
+    const re = /([0-9]+[,.][0-9]+)/g; let m;
+    while ((m = re.exec(str)) !== null) {
+      const v = parseNum(m[1]);
+      if (v != null && (min == null || v >= min) && (max == null || v <= max)) return v;
+    }
+    return undefined;
+  }
+  function winOf(src, re, before, after) {
+    const norm = src.replace(/[áàâã]/gi,'a').replace(/[éèê]/gi,'e').replace(/[íì]/gi,'i').replace(/[óòô]/gi,'o').replace(/[úù]/gi,'u');
+    const idx = norm.search(re);
+    if (idx < 0) return '';
+    const start = Math.max(0, idx - (before || 0));
+    const end = Math.min(src.length, idx + (after || 200));
+    return src.slice(start, end);
+  }
+
+  let v, m;
+
+  // Versión InBody detectada en el encabezado
+  (function() {
+    const fechaIdx = text.search(/fecha[\s\/]*hora|date[\s\/]*time/i);
+    const hdrZone = fechaIdx > 0 ? text.slice(0, fechaIdx) : text.slice(0, 600);
+    const vM = hdrZone.match(/InBody\s*(\d[\w\-]*)/i);
+    if (vM) { result._version = 'InBody' + vM[1]; }
+    else { const vF = text.match(/InBody\s*(\d[\w\-]+)/i); result._version = vF ? ('InBody' + vF[1]) : null; }
+  })();
+
+  // Peso corporal — sección "Músculo-Grasa", último decimal antes de "MME"
+  (function() {
+    const mgRe = /m[uú]sculo[\s\-]+gras[ao]/i;
+    let mgIdx = text.search(mgRe); if (mgIdx < 0) mgIdx = 0;
+    const mmeIdx = text.slice(mgIdx).search(/\bmme\b/i);
+    if (mmeIdx >= 0) {
+      const zone = text.slice(mgIdx, mgIdx + mmeIdx);
+      const decs = [];
+      const dRe = /([0-9]+[,.][0-9]+)/g; let dm;
+      while ((dm = dRe.exec(zone)) !== null) { const dv = parseNum(dm[1]); if (dv != null && dv >= 40 && dv <= 250) decs.push(dv); }
+      if (decs.length > 0) { result.peso_total = decs[decs.length - 1]; return; }
+    }
+    const lines = text.split('\n');
+    for (let li = 0; li < lines.length && result.peso_total == null; li++) {
+      const ll = lines[li];
+      if (/\bpeso\b/i.test(ll) && !/ideal|control|libre|magra/i.test(ll)) {
+        const lw = ll + '\n' + (lines[li + 1] || '') + '\n' + (lines[li + 2] || '');
+        v = firstDecimal(lw, 40, 250);
+        if (v != null) result.peso_total = v;
+      }
+    }
+    if (result.peso_total == null) {
+      const pw = winOf(text, /\bpeso\b(?!\s*(?:ideal|control|libre|magra))/i, 0, 200);
+      if (pw) { v = firstDecimal(pw, 40, 250); if (v != null) result.peso_total = v; }
+    }
+  })();
+
+  // % Grasa corporal (PGC)
+  (function() {
+    let bmi = null;
+    if (result.peso_total) {
+      let htM = text.match(/\b(1[4-9][0-9]|2[0-2][0-9])\s*cm\b/i);
+      if (!htM) htM = text.match(/altura\s+([0-9]{3})/i);
+      if (htM) { const ht = parseInt(htM[1], 10); bmi = result.peso_total / Math.pow(ht / 100, 2); }
+    }
+    const pgcPos = []; const pgcRe = /\bpgc\b/gi; let pgcM;
+    while ((pgcM = pgcRe.exec(text)) !== null) pgcPos.push(pgcM.index);
+    const tries = pgcPos.length >= 2 ? [pgcPos[1], pgcPos[0]] : pgcPos.length >= 1 ? [pgcPos[0]] : [];
+    for (let ti = 0; ti < tries.length && result.grasa_pct == null; ti++) {
+      const pgcWin = text.slice(tries[ti], tries[ti] + 600);
+      const pctOff = pgcWin.search(/\(%\)/);
+      const searchFrom = pctOff >= 0 ? pgcWin.slice(pctOff + 3) : pgcWin;
+      const sfLines = searchFrom.split('\n');
+      for (let sfi = 0; sfi < sfLines.length && result.grasa_pct == null; sfi++) {
+        const sfl = sfLines[sfi].trim();
+        const sfDecs = sfl.match(/[0-9]+[,.][0-9]+/g);
+        if (sfDecs && sfDecs.length === 1) {
+          const sfV = parseNum(sfDecs[0]);
+          if (sfV != null && sfV >= 10 && sfV <= 65) {
+            if (Math.abs(sfV - Math.round(sfV)) < 0.01) continue;
+            if (/[0-9]\s*(?:kg|%)/i.test(sfl)) continue;
+            if (bmi && Math.abs(sfV - bmi) <= 0.8) continue;
+            if (result.peso_total != null && Math.abs(sfV - result.peso_total) <= 2) continue;
+            result.grasa_pct = sfV;
+          }
+        }
+      }
+    }
+  })();
+
+  // Peso ideal
+  const ctrlSec = winOf(text, /control\s+de\s+peso/i, 0, 400);
+  if (ctrlSec) {
+    const idealSecM = ctrlSec.match(/peso\s+ideal[\s\S]{0,40}?([0-9]+[,.][0-9]+)/i);
+    if (idealSecM) { v = parseNum(idealSecM[1]); if (v >= 30 && v <= 150) result.peso_objetivo = v; }
+  }
+  if (result.peso_objetivo == null) {
+    const idealRe = /ideal/gi; let idealM;
+    while ((idealM = idealRe.exec(text)) !== null) {
+      const iWin = text.slice(idealM.index, idealM.index + 100);
+      const iNumRe = /([0-9]+[,.][0-9]+)/g; let iDm;
+      while ((iDm = iNumRe.exec(iWin)) !== null) {
+        const iV = parseNum(iDm[1]);
+        if (iV == null || iV < 40 || iV > 150) continue;
+        if (result.peso_total != null && Math.abs(iV - result.peso_total) < 2) continue;
+        result.peso_objetivo = iV; break;
+      }
+      if (result.peso_objetivo != null) break;
+    }
+  }
+
+  // Grasa visceral
+  const viscIdx = text.search(/visceral/i);
+  if (viscIdx >= 0) {
+    const viscSnip = text.slice(viscIdx + 8, viscIdx + 150);
+    const viscClean = viscSnip.replace(/[0-9]+[,.][0-9]+/g, '');
+    const viscIntM = viscClean.match(/\b([0-9]{1,2})\b/);
+    if (viscIntM) { const vv = parseInt(viscIntM[1], 10); if (vv >= 1 && vv <= 20) result.grasa_visceral = vv; }
+  }
+  if (result.grasa_visceral == null) {
+    m = text.match(/([0-9]{1,2})\s*\(?\s*1\s*[~\-]\s*9\s*\)?/);
+    if (m) { const gvv = parseInt(m[1], 10); if (gvv >= 1 && gvv <= 20) result.grasa_visceral = gvv; }
+  }
+
+  // Metabolismo basal (BMR)
+  m = text.match(/tasa\s+metab[^\n]{0,30}?([0-9]{3,4})\s*kcal/i);
+  if (!m) m = text.match(/metab[a-záéíóú]{0,10}\s+basal[^0-9]{0,15}([0-9]{3,4})/i);
+  if (!m) m = text.match(/([0-9]{4})\s*kcal/i);
+  if (m) { v = parseInt(m[1], 10); if (v >= 600 && v <= 5000) result.bmr = v; }
+
+  // Agua corporal total
+  m = text.match(/agua\s+corporal\s+(?:total\s+)?\([Ll]\)[^0-9]{0,10}([0-9]+[,.][0-9]+)/i);
+  if (!m) m = text.match(/agua\s+corporal\s+total[^0-9]{0,15}([0-9]+[,.][0-9]+)/i);
+  if (!m) m = text.match(/agua\s+corporal[^0-9]{0,20}([0-9]+[,.][0-9]+)/i);
+  if (m) { v = parseNum(m[1]); if (v >= 15 && v <= 80) result.ecw_tbw = Math.round(v * 10) / 10; }
+
+  // Masa muscular esquelética (SMM/MME)
+  const smmLines = text.split('\n');
+  for (let si = 0; si < smmLines.length && result.smm == null; si++) {
+    const sLine = smmLines[si];
+    if (/m[uú]sculo\s+esqu/i.test(sLine) || /\bmme\s*\([Kk]g\)/i.test(sLine)) {
+      const sWin = sLine + '\n' + (smmLines[si+1]||'') + '\n' + (smmLines[si+2]||'') + '\n' + (smmLines[si+3]||'');
+      v = firstDecimal(sWin, 10, 60);
+      if (v != null) result.smm = v;
+    }
+  }
+  if (result.smm == null) {
+    const sWinG = winOf(text, /masa\s+de\s+m[uú]sculo/i, 0, 150);
+    if (sWinG) { v = firstDecimal(sWinG, 10, 60); if (v != null) result.smm = v; }
+  }
+
+  // Masa ósea (minerales)
+  (function() {
+    const secIdx = text.search(/[aá]n[aá]lisis\s+de\s+composici[oó]n\s+corporal/i);
+    const src = secIdx >= 0 ? text.slice(secIdx, secIdx + 800) : text;
+    const mm = src.match(/minerales\s*\(kg\)\s*([0-9]+[,.][0-9]+)/i);
+    if (mm) { const vv = parseNum(mm[1]); if (vv >= 1.5 && vv <= 5.5) { result.masa_osea = vv; return; } }
+    const lns = src.split('\n');
+    for (let li = 0; li < lns.length; li++) {
+      if (!/mineral/i.test(lns[li])) continue;
+      if (/prote[ií]/i.test(lns[li])) continue;
+      const nums = lns[li].match(/([0-9]+[,.][0-9]+)/g) || [];
+      for (let ni = 0; ni < nums.length; ni++) { const vv2 = parseNum(nums[ni]); if (vv2 >= 1.5 && vv2 <= 5.5) { result.masa_osea = vv2; return; } }
+      if (li + 1 < lns.length) {
+        const next = lns[li + 1].match(/([0-9]+[,.][0-9]+)/g) || [];
+        for (let ni2 = 0; ni2 < next.length; ni2++) { const vv3 = parseNum(next[ni2]); if (vv3 >= 1.5 && vv3 <= 5.5) { result.masa_osea = vv3; return; } }
+      }
+    }
+  })();
+
+  // Altura
+  m = text.match(/altura\s+([0-9]{3})\s*cm/i);
+  if (!m) m = text.match(/\b(1[4-9][0-9]|2[0-2][0-9])\s*cm\b/i);
+  if (m) result.height = parseInt(m[1], 10);
+
+  // Ángulo de fase
+  const afIdx = text.search(/[aá]ngulo\s+de\s+fase/i);
+  if (afIdx >= 0) {
+    const afWin = text.slice(afIdx, afIdx + 120);
+    const afM = afWin.match(/([0-9]+[,.][0-9]+)/);
+    if (afM) { v = parseNum(afM[1]); if (v >= 1 && v <= 15) result.angulo_fase = v; }
+  }
+
+  // Validación cruzada: SMM no puede superar la masa magra calculada
+  if (result.peso_total != null && result.grasa_pct != null && result.smm != null) {
+    const masaMagra = result.peso_total * (1 - result.grasa_pct / 100);
+    if (result.smm > masaMagra * 1.05) result.smm = null;
+  }
+
+  return result;
 }
 
 // ---------------- Módulo: Entrenamiento ----------------

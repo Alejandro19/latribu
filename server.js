@@ -4,16 +4,42 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const path = require('path');
+const https = require('https');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('@supabase/supabase-js');
 
+let pdfParse;
+try { pdfParse = require('pdf-parse'); } catch (e) { pdfParse = null; }
+
+let CSC;
+try { CSC = require('country-state-city'); } catch (e) { CSC = null; }
+
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_in_production';
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '8h';
 const BUCKET = process.env.SUPABASE_BUCKET || 'latribu-files';
+
+const PRIORITY_ISO = ['CO', 'MX', 'ES', 'AR', 'CL', 'PE', 'VE', 'EC', 'US', 'BO', 'PY', 'UY', 'CR', 'GT', 'HN', 'SV', 'NI', 'PA', 'CU', 'DO'];
+let _countriesCache = null;
+function getCountriesCache() {
+  if (_countriesCache) return _countriesCache;
+  if (!CSC) return { priority: [], rest: [] };
+  let displayNames;
+  try { displayNames = new Intl.DisplayNames(['es'], { type: 'region' }); } catch (e) {}
+  const all = CSC.Country.getAllCountries().map(c => {
+    let name = c.name;
+    try { if (displayNames) name = displayNames.of(c.isoCode) || c.name; } catch (e) {}
+    return { isoCode: c.isoCode, name, flag: c.flag || '', phonecode: c.phonecode || '' };
+  }).sort((a, b) => a.name.localeCompare(b.name, 'es'));
+  _countriesCache = {
+    priority: PRIORITY_ISO.map(code => all.find(c => c.isoCode === code)).filter(Boolean),
+    rest: all.filter(c => !PRIORITY_ISO.includes(c.isoCode))
+  };
+  return _countriesCache;
+}
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false }
@@ -389,6 +415,32 @@ app.get('/api/clients/:id/photos', authMiddleware, ownerOrAdmin, async (req, res
   } catch (e) {
     console.error(e);
     return err(res, 'Error al obtener fotos.', 500);
+  }
+});
+
+// Registro InBody: se guarda tras el parseo automático del PDF/imagen
+// subido en el módulo 3 (Composición Corporal, dentro de Información Personal).
+app.get('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const records = await dbGet('bio_inbody_records', { client_id: req.params.id }, { order: { column: 'fecha', ascending: true } });
+    return ok(res, { records });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener registros InBody.', 500);
+  }
+});
+
+app.post('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const { fecha, version, peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura } = req.body;
+    const record = await dbInsert('bio_inbody_records', {
+      client_id: req.params.id, fecha: fecha || new Date().toISOString().slice(0, 10), version,
+      peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura
+    });
+    return ok(res, { record }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al guardar registro InBody.', 500);
   }
 });
 
@@ -787,6 +839,114 @@ app.post('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, async (req,
   } catch (e) {
     console.error(e);
     return err(res, 'Error al guardar check-in de evolución.', 500);
+  }
+});
+
+// ------------------------------------------------------------
+// Países / Ciudades (módulo 1) — públicos, sin auth
+// ------------------------------------------------------------
+
+app.get('/api/countries', (req, res) => {
+  ok(res, { data: getCountriesCache() });
+});
+
+app.get('/api/cities/:isoCode', (req, res) => {
+  if (!CSC) return ok(res, { data: [] });
+  const cities = CSC.City.getCitiesOfCountry(req.params.isoCode.toUpperCase()) || [];
+  const names = [...new Set(cities.map(c => c.name))].sort((a, b) => a.localeCompare(b, 'es'));
+  ok(res, { data: names });
+});
+
+// ------------------------------------------------------------
+// OCR InBody (módulo 3, dentro de Información Personal)
+// Proxy a Google Cloud Vision con fallback a pdf-parse — mismo
+// patrón que BIO360, el parseo de campos InBody ocurre en el frontend.
+// ------------------------------------------------------------
+
+app.post('/api/clients/:id/ocr-vision', authMiddleware, ownerOrAdmin, async (req, res) => {
+  const apiKey = process.env.GOOGLE_VISION_API_KEY;
+  const { base64 } = req.body;
+  if (!base64) return err(res, 'No se recibió imagen o PDF.');
+
+  async function pdfFallback() {
+    if (!pdfParse) throw new Error('pdf-parse no disponible como fallback.');
+    const buf = Buffer.from(base64, 'base64');
+    const versions = ['v1.10.100', 'v1.9.426', 'default'];
+    let lastErr;
+    for (const version of versions) {
+      try {
+        const data = await pdfParse(buf, { version });
+        if (data.text && data.text.trim()) return data.text;
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr || new Error('No se pudo extraer texto del PDF.');
+  }
+
+  const isPdf = base64.startsWith('JVBERi0');
+  const sizeKB = Math.round(base64.length * 0.75 / 1024);
+  if (sizeKB > 8000) {
+    return err(res, 'La imagen excede 8 MB. Comprime la foto antes de subirla.', 413);
+  }
+
+  if (isPdf && pdfParse) {
+    try {
+      const quickText = await pdfFallback();
+      if (quickText && quickText.trim()) return ok(res, { text: quickText, source: 'pdf-parse' });
+    } catch (e) {
+      console.warn('[OCR] pdf-parse falló (' + e.message + '), intentando Vision API...');
+    }
+  }
+
+  if (apiKey) {
+    const bodyStr = JSON.stringify({
+      requests: [{ image: { content: base64 }, features: [{ type: 'DOCUMENT_TEXT_DETECTION' }] }]
+    });
+    try {
+      const text = await new Promise((resolve, reject) => {
+        const req2 = https.request({
+          hostname: 'vision.googleapis.com',
+          path: `/v1/images:annotate?key=${apiKey}`,
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bodyStr) }
+        }, (r) => {
+          let raw = '';
+          r.on('data', c => raw += c);
+          r.on('end', () => {
+            try {
+              const parsed = JSON.parse(raw);
+              if (r.statusCode === 401) return reject(new Error('AUTH_ERROR'));
+              if (r.statusCode === 403) return reject(new Error('FORBIDDEN: Cloud Vision API no habilitada o sin permiso.'));
+              if (r.statusCode !== 200) {
+                const msg = parsed.error?.message || parsed.error?.status || 'Vision API error ' + r.statusCode;
+                if (msg.toLowerCase().includes('expired') || msg.toLowerCase().includes('api key')) return reject(new Error('API_KEY_ERROR: ' + msg));
+                return reject(new Error(msg));
+              }
+              resolve(parsed.responses?.[0]?.fullTextAnnotation?.text || '');
+            } catch (e) { reject(e); }
+          });
+        });
+        req2.setTimeout(20000, () => { req2.destroy(); reject(new Error('TIMEOUT')); });
+        req2.on('error', reject);
+        req2.write(bodyStr);
+        req2.end();
+      });
+      if (text && text.trim()) return ok(res, { text, source: 'vision' });
+      if (!isPdf) return ok(res, { text: '', source: 'vision' });
+    } catch (e) {
+      const msg = e.message || '';
+      if (msg.startsWith('API_KEY_ERROR')) return err(res, 'Google Vision API key vencida o inválida.', 401);
+      const fallbackable = isPdf && (msg === 'AUTH_ERROR' || msg === 'TIMEOUT' || msg.includes('BILLING') || msg.includes('QUOTA') || msg.includes('RESOURCE_EXHAUSTED'));
+      if (!fallbackable) return err(res, msg || 'Error al procesar el archivo.', 500);
+    }
+  } else if (!isPdf) {
+    return err(res, 'GOOGLE_VISION_API_KEY no está configurada en el servidor.', 501);
+  }
+
+  try {
+    const text = await pdfFallback();
+    ok(res, { text, source: 'pdf-parse' });
+  } catch (e2) {
+    err(res, 'Error pdf-parse: ' + e2.message, 500);
   }
 });
 

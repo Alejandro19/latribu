@@ -257,16 +257,25 @@ CREATE TABLE evolution_checkins (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Opcional: registros InBody/DEXA si se quiere reutilizar el flujo
--- de biomarcadores de BIO360 en el dashboard de evolución.
+-- Registros InBody, cargados y parseados desde el módulo 3 dentro de
+-- Información Personal (mismo flujo de OCR que BIO360: /api/clients/:id/ocr-vision
+-- + parseo en el frontend), para poder comparar el progreso a futuro.
 CREATE TABLE bio_inbody_records (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   fecha DATE,
+  version TEXT,
   peso_total NUMERIC(5,1),
   smm NUMERIC(5,1),
   grasa_pct NUMERIC(4,1),
   imc NUMERIC(4,1),
+  peso_objetivo NUMERIC(5,1),
+  grasa_visceral NUMERIC(4,1),
+  bmr NUMERIC(6,0),
+  angulo_fase NUMERIC(4,2),
+  ecw_tbw NUMERIC(5,3),
+  masa_osea NUMERIC(4,2),
+  altura NUMERIC(5,1),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
