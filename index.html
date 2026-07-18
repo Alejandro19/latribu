@@ -18,6 +18,21 @@ h1,h2,h3,.serif{font-family:'Fraunces',serif;}
 button{font-family:inherit;cursor:pointer;}
 input,select,textarea{font-family:inherit;}
 .hidden{display:none !important;}
+.stepper-group{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg, #f5e4d4, #fbf3ee);border:1px solid #d9a441;border-radius:18px;overflow:hidden;width:max-content;box-shadow:0 8px 20px rgba(209, 161, 99, 0.15);}
+.stepper-group input{width:90px;border:none;background:transparent;text-align:center;font-weight:700;color:var(--ink);}
+.stepper-btn{border:none;background:var(--sage);color:#fff;width:40px;height:40px;border-radius:12px;cursor:pointer;transition:transform .15s ease, filter .15s ease;box-shadow:0 6px 18px rgba(107,143,113,0.18);}
+.stepper-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
+.stepper-field .stepper-group{border-color:var(--gold);}
+.field.invalid label{color:var(--danger);}
+.field.invalid input,.field.invalid select,.field.invalid textarea{border-color:var(--danger);}
+.accordion{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--paper);}
+.accordion-item{border-bottom:1px solid var(--line);}
+.accordion-item:last-child{border-bottom:none;}
+.accordion-header{width:100%;text-align:left;padding:16px 18px;background:var(--cream);border:none;cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;font-size:15px;}
+.accordion-content{display:none;padding:18px 18px 12px;background:var(--paper);}
+.accordion-content.active{display:block;}
+.accordion-toggle{font-size:14px;color:var(--terracota);}
+.conditional-hidden{display:none !important;}
 
 /* Login */
 #login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
@@ -35,6 +50,7 @@ input,select,textarea{font-family:inherit;}
 .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
 .btn-danger{background:var(--terracota-soft);color:var(--danger);}
 .error-msg{background:#FBEAE3;color:var(--danger);padding:10px 14px;border-radius:10px;font-size:14px;margin-bottom:16px;}
+.success-msg{background:#E9F2E9;color:var(--sage);padding:10px 14px;border-radius:10px;font-size:14px;margin-bottom:16px;}
 .link-btn{background:none;border:none;color:var(--terracota);font-weight:600;text-decoration:underline;padding:0;}
 
 /* App shell */
@@ -56,7 +72,8 @@ input,select,textarea{font-family:inherit;}
 .card-title{font-size:18px;font-weight:700;margin:0 0 16px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
-@media(max-width:800px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+@media(max-width:800px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
 
 .chip{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--cream);font-size:13px;font-weight:600;margin:4px 6px 4px 0;cursor:pointer;color:var(--ink-soft);}
 .chip.selected{background:var(--terracota);border-color:var(--terracota);color:#fff;}
@@ -85,7 +102,11 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .kpi-tile{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;}
 .kpi-tile .val{font-size:26px;font-weight:700;color:var(--terracota);}
 .kpi-tile .lbl{font-size:12px;color:var(--ink-soft);margin-top:4px;}
-.photo-thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;border:1px solid var(--line);}
+.photo-thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;border:1px solid var(--line);cursor:zoom-in;}
+.photo-preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:zoom-out;padding:24px;}
+.photo-preview-box{max-width:min(600px,90vw);max-height:90vh;text-align:center;}
+.photo-preview-box img{max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;}
+.photo-preview-box p{color:#fff;font-size:14px;margin-top:10px;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--ink-soft);}
 </style>
 </head>
@@ -130,7 +151,7 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 
 <script>
 const API = '';
-let state = { token: localStorage.getItem('lt_token') || null, role: null, user: null, permissions: {}, view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
+let state = { token: localStorage.getItem('lt_token') || null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, notifications: [], view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
 
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -140,6 +161,10 @@ async function api(path, opts = {}) {
   if (opts.body instanceof FormData) delete finalOpts.headers['Content-Type'];
   const res = await fetch(API + path, finalOpts);
   const data = await res.json().catch(() => ({}));
+  if (res.status === 402 && state.role === 'cliente') {
+    state.planExpired = true;
+    renderPlanExpiredScreen();
+  }
   if (!res.ok || data.success === false) throw new Error(data.error || 'Error de red.');
   return data;
 }
@@ -168,7 +193,8 @@ async function handleRegister() {
   errBox.innerHTML = '';
   try {
     const data = await api('/api/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password }) });
-    onAuthSuccess(data);
+    errBox.innerHTML = `<div class="success-msg">${data.message || 'Cuenta creada, pendiente de activación.'}</div>`;
+    showLogin();
   } catch (e) {
     errBox.innerHTML = `<div class="error-msg">${e.message}</div>`;
   }
@@ -179,14 +205,19 @@ function onAuthSuccess(data) {
   state.role = data.role;
   state.user = data.user;
   state.permissions = data.permissions || {};
+  state.clientType = data.clientType || null;
+  state.onboardingComplete = !!data.onboardingComplete;
+  state.planExpired = !!data.planExpired;
+  state.planEndDate = data.planEndDate || null;
   localStorage.setItem('lt_token', data.token);
-  state.view = data.role === 'admin' ? 'admin-clients' : 'personal-info';
+  if (data.role === 'admin') state.view = 'admin-clients';
+  else state.view = (CLIENT_NAV.find(item => item.visible(state)) || CLIENT_NAV[0]).key;
   boot();
 }
 
 function logout() {
   localStorage.removeItem('lt_token');
-  state = { token: null, role: null, user: null, permissions: {}, view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
+  state = { token: null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, planExpired: false, planEndDate: null, notifications: [], view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
   document.getElementById('app-view').classList.remove('active');
   document.getElementById('login-view').style.display = 'flex';
 }
@@ -195,10 +226,21 @@ async function boot() {
   if (!state.token) return;
   try {
     const data = await api('/api/auth/me');
-    state.role = data.role; state.user = data.user; state.permissions = data.permissions || {};
+    state.role = data.role; state.user = data.user; state.permissions = data.permissions || {}; state.clientType = data.clientType || null; state.onboardingComplete = !!data.onboardingComplete;
+    state.planExpired = !!data.planExpired; state.planEndDate = data.planEndDate || null;
     document.getElementById('login-view').style.display = 'none';
     document.getElementById('app-view').classList.add('active');
-    if (!state.view || state.view === 'personal-info' && state.role === 'admin') state.view = 'admin-clients';
+    if (state.role === 'cliente' && state.planExpired) {
+      renderPlanExpiredScreen();
+      return;
+    }
+    if (!state.view || (state.view === 'personal-info' && state.role === 'admin')) state.view = 'admin-clients';
+    if (state.role === 'cliente' && !CLIENT_NAV.some(item => item.key === state.view && item.visible(state))) {
+      state.view = (CLIENT_NAV.find(item => item.visible(state)) || CLIENT_NAV[0]).key;
+    }
+    if (state.role === 'admin') {
+      try { const { notifications } = await api('/api/admin/notifications'); state.notifications = notifications; } catch (e) { state.notifications = []; }
+    }
     renderNav();
     renderMain();
   } catch (e) {
@@ -209,25 +251,45 @@ async function boot() {
 // ---------------- Navigation ----------------
 
 const CLIENT_NAV = [
-  { key: 'personal-info', label: 'Información Personal' },
-  { key: 'training', label: 'Entrenamiento' },
-  { key: 'nutrition', label: 'Nutrición' },
-  { key: 'supplementation', label: 'Suplementación' },
-  { key: 'cortisol', label: 'Gestión de Cortisol' },
-  { key: 'community', label: 'Comunidad' },
-  { key: 'evolution', label: 'Mi Evolución' },
+  { key: 'personal-info', label: 'Información Personal', visible: s => s.clientType !== 'lead_wellness' },
+  { key: 'training', label: 'Entrenamiento', visible: s => s.clientType !== 'lead_wellness' && s.permissions?.training === true },
+  { key: 'nutrition', label: 'Nutrición', visible: s => s.clientType !== 'lead_wellness' && s.permissions?.nutrition === true },
+  { key: 'supplementation', label: 'Suplementación', visible: s => s.clientType !== 'lead_wellness' && s.permissions?.supplementation === true },
+  { key: 'cortisol', label: 'Gestión de Cortisol', visible: s => s.permissions?.cortisol === true },
+  { key: 'community', label: 'Comunidad', visible: s => s.clientType === 'lead_wellness' ? s.permissions?.community === true : s.onboardingComplete === true },
+  { key: 'evolution', label: 'Mi Evolución', visible: s => s.clientType !== 'lead_wellness' && s.onboardingComplete === true },
 ];
 const ADMIN_NAV = [
   { key: 'admin-clients', label: 'Clientes' },
   { key: 'admin-community', label: 'Comunidad' },
+  { key: 'admin-notifications', label: 'Notificaciones' },
 ];
+const CLIENT_TYPE_LABELS = { coaching_1_1: 'Coaching 1:1', coaching_online: 'Coaching Online', lead_wellness: 'Leads Wellness' };
 
 function renderNav() {
-  const nav = state.role === 'admin' ? ADMIN_NAV : CLIENT_NAV;
-  document.getElementById('nav-items').innerHTML = nav.map(item => `
-    <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}</button>
-  `).join('');
+  if (state.role === 'admin') {
+    const unread = (state.notifications || []).filter(n => !n.read).length;
+    document.getElementById('nav-items').innerHTML = ADMIN_NAV.map(item => `
+      <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}${item.key === 'admin-notifications' && unread ? ` <span class="badge">${unread}</span>` : ''}</button>
+    `).join('');
+  } else {
+    document.getElementById('nav-items').innerHTML = CLIENT_NAV.filter(item => item.visible(state)).map(item => `
+      <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}</button>
+    `).join('');
+  }
   document.getElementById('user-chip').innerText = `${state.user?.name || ''} · ${state.role === 'admin' ? 'Admin' : 'Miembro'}`;
+}
+
+function renderPlanExpiredScreen() {
+  document.getElementById('nav-items').innerHTML = '';
+  document.getElementById('user-chip').innerText = `${state.user?.name || ''} · Miembro`;
+  const endDate = state.planEndDate ? new Date(state.planEndDate + 'T00:00:00').toLocaleDateString() : '';
+  document.getElementById('main-content').innerHTML = `
+    <div class="card" style="max-width:480px;margin:60px auto;text-align:center;">
+      <div class="card-title">Tu plan ha vencido</div>
+      <p style="color:var(--ink-soft);">${endDate ? `Tu membresía venció el ${endDate}. ` : ''}Contacta a tu coach para renovar tu plan y recuperar el acceso a la plataforma.</p>
+    </div>
+  `;
 }
 
 function setView(view, extra) {
@@ -251,6 +313,7 @@ function renderMain() {
     'admin-clients': renderAdminClients,
     'admin-client-detail': renderAdminClientDetail,
     'admin-community': renderAdminCommunity,
+    'admin-notifications': renderAdminNotifications,
   };
   (routes[state.view] || renderPersonalInfo)(el);
 }
@@ -263,96 +326,123 @@ function currentClientId() {
 
 const ONBOARDING_MODULES = [
   { n: 1, title: 'Perfil Personal', custom: 'country', fields: [
-    { id: 'birthdate', label: 'Fecha de nacimiento', type: 'date' },
-    { id: 'gender', label: 'Género', type: 'select', options: ['Masculino', 'Femenino', 'Otro'] },
-    { id: 'occupation', label: 'Ocupación', type: 'text' },
-    { id: 'marital_status', label: 'Estado civil', type: 'select', options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Divorciado/a'] },
+    { id: 'birthdate', label: 'Fecha de nacimiento', type: 'date', required: true },
+    { id: 'gender', label: 'Género', type: 'select', options: ['Masculino', 'Femenino', 'Otro'], required: true },
+    { id: 'occupation', label: 'Ocupación', type: 'text', required: true },
+    { id: 'marital_status', label: 'Estado civil', type: 'select', options: ['Soltero/a', 'Casado/a', 'Unión libre', 'Divorciado/a'], required: true },
   ]},
   { n: 2, title: 'Vida Profesional', fields: [
-    { id: 'work_hours', label: 'Horas de trabajo al día', type: 'number' },
-    { id: 'cognitive_demand', label: 'Demanda cognitiva (1-10)', type: 'number' },
-    { id: 'travel', label: 'Frecuencia de viajes', type: 'select', options: ['Nunca', '1-2 veces al mes', 'Semanal', 'Muy frecuente'] },
-    { id: 'work_place', label: 'Lugar de trabajo', type: 'select', options: ['Oficina', 'Remoto', 'Híbrido', 'Campo/Obra'] },
-    { id: 'time_control', label: 'Control sobre tu horario', type: 'select', options: ['Alto', 'Medio', 'Bajo'] },
+    { id: 'work_hours', label: '¿Horas de trabajo al día?', type: 'stepper', required: true },
+    { id: 'cognitive_demand', label: '¿Demanda cognitiva (1-10)?', type: 'stepper', required: true },
+    { id: 'travel', label: '¿Con qué frecuencia viajas por trabajo?', type: 'select', options: ['Nunca', '1-2 veces al mes', 'Semanal', 'Muy frecuente'], required: true },
+    { id: 'work_place', label: '¿Dónde trabajas principalmente?', type: 'select', options: ['Oficina', 'Remoto', 'Híbrido', 'Campo/Obra'], required: true },
+    { id: 'time_control', label: '¿Tienes control sobre tu horario?', type: 'select', options: ['Alto', 'Medio', 'Bajo'], required: true },
   ]},
   { n: 3, title: 'Composición Corporal', custom: 'body', fields: [] },
   { n: 4, title: 'Historial de Salud', fields: [
-    { id: 'condition', label: 'Condición médica diagnosticada', type: 'select', options: ['Ninguna', 'Diabetes', 'Hipertensión', 'Hipotiroidismo', 'Síndrome metabólico', 'PCOS', 'Otra'] },
-    { id: 'meds', label: '¿Tomas medicamentos actualmente?', type: 'text' },
-    { id: 'allergies', label: 'Alergias', type: 'text' },
-    { id: 'injury', label: 'Lesiones que limiten tu actividad', type: 'text' },
-    { id: 'mental_health', label: 'Salud mental diagnosticada', type: 'select', options: ['Sin diagnóstico', 'Ansiedad', 'Depresión', 'TDAH', 'Burnout', 'Otro'] },
-    { id: 'last_checkup', label: 'Último chequeo médico', type: 'select', options: ['Menos de 6 meses', '1 año', '2+ años', 'Nunca'] },
+    { id: 'condition', label: 'Condición médica diagnosticada', type: 'select', options: ['Ninguna', 'Diabetes', 'Hipertensión', 'Hipotiroidismo', 'Síndrome metabólico', 'PCOS', 'Otra'], required: true },
+    { id: 'condition_other', label: 'Especifica la condición médica', type: 'text', required: true },
+    { id: 'meds', label: '¿Tomas medicamentos actualmente?', type: 'select', options: ['No', 'Sí'], required: true },
+    { id: 'meds_detail', label: '¿Para qué te lo recetaron?', type: 'text', required: true },
+    { id: 'allergies', label: 'Alergias', type: 'text', required: true },
+    { id: 'injury', label: 'Pre existencias medicas o Lesiones', type: 'text', required: true },
+    { id: 'intervention_surgery', label: '¿Intervenciones quirúrgicas?', type: 'select', options: ['No', 'Sí'], required: true },
+    { id: 'intervention_surgery_detail', label: 'Describe la intervención quirúrgica', type: 'text', required: true },
+    { id: 'last_checkup', label: 'Último chequeo médico', type: 'select', options: ['Menos de 6 meses', '1 año', '2+ años', 'Nunca'], required: true },
+    { id: 'checkup_file', label: 'Subir chequeo médico', type: 'file' },
+    { id: 'checkup_notes', label: 'Observaciones del chequeo', type: 'textarea', required: true },
+    { id: 'mental_health', label: 'Salud mental diagnosticada', type: 'select', options: ['Sin diagnóstico', 'Ansiedad', 'Depresión', 'TDAH', 'Burnout', 'Otro'], required: true },
+    { id: 'mental_health_other', label: 'Especifica la salud mental', type: 'text', required: true },
+    { id: 'medical_clearance', label: '¿Tienes autorización médica para entrenar?', type: 'select', options: ['No', 'Sí'], required: true },
+    { id: 'goal_reasons', label: 'Escribe 3 razones por las que quieres alcanzar tu objetivo', type: 'textarea', required: true },
   ]},
   { n: 5, title: 'Alimentación', fields: [
-    { id: 'meals_per_day', label: 'Comidas por día', type: 'number' },
-    { id: 'first_meal', label: 'Primera comida (hora)', type: 'time' },
-    { id: 'last_meal', label: 'Última comida (hora)', type: 'time' },
-    { id: 'water_liters', label: 'Litros de agua al día', type: 'number' },
-    { id: 'proteins', label: 'Proteínas que más consumes', type: 'chips', options: ['Pollo', 'Res', 'Pescado', 'Huevo', 'Legumbres', 'Tofu', 'Otro'] },
-    { id: 'carbs', label: 'Carbohidratos que más consumes', type: 'chips', options: ['Arroz', 'Papa', 'Avena', 'Pan integral', 'Quinoa', 'Fruta', 'Otro'] },
-    { id: 'fats', label: 'Grasas que más consumes', type: 'chips', options: ['Aguacate', 'Aceite de oliva', 'Frutos secos', 'Mantequilla', 'Otro'] },
-    { id: 'dairy', label: 'Tolerancia a lácteos', type: 'select', options: ['Sin problema', 'Leve intolerancia', 'Intolerante', 'No consumo'] },
-    { id: 'probiotics', label: '¿Consumes probióticos?', type: 'select', options: ['Sí', 'No'] },
-    { id: 'probiotics_types', label: '¿Cuáles probióticos?', type: 'chips', options: ['Yogur griego', 'Kéfir', 'Kombucha', 'Suplemento', 'Otro'] },
-    { id: 'eating_out', label: 'Frecuencia de comer fuera', type: 'select', options: ['Nunca', '1-2 veces/semana', '3+ veces/semana', 'Diario'] },
-    { id: 'snacks', label: 'Consumo de snacks entre comidas', type: 'select', options: ['Nunca', 'A veces', 'Siempre'] },
-    { id: 'caffeine_cups', label: 'Tazas de café/cafeína al día', type: 'number' },
-    { id: 'last_coffee', label: 'Hora del último café', type: 'time' },
-    { id: 'alcohol', label: 'Consumo de alcohol', type: 'select', options: ['Nunca', 'Ocasional', '1-2x semana', '3+ veces semana'] },
-    { id: 'diet_type', label: 'Tipo de dieta', type: 'select', options: ['Omnívoro', 'Vegetariano', 'Vegano', 'Keto', 'Paleo', 'Otra'] },
-    { id: 'fasting', label: '¿Practicas ayuno intermitente?', type: 'select', options: ['No', '16/8', '18/6', '20/4', '24h', 'Otro'] },
-    { id: 'ultraproc', label: 'Consumo de ultraprocesados', type: 'select', options: ['Bajo', 'Moderado', 'Alto'] },
-    { id: 'veggies', label: 'Consumo de verduras', type: 'select', options: ['Bajo', 'Moderado', 'Alto'] },
-    { id: 'supps_active', label: '¿Tomas suplementos actualmente?', type: 'select', options: ['Sí', 'No'] },
-    { id: 'supps_list', label: '¿Cuáles suplementos?', type: 'chips', options: ['Proteína', 'Creatina', 'Omega 3', 'Vitamina D', 'Magnesio', 'Zinc', 'B12', 'Colágeno', 'Otro'] },
-    { id: 'substances', label: 'Consumo de otras sustancias', type: 'select', options: ['No', 'Tabaco', 'Alcohol frecuente', 'Cannabis', 'Otra'] },
+    { id: 'meals_per_day', label: '¿Cuántas comidas haces al día?', type: 'number', required: true },
+    { id: 'first_meal', label: '¿A qué hora es tu primera comida?', type: 'time', required: true },
+    { id: 'last_meal', label: '¿A qué hora es tu última comida?', type: 'time', required: true },
+    { id: 'water_liters', label: '¿Cuántos litros de agua tomas al día?', type: 'number', required: true },
+    { id: 'proteins', label: 'Proteínas que más consumes', type: 'chips', options: ['Pollo', 'Res', 'Pescado', 'Huevo', 'Legumbres', 'Tofu', 'Otro'], required: true },
+    { id: 'carbs', label: 'Carbohidratos que más consumes', type: 'chips', options: ['Arroz', 'Papa', 'Avena', 'Pan integral', 'Quinoa', 'Fruta', 'Otro'], required: true },
+    { id: 'fats', label: 'Grasas que más consumes', type: 'chips', options: ['Aguacate', 'Aceite de oliva', 'Frutos secos', 'Mantequilla', 'Otro'], required: true },
+    { id: 'breakfast_example', label: 'Describe cómo se ve tu desayuno', type: 'textarea', required: true },
+    { id: 'snack_example', label: 'Describe cómo se ven tus snacks', type: 'textarea', required: true },
+    { id: 'lunch_example', label: 'Describe cómo se ve tu almuerzo', type: 'textarea', required: true },
+    { id: 'dinner_example', label: 'Describe cómo se ve tu cena', type: 'textarea', required: true },
+    { id: 'favorite_fruits', label: '¿Cuáles son tus 3 frutas preferidas?', type: 'text', required: true },
+    { id: 'anxiety_food', label: '¿Con qué te alimentas cuando tienes ansiedad?', type: 'text', required: true },
+    { id: 'dairy', label: 'Tolerancia a lácteos', type: 'select', options: ['Sin problema', 'Leve intolerancia', 'Intolerante', 'No consumo'], required: true },
+    { id: 'probiotics', label: '¿Consumes probióticos?', type: 'select', options: ['Sí', 'No'], required: true },
+    { id: 'probiotics_types', label: '¿Cuáles probióticos?', type: 'chips', options: ['Yogur griego', 'Kéfir', 'Kombucha', 'Suplemento', 'Otro'], required: true },
+    { id: 'eating_out', label: '¿Cuántas veces comes por fuera?', type: 'select', options: ['Nunca', '1-2 veces/semana', '3+ veces/semana', 'Diario'], required: true },
+    { id: 'snacks', label: 'Consumo de snacks entre comidas', type: 'select', options: ['Nunca', 'A veces', 'Siempre'], required: true },
+    { id: 'snacks_qty', label: 'Cantidad de snacks diarios', type: 'number', required: true },
+    { id: 'caffeine_cups', label: 'Tazas de café/cafeína al día', type: 'number', required: true },
+    { id: 'last_coffee', label: 'Hora del último café', type: 'time', required: true },
+    { id: 'alcohol', label: 'Consumo de alcohol', type: 'select', options: ['Nunca', 'Ocasional', '1-2x semana', '3+ veces semana'], required: true },
+    { id: 'alcohol_type', label: 'Tipo de alcohol', type: 'text', required: true },
+    { id: 'diet_type', label: 'Tipo de dieta', type: 'select', options: ['Omnívoro', 'Vegetariano', 'Vegano', 'Keto', 'Paleo', 'Otra'], required: true },
+    { id: 'fasting', label: '¿Practicas ayuno intermitente?', type: 'select', options: ['No', '16/8', '18/6', '20/4', '24h', 'Otro'], required: true },
+    { id: 'ultraproc', label: 'Consumo de ultraprocesados', type: 'select', options: ['Bajo', 'Moderado', 'Alto'], required: true },
+    { id: 'veggies', label: 'Consumo de verduras', type: 'select', options: ['Bajo', 'Moderado', 'Alto'], required: true },
+    { id: 'supps_active', label: '¿Tomas suplementos actualmente?', type: 'select', options: ['Sí', 'No'], required: true },
+    { id: 'supps_list', label: '¿Cuáles suplementos?', type: 'chips', options: ['Proteína', 'Creatina', 'Omega 3', 'Vitamina D', 'Magnesio', 'Zinc', 'B12', 'Colágeno', 'Otro'], required: true },
+    { id: 'substances', label: 'Consumo de otras sustancias', type: 'select', options: ['No', 'Tabaco', 'Alcohol frecuente', 'Cannabis', 'Esteroides', 'Otra'], required: true },
+    { id: 'substances_detail', label: 'Especifica', type: 'text', required: true },
+    { id: 'substances_frequency', label: '¿Con qué frecuencia lo consumes?', type: 'select', options: ['Una vez a la semana', '2-3 veces a la semana', 'Casi todos los días', 'Diario'], required: true },
   ]},
   { n: 6, title: 'Sueño', fields: [
-    { id: 'sleep_hours', label: 'Horas de sueño promedio', type: 'number' },
-    { id: 'bedtime', label: 'Hora de dormir', type: 'time' },
-    { id: 'wakeup', label: 'Hora de despertar', type: 'time' },
-    { id: 'sleep_quality', label: 'Calidad del sueño (1-10)', type: 'number' },
-    { id: 'wakeups', label: 'Despertares nocturnos', type: 'select', options: ['Ninguno', '1-2', '3+'] },
+    { id: 'sleep_hours', label: 'Horas de sueño promedio', type: 'stepper', required: true },
+    { id: 'bedtime', label: 'Hora de dormir', type: 'time', required: true },
+    { id: 'wakeup', label: 'Hora de despertar', type: 'time', required: true },
+    { id: 'sleep_quality', label: 'Calidad del sueño (1-10)', type: 'stepper', required: true },
+    { id: 'wakeups', label: 'Despertares nocturnos', type: 'select', options: ['Ninguno', '1-2', '3+'], required: true },
   ]},
   { n: 7, title: 'Energía y Cognición', fields: [
-    { id: 'energy_am', label: 'Energía en la mañana (1-10)', type: 'number' },
-    { id: 'energy_pm', label: 'Energía en la tarde (1-10)', type: 'number' },
-    { id: 'brain_fog', label: 'Niebla mental', type: 'select', options: ['Siempre', 'Frecuentemente', 'A veces', 'Nunca'] },
-    { id: 'focus_time', label: 'Tiempo de foco sostenido', type: 'select', options: ['<15min', '15-30min', '30-60min', '>1h'] },
-    { id: 'memory', label: '¿Sientes la memoria afectada?', type: 'select', options: ['Sí notablemente', 'Un poco', 'No'] },
+    { id: 'energy_am', label: 'Energía en la mañana (1-10)', type: 'number', required: true },
+    { id: 'energy_pm', label: 'Energía en la tarde (1-10)', type: 'number', required: true },
+    { id: 'brain_fog', label: 'Niebla mental', type: 'select', options: ['Siempre', 'Frecuentemente', 'A veces', 'Nunca'], required: true },
+    { id: 'focus_time', label: 'Tiempo de foco sostenido', type: 'select', options: ['<15min', '15-30min', '30-60min', '>1h'], required: true },
+    { id: 'memory', label: '¿Sientes la memoria afectada?', type: 'select', options: ['Sí notablemente', 'Un poco', 'No'], required: true },
   ]},
   { n: 8, title: 'Estrés y Emociones', fields: [
-    { id: 'stress_level', label: 'Nivel de estrés crónico (1-10)', type: 'number' },
-    { id: 'anxiety', label: 'Frecuencia de ansiedad', type: 'select', options: ['Nunca', 'Raramente', 'A veces', 'Frecuentemente', 'Diario'] },
-    { id: 'mood', label: 'Estado de ánimo general', type: 'select', options: ['Estable', 'Variable', 'Generalmente bajo', 'Generalmente alto'] },
-    { id: 'coping_techniques', label: 'Técnicas de manejo del estrés que usas', type: 'text' },
-    { id: 'work_life_balance', label: '¿El trabajo invade tu vida personal?', type: 'select', options: ['No', 'A veces', 'Frecuentemente', 'Siempre'] },
+    { id: 'stress_level', label: 'Nivel de estrés crónico (1-10)', type: 'number', required: true },
+    { id: 'anxiety', label: 'Frecuencia de ansiedad', type: 'select', options: ['Nunca', 'Raramente', 'A veces', 'Frecuentemente', 'Diario'], required: true },
+    { id: 'mood', label: 'Estado de ánimo general', type: 'select', options: ['Estable', 'Variable', 'Generalmente bajo', 'Generalmente alto'], required: true },
+    { id: 'coping_techniques', label: 'Técnicas de manejo del estrés que usas', type: 'text', required: true },
+    { id: 'work_life_balance', label: '¿El trabajo invade tu vida personal?', type: 'select', options: ['No', 'A veces', 'Frecuentemente', 'Siempre'], required: true },
   ]},
   { n: 9, title: 'Entrenamiento Físico', fields: [
-    { id: 'active', label: '¿Realizas actividad física regular?', type: 'select', options: ['Sí', 'No'] },
-    { id: 'training_types', label: 'Tipos de entrenamiento', type: 'text' },
-    { id: 'frequency', label: 'Frecuencia semanal', type: 'select', options: ['No entrena', '1-2 x sem', '3-4 x sem', '5+ x sem'] },
-    { id: 'duration', label: 'Duración promedio por sesión', type: 'text' },
-    { id: 'goals', label: 'Objetivos principales', type: 'text' },
+    { id: 'active', label: '¿Has realizado alguna vez actividad física?', type: 'select', options: ['Sí', 'No'], required: true },
+    { id: 'activity_level', label: 'A qué nivel', type: 'select', options: ['Básico', 'Intermedio', 'Avanzado'], required: true },
+    { id: 'activity_time', label: 'Durante cuánto tiempo', type: 'text', required: true },
+    { id: 'sports_active', label: 'Actualmente practicas algún deporte o haces actividad física', type: 'select', options: ['Sí', 'No'], required: true },
+    { id: 'sports_detail', label: '¿Cuál deporte o actividad practicas?', type: 'text', required: true },
+    { id: 'training_place', label: '¿En qué lugar vas a entrenar actualmente?', type: 'select', options: ['Gimnasio', 'Casa', 'Aire libre', 'Otro'], required: true },
+    { id: 'training_schedule', label: '¿En qué horario?', type: 'text', required: true },
+    { id: 'training_days', label: '¿Cuántos días a la semana?', type: 'number', required: true },
+    { id: 'goals', label: 'Objetivos principales', type: 'text', required: true },
   ]},
 ];
 
 let onboardingData = {};
+// El wizard de Información Personal siempre arranca en blanco (es un registro recurrente,
+// no un formulario que se pre-llena con lo último guardado) — el histórico vive solo en la
+// base de datos. Mientras el cliente navega Continuar/Anterior dentro de una misma sesión,
+// todo vive en memoria (onboardingData + los borradores de módulo 3 / archivos pendientes);
+// se reinicia por completo al hacer clic en "Finalizar" o al cambiar de cliente.
+let _personalInfoLoadedFor = null;
+let _pendingOnboardingFiles = {};
 
-async function renderPersonalInfo(el) {
+function renderPersonalInfo(el) {
   const clientId = currentClientId();
-  try {
-    const { personalInfo } = await api(`/api/clients/${clientId}/personal-info`);
-    onboardingData = personalInfo.onboarding_report || {};
-    for (const f of ['birthdate','gender','occupation','country','city','phone_code','phone_number','marital_status']) {
-      if (personalInfo[f] !== undefined && personalInfo[f] !== null) onboardingData[f] = personalInfo[f];
-    }
-    for (const f of ['weight','height','body_fat']) if (personalInfo[f] != null) onboardingData[f] = personalInfo[f];
-    renderPersonalInfoBody(el);
-  } catch (e) {
-    el.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  if (_personalInfoLoadedFor !== clientId) {
+    onboardingData = {};
+    _personalInfoLoadedFor = clientId;
+    _pendingOnboardingFiles = {};
+    window._m3Draft = null;
+    window._m3DraftClientId = null;
   }
+  renderPersonalInfoBody(el);
 }
 
 function renderPersonalInfoBody(el) {
@@ -376,12 +466,19 @@ function renderPersonalInfoBody(el) {
       ${mod.custom === 'body' ? renderBodyModuleBlock() : ''}
       <div style="display:flex;justify-content:space-between;margin-top:24px;">
         <button class="btn btn-ghost" ${step === 1 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step - 1})">Anterior</button>
-        <button class="btn btn-primary" style="width:auto" onclick="${saveFn}">${step === 9 ? 'Finalizar' : 'Guardar y continuar'}</button>
+        <button class="btn btn-primary" style="width:auto" onclick="${saveFn}">${step === 9 ? 'Finalizar' : 'Continuar'}</button>
       </div>
     </div>
   `;
   if (mod.custom === 'country') m1Init();
   if (mod.custom === 'body') initModule3();
+  initFieldDependencies(step);
+  restorePendingFileInputs(step);
+
+  document.querySelectorAll('#module-fields .field input, #module-fields .field select, #module-fields .field textarea').forEach(el => {
+    el.addEventListener('input', () => clearFieldError(el));
+    el.addEventListener('change', () => clearFieldError(el));
+  });
 }
 
 function renderField(f) {
@@ -392,9 +489,16 @@ function renderField(f) {
       ${f.options.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}
     </select></div>`;
   }
+  if (f.type === 'stepper') {
+    return `<div class="field"><label>${f.label}</label><div class="stepper-group">
+      <button type="button" class="stepper-btn" onclick="changeStepper('${f.id}', -1)">-</button>
+      <input type="number" id="field-${f.id}" value="${val ?? 0}" min="0" readonly>
+      <button type="button" class="stepper-btn" onclick="changeStepper('${f.id}', 1)">+</button>
+    </div></div>`;
+  }
   if (f.type === 'chips') {
     const selected = Array.isArray(val) ? val : [];
-    return `<div class="field" style="grid-column:1 / -1;">
+    return `<div class="field" id="field-${f.id}" style="grid-column:1 / -1;">
       <label>${f.label}</label>
       <div>${f.options.map(o => `<span class="chip ${selected.includes(o) ? 'selected' : ''}" onclick="toggleChip('${f.id}','${o.replace(/'/g,"\\'")}')">${o}</span>`).join('')}</div>
       ${selected.includes('Otro') ? `<input type="text" style="margin-top:8px" placeholder="Especifica…" id="field-${f.id}-otro" value="${onboardingData[f.id + '_otro'] || ''}">` : ''}
@@ -412,6 +516,72 @@ function toggleChip(fieldId, option) {
   renderPersonalInfoBody(document.getElementById('main-content'));
 }
 
+function changeStepper(fieldId, delta) {
+  const input = document.getElementById(`field-${fieldId}`);
+  if (!input) return;
+  const current = Number(input.value) || 0;
+  const next = Math.max(0, current + delta);
+  input.value = next;
+  onboardingData[fieldId] = String(next);
+}
+
+function initFieldDependencies(step) {
+  const update = () => {
+    const rules = [
+        { id: 'condition', value: 'Otra', target: 'condition_other' },
+      { id: 'mental_health', value: 'Otro', target: 'mental_health_other' },
+      { id: 'snacks', values: ['A veces', 'Siempre'], target: 'snacks_qty' },
+      { id: 'alcohol', notValue: 'Nunca', target: 'alcohol_type' },
+      { id: 'substances', value: 'Otra', target: 'substances_detail' },
+      { id: 'substances', values: ['Tabaco', 'Alcohol frecuente', 'Cannabis', 'Esteroides'], target: 'substances_frequency' },
+      { id: 'supps_active', value: 'Sí', target: 'supps_list' },
+      { id: 'probiotics', value: 'Sí', target: 'probiotics_types' },
+      { id: 'sports_active', value: 'Sí', target: 'sports_detail' },
+      { id: 'intervention_surgery', value: 'Sí', target: 'intervention_surgery_detail' },
+      { id: 'meds', value: 'Sí', target: 'meds_detail' },
+      { id: 'medical_clearance', value: 'Sí', target: null }
+    ];
+    rules.forEach(rule => {
+      const el = document.getElementById(`field-${rule.id}`);
+      const target = rule.target ? document.getElementById(`field-${rule.target}`) : null;
+      if (!el || !target) return;
+      const val = el.value;
+      const show = rule.values ? rule.values.includes(val) : rule.notValue ? val !== rule.notValue && val !== '' : val === rule.value;
+      const fieldWrapper = target.closest('.field');
+      if (fieldWrapper) fieldWrapper.classList.toggle('conditional-hidden', !show);
+      if (!show && rule.target) {
+        onboardingData[rule.target] = Array.isArray(onboardingData[rule.target]) ? [] : '';
+        onboardingData[`${rule.target}_otro`] = '';
+      }
+    });
+  };
+
+  const watchIds = ['condition', 'mental_health', 'snacks', 'alcohol', 'substances', 'supps_active', 'probiotics', 'sports_active', 'intervention_surgery', 'meds'];
+  watchIds.forEach(id => {
+    const el = document.getElementById(`field-${id}`);
+    if (!el) return;
+    el.addEventListener('change', update);
+    el.addEventListener('input', update);
+  });
+  update();
+}
+
+function openPhotoPreview(url, caption) {
+  const overlay = document.createElement('div');
+  overlay.className = 'photo-preview-overlay';
+  overlay.onclick = () => overlay.remove();
+  overlay.innerHTML = `<div class="photo-preview-box"><img src="${url}"><p>${caption || ''}</p></div>`;
+  document.body.appendChild(overlay);
+}
+
+function toggleAccordion(button) {
+  const item = button.closest('.accordion-item');
+  const content = item.querySelector('.accordion-content');
+  const active = content.classList.contains('active');
+  document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+  if (!active) content.classList.add('active');
+}
+
 function syncStepFieldsFromDOM(step) {
   const mod = ONBOARDING_MODULES.find(m => m.n === step);
   if (!mod) return;
@@ -422,8 +592,60 @@ function syncStepFieldsFromDOM(step) {
       return;
     }
     const input = document.getElementById(`field-${f.id}`);
-    if (input) onboardingData[f.id] = input.value;
+    if (!input) return;
+    if (f.type === 'file') {
+      if (input.files && input.files[0]) {
+        onboardingData[f.id] = input.files[0].name;
+      }
+      return;
+    }
+    onboardingData[f.id] = input.value;
   });
+}
+
+function clearFieldError(el) {
+  const wrapper = el.closest('.field');
+  if (wrapper) wrapper.classList.remove('invalid');
+}
+
+function validateStep(step) {
+  const mod = ONBOARDING_MODULES.find(m => m.n === step);
+  if (!mod) return true;
+  let valid = true;
+  for (const f of mod.fields) {
+    if (f.type === 'file') continue;
+    if (!f.required) continue;
+    const el = document.getElementById(`field-${f.id}`);
+    if (!el) continue;
+    const wrapper = el.closest('.field');
+    if (wrapper && wrapper.classList.contains('conditional-hidden')) {
+      if (wrapper) wrapper.classList.remove('invalid');
+      continue;
+    }
+    const isEmpty = f.type === 'chips'
+      ? !(Array.isArray(onboardingData[f.id]) && onboardingData[f.id].length > 0)
+      : String(el.value || '').trim() === '';
+    if (isEmpty) {
+      if (wrapper) wrapper.classList.add('invalid');
+      valid = false;
+    } else {
+      if (wrapper) wrapper.classList.remove('invalid');
+    }
+  }
+  return valid;
+}
+
+async function uploadPendingFiles(clientId) {
+  const file = _pendingOnboardingFiles.checkup_file;
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('checkup_file', file);
+  formData.append('onboarding_report', JSON.stringify(onboardingData));
+  const result = await api(`/api/clients/${clientId}/personal-info-file`, { method: 'POST', body: formData });
+  onboardingData.checkup_file_url = result.file_url;
+  onboardingData.checkup_file_name = result.file_name;
+  onboardingData.checkup_uploaded_at = result.uploaded_at;
+  _pendingOnboardingFiles = {};
 }
 
 function setStep(n) {
@@ -433,17 +655,79 @@ function setStep(n) {
 }
 
 async function saveOnboardingStep(step) {
-  const mod = ONBOARDING_MODULES.find(m => m.n === step);
-  const clientId = currentClientId();
+  if (!validateStep(step)) return;
   syncStepFieldsFromDOM(step);
-  const payload = { onboarding_report: onboardingData, complete: step === 9 };
+  cleanConditionalFields(step);
+  capturePendingFiles(step);
+  if (step < 9) {
+    setStep(step + 1);
+    return;
+  }
+  // Finalizar: único momento en que todo el wizard se guarda de forma definitiva.
+  const clientId = currentClientId();
   try {
+    await uploadPendingFiles(clientId);
+    const bodyDraft = window._m3Draft || {};
+    const payload = {
+      birthdate: onboardingData.birthdate, gender: onboardingData.gender,
+      occupation: onboardingData.occupation, marital_status: onboardingData.marital_status,
+      country: onboardingData.country, city: onboardingData.city,
+      phone_code: onboardingData.phone_code, phone_number: onboardingData.phone_number,
+      weight: bodyDraft.weight || null, height: bodyDraft.height || null, body_fat: bodyDraft.body_fat || null,
+      onboarding_report: onboardingData, complete: true
+    };
     await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
-    if (step < 9) setStep(step + 1);
-    else { setStep(1); alert('¡Información personal guardada!'); }
+    await commitModule3Draft(clientId);
+    state.onboardingComplete = true;
+    _personalInfoLoadedFor = null;
+    renderNav();
+    setStep(1);
+    alert('Datos ingresados correctamente, tu coach te contactara lo antes posible.');
   } catch (e) {
     alert('Error al guardar: ' + e.message);
   }
+}
+
+function capturePendingFiles(step) {
+  const mod = ONBOARDING_MODULES.find(m => m.n === step);
+  if (!mod) return;
+  mod.fields.forEach(f => {
+    if (f.type !== 'file') return;
+    const input = document.getElementById(`field-${f.id}`);
+    if (input && input.files && input.files[0]) _pendingOnboardingFiles[f.id] = input.files[0];
+  });
+}
+
+function restorePendingFileInputs(step) {
+  const mod = ONBOARDING_MODULES.find(m => m.n === step);
+  if (!mod) return;
+  mod.fields.forEach(f => {
+    if (f.type !== 'file') return;
+    const file = _pendingOnboardingFiles[f.id];
+    const input = document.getElementById(`field-${f.id}`);
+    if (!file || !input) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      input.files = dt.files;
+    } catch (e) { /* navegador sin soporte para DataTransfer en inputs de archivo */ }
+  });
+}
+
+function cleanConditionalFields(step) {
+  const rules = [
+    { id: 'supps_active', value: 'Sí', target: 'supps_list' },
+    { id: 'probiotics', value: 'Sí', target: 'probiotics_types' },
+  ];
+  rules.forEach(rule => {
+    const input = document.getElementById(`field-${rule.id}`);
+    if (!input) return;
+    const show = input.value === rule.value;
+    if (!show) {
+      onboardingData[rule.target] = Array.isArray(onboardingData[rule.target]) ? [] : '';
+      onboardingData[`${rule.target}_otro`] = '';
+    }
+  });
 }
 
 // ---------------- Módulo 1: País / Ciudad / Indicativo telefónico ----------------
@@ -562,80 +846,101 @@ function m1OnCountryChange(sel) {
   m1LoadCities(iso);
 }
 
-async function saveModule1() {
-  const clientId = currentClientId();
+function saveModule1() {
   syncStepFieldsFromDOM(1);
-  const country = document.getElementById('m1-pais').value;
-  const city = document.getElementById('m1-city').value;
   const phoneCode = document.getElementById('m1-phone-code').value;
   const phoneNum = document.getElementById('m1-phone-num').value;
-  onboardingData.country = country;
-  onboardingData.city = city;
+  onboardingData.country = document.getElementById('m1-pais').value;
+  onboardingData.city = document.getElementById('m1-city').value;
   onboardingData.phone_code = phoneCode;
   onboardingData.phone_number = phoneNum ? `${phoneCode} ${phoneNum}` : '';
-  const payload = {
-    birthdate: onboardingData.birthdate, gender: onboardingData.gender,
-    occupation: onboardingData.occupation, marital_status: onboardingData.marital_status,
-    country, city, phone_code: phoneCode, phone_number: onboardingData.phone_number,
-    onboarding_report: onboardingData, complete: false
-  };
-  try {
-    await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
-    setStep(2);
-  } catch (e) { alert('Error al guardar: ' + e.message); }
+  setStep(2);
 }
 
 // ---------------- Módulo 3: Composición Corporal (dentro de Información Personal) ----------------
 
+const PHOTO_ANGLES = [
+  { key: 'frente', label: 'Frente' },
+  { key: 'lado_derecho', label: 'Lado derecho' },
+  { key: 'lado_izquierdo', label: 'Lado izquierdo' },
+  { key: 'espalda', label: 'Espalda' },
+];
+
 function renderBodyModuleBlock() {
   return `
-    <div class="grid-2">
-      <div class="field"><label>Peso (kg)</label><input type="number" id="field-weight" value="${onboardingData.weight ?? ''}"></div>
-      <div class="field"><label>Estatura (cm)</label><input type="number" id="field-height" value="${onboardingData.height ?? ''}"></div>
-      <div class="field"><label>% Grasa corporal (si lo conoces)</label><input type="number" id="field-body_fat" value="${onboardingData.body_fat ?? ''}"></div>
+    <div class="accordion">
+      <div class="accordion-item">
+        <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+          Composición corporal
+          <span class="accordion-toggle">Ver</span>
+        </button>
+        <div class="accordion-content active">
+          <div class="grid-2">
+            <div class="field"><label>Peso (kg)</label><input type="number" id="field-weight"></div>
+            <div class="field"><label>Estatura (cm)</label><input type="number" id="field-height"></div>
+            <div class="field"><label>% Grasa corporal (si lo conoces)</label><input type="number" id="field-body_fat"></div>
+          </div>
+          <div id="weight-month-label" style="font-size:13px;color:var(--ink-soft);margin-top:8px;"></div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+          Cargar análisis InBody
+          <span class="accordion-toggle">Ver</span>
+        </button>
+        <div class="accordion-content">
+          <p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">Sube el PDF o una foto de tu reporte InBody y completaremos los campos automáticamente.</p>
+          <div class="bf-drop" onclick="document.getElementById('m3-pdf-input').click()">
+            Subir PDF o foto del análisis InBody
+            <input type="file" id="m3-pdf-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="m3HandlePdf(this)">
+          </div>
+          <div id="m3-ocr-status" style="font-size:13px;margin:8px 0;"></div>
+          <div id="m3-version-label" style="font-size:12px;color:var(--ink-soft);display:none;margin-bottom:8px;"></div>
+          <div class="grid-3">
+            <div class="field"><label>Peso total (InBody)</label><input type="number" id="m3-peso-total" onchange="m3UpdateIMC()"></div>
+            <div class="field"><label>Masa muscular esquelética</label><input type="number" id="m3-smm"></div>
+            <div class="field"><label>% Grasa corporal</label><input type="number" id="m3-grasa-pct"></div>
+            <div class="field"><label>Peso objetivo</label><input type="number" id="m3-peso-objetivo"></div>
+            <div class="field"><label>Grasa visceral</label><input type="number" id="m3-grasa-visceral"></div>
+            <div class="field"><label>Metabolismo basal (BMR)</label><input type="number" id="m3-bmr"></div>
+            <div class="field"><label>Ángulo de fase</label><input type="number" step="0.01" id="m3-angulo-fase"></div>
+            <div class="field"><label>Agua corporal total (L)</label><input type="number" step="0.1" id="m3-ecw-tbw"></div>
+            <div class="field"><label>Masa ósea</label><input type="number" step="0.01" id="m3-masa-osea"></div>
+            <div class="field"><label>Estatura (InBody)</label><input type="number" id="m3-height" onchange="m3UpdateIMC()"></div>
+            <div class="field"><label>IMC calculado</label><input type="text" id="m3-imc-display" disabled></div>
+          </div>
+          <div id="m3-month-label" style="font-size:13px;color:var(--ink-soft);margin-top:8px;"></div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+          Medidas antropométricas
+          <span class="accordion-toggle">Ver</span>
+        </button>
+        <div class="accordion-content">
+          <div class="grid-3">
+            <div class="field"><label>Cintura (cm)</label><input type="number" id="am-cintura"></div>
+            <div class="field"><label>Brazos (cm)</label><input type="number" id="am-brazos"></div>
+            <div class="field"><label>Hombros (cm)</label><input type="number" id="am-hombros"></div>
+            <div class="field"><label>Piernas (cm)</label><input type="number" id="am-piernas"></div>
+            <div class="field"><label>Glúteo (cm)</label><input type="number" id="am-gluteo"></div>
+          </div>
+          <div id="am-month-label" style="font-size:13px;color:var(--ink-soft);margin-top:8px;"></div>
+        </div>
+      </div>
+      <div class="accordion-item">
+        <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+          Fotos de progreso
+          <span class="accordion-toggle">Ver</span>
+        </button>
+        <div class="accordion-content">
+          <div class="grid-2">
+            ${PHOTO_ANGLES.map(a => `<div class="field"><label>${a.label}</label><input type="file" id="photo-file-${a.key}" accept="image/*"></div>`).join('')}
+          </div>
+          <div id="photo-month-label" style="font-size:13px;color:var(--ink-soft);margin-top:8px;"></div>
+        </div>
+      </div>
     </div>
-
-    <div style="margin:24px 0 8px;font-weight:700;">Cargar análisis InBody</div>
-    <p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">Sube el PDF o una foto de tu reporte InBody y completaremos los campos automáticamente.</p>
-    <div class="bf-drop" onclick="document.getElementById('m3-pdf-input').click()">
-      Subir PDF o foto del análisis InBody
-      <input type="file" id="m3-pdf-input" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="m3HandlePdf(this)">
-    </div>
-    <div id="m3-ocr-status" style="font-size:13px;margin:8px 0;"></div>
-    <div id="m3-version-label" style="font-size:12px;color:var(--ink-soft);display:none;margin-bottom:8px;"></div>
-    <div class="grid-3">
-      <div class="field"><label>Peso total (InBody)</label><input type="number" id="m3-peso-total" onchange="m3UpdateIMC()"></div>
-      <div class="field"><label>Masa muscular esquelética</label><input type="number" id="m3-smm"></div>
-      <div class="field"><label>% Grasa corporal</label><input type="number" id="m3-grasa-pct"></div>
-      <div class="field"><label>Peso objetivo</label><input type="number" id="m3-peso-objetivo"></div>
-      <div class="field"><label>Grasa visceral</label><input type="number" id="m3-grasa-visceral"></div>
-      <div class="field"><label>Metabolismo basal (BMR)</label><input type="number" id="m3-bmr"></div>
-      <div class="field"><label>Ángulo de fase</label><input type="number" step="0.01" id="m3-angulo-fase"></div>
-      <div class="field"><label>Agua corporal total (L)</label><input type="number" step="0.1" id="m3-ecw-tbw"></div>
-      <div class="field"><label>Masa ósea</label><input type="number" step="0.01" id="m3-masa-osea"></div>
-      <div class="field"><label>Estatura (InBody)</label><input type="number" id="m3-height" onchange="m3UpdateIMC()"></div>
-      <div class="field"><label>IMC calculado</label><input type="text" id="m3-imc-display" disabled></div>
-    </div>
-    <div id="m3-inbody-history"></div>
-
-    <div style="margin:24px 0 8px;font-weight:700;">Medidas antropométricas</div>
-    <div class="grid-3">
-      <div class="field"><label>Cintura (cm)</label><input type="number" id="am-cintura"></div>
-      <div class="field"><label>Brazos (cm)</label><input type="number" id="am-brazos"></div>
-      <div class="field"><label>Hombros (cm)</label><input type="number" id="am-hombros"></div>
-      <div class="field"><label>Piernas (cm)</label><input type="number" id="am-piernas"></div>
-      <div class="field"><label>Glúteo (cm)</label><input type="number" id="am-gluteo"></div>
-    </div>
-    <div id="m3-history" class="empty-state">Cargando historial…</div>
-
-    <div style="margin:24px 0 8px;font-weight:700;">Fotos de progreso</div>
-    <div class="grid-2">
-      <div class="field"><label>Ángulo</label><select id="photo-angle">
-        <option value="frente">Frente</option><option value="perfil">Perfil</option><option value="espalda">Espalda</option>
-      </select></div>
-      <div class="field"><label>Foto</label><input type="file" id="photo-file" accept="image/*"></div>
-    </div>
-    <div id="m3-gallery" style="margin-top:8px;"></div>
   `;
 }
 
@@ -647,75 +952,183 @@ async function initModule3() {
       api(`/api/clients/${clientId}/photos`),
       api(`/api/clients/${clientId}/inbody-records`)
     ]);
-    const histEl = document.getElementById('m3-history');
-    if (histEl) {
-      histEl.outerHTML = records.length ? `<table id="m3-history"><thead><tr><th>Fecha</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
-        <tbody>${records.map(r => `<tr><td>${r.fecha}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>`
-        : '<div class="empty-state" id="m3-history">Aún no tienes medidas registradas.</div>';
-    }
-    const galEl = document.getElementById('m3-gallery');
-    if (galEl) {
-      galEl.innerHTML = photos.length ? `<div class="grid-3">${photos.map(p => `<div><img class="photo-thumb" src="${p.photo_url}"><p style="text-align:center;font-size:12px;color:var(--ink-soft);">${p.angle} · ${p.fecha}</p></div>`).join('')}</div>` : '<div class="empty-state">Aún no has subido fotos.</div>';
-    }
-    const ibEl = document.getElementById('m3-inbody-history');
-    if (ibEl) {
-      ibEl.innerHTML = inbodyRecords.length ? `<p style="font-size:12px;color:var(--ink-soft);margin-top:10px;">Últimos registros InBody: ${inbodyRecords.slice(-3).map(r => `${r.fecha} (${r.peso_total ?? '-'} kg, ${r.grasa_pct ?? '-'}% grasa)`).join(' · ')}</p>` : '';
-    }
+    window._m3Records = records;
+    window._m3Photos = photos;
+    window._m3InbodyRecords = inbodyRecords;
+    const allMonthNums = [
+      ...records.map(r => Number(r.mes_num) || 0),
+      ...photos.map(p => Number(p.mes_num) || 0),
+      ...inbodyRecords.map(r => Number(r.mes_num) || 0),
+    ];
+    const maxMonthNum = Math.max(0, ...allMonthNums);
+    window._m3NextMonthNum = maxMonthNum + 1;
+    const nextMonthLabel = `Siguiente registro: Mes ${window._m3NextMonthNum}`;
+    ['weight-month-label', 'm3-month-label', 'am-month-label', 'photo-month-label'].forEach(id => {
+      const labelEl = document.getElementById(id);
+      if (labelEl) labelEl.textContent = nextMonthLabel;
+    });
+    restoreModule3Draft(clientId);
   } catch (e) { console.error(e); }
 }
 
-async function saveModule3() {
-  const clientId = currentClientId();
-  const weight = document.getElementById('field-weight').value || null;
-  const payload = {
-    weight, height: document.getElementById('field-height').value || null,
-    body_fat: document.getElementById('field-body_fat').value || null,
-    onboarding_report: onboardingData, complete: false
+// Borrador temporal de Composición Corporal: permite ir a "Historial de Salud" y volver
+// con "Anterior" sin perder lo digitado. Vive solo en memoria (window._m3Draft), nunca se
+// guarda en el servidor, así que se pierde automáticamente si se cierra/recarga la app.
+// Se confirma en la base de datos (y se limpia) recién al hacer clic en "Finalizar".
+function captureModule3Draft() {
+  window._m3Draft = {
+    weight: document.getElementById('field-weight').value,
+    height: document.getElementById('field-height').value,
+    body_fat: document.getElementById('field-body_fat').value,
+    am: {
+      cintura: document.getElementById('am-cintura').value,
+      brazos: document.getElementById('am-brazos').value,
+      hombros: document.getElementById('am-hombros').value,
+      piernas: document.getElementById('am-piernas').value,
+      gluteo: document.getElementById('am-gluteo').value,
+    },
+    inbody: {
+      pesoTotal: document.getElementById('m3-peso-total').value,
+      smm: document.getElementById('m3-smm').value,
+      grasaPct: document.getElementById('m3-grasa-pct').value,
+      pesoObjetivo: document.getElementById('m3-peso-objetivo').value,
+      grasaVisceral: document.getElementById('m3-grasa-visceral').value,
+      bmr: document.getElementById('m3-bmr').value,
+      anguloFase: document.getElementById('m3-angulo-fase').value,
+      ecwTbw: document.getElementById('m3-ecw-tbw').value,
+      masaOsea: document.getElementById('m3-masa-osea').value,
+      altura: document.getElementById('m3-height').value,
+      imc: document.getElementById('m3-imc-display').value,
+      ocrDone: !!window._m3OcrDone,
+      version: window._m3InbodyVersion || null,
+    },
+    photos: Object.fromEntries(PHOTO_ANGLES.map(a => [a.key, (document.getElementById(`photo-file-${a.key}`).files || [])[0] || null])),
   };
-  try {
-    await api(`/api/clients/${clientId}/personal-info`, { method: 'PUT', body: JSON.stringify(payload) });
+}
 
-    const cintura = document.getElementById('am-cintura').value;
-    const brazos = document.getElementById('am-brazos').value;
-    const hombros = document.getElementById('am-hombros').value;
-    const piernas = document.getElementById('am-piernas').value;
-    const gluteo = document.getElementById('am-gluteo').value;
-    if (cintura || brazos || hombros || piernas || gluteo) {
-      await api(`/api/clients/${clientId}/anthropometrics`, { method: 'POST', body: JSON.stringify({
-        fecha: new Date().toISOString().slice(0, 10), peso: weight,
-        cintura: cintura || null, brazos: brazos || null, hombros: hombros || null, piernas: piernas || null, gluteo: gluteo || null
-      })});
-    }
+function restoreModule3Draft(clientId) {
+  const draft = window._m3Draft;
+  if (!draft || window._m3DraftClientId !== clientId) return;
+  document.getElementById('field-weight').value = draft.weight || '';
+  document.getElementById('field-height').value = draft.height || '';
+  document.getElementById('field-body_fat').value = draft.body_fat || '';
+  document.getElementById('am-cintura').value = draft.am.cintura || '';
+  document.getElementById('am-brazos').value = draft.am.brazos || '';
+  document.getElementById('am-hombros').value = draft.am.hombros || '';
+  document.getElementById('am-piernas').value = draft.am.piernas || '';
+  document.getElementById('am-gluteo').value = draft.am.gluteo || '';
+  document.getElementById('m3-peso-total').value = draft.inbody.pesoTotal || '';
+  document.getElementById('m3-smm').value = draft.inbody.smm || '';
+  document.getElementById('m3-grasa-pct').value = draft.inbody.grasaPct || '';
+  document.getElementById('m3-peso-objetivo').value = draft.inbody.pesoObjetivo || '';
+  document.getElementById('m3-grasa-visceral').value = draft.inbody.grasaVisceral || '';
+  document.getElementById('m3-bmr').value = draft.inbody.bmr || '';
+  document.getElementById('m3-angulo-fase').value = draft.inbody.anguloFase || '';
+  document.getElementById('m3-ecw-tbw').value = draft.inbody.ecwTbw || '';
+  document.getElementById('m3-masa-osea').value = draft.inbody.masaOsea || '';
+  document.getElementById('m3-height').value = draft.inbody.altura || '';
+  document.getElementById('m3-imc-display').value = draft.inbody.imc || '';
+  window._m3OcrDone = draft.inbody.ocrDone;
+  window._m3InbodyVersion = draft.inbody.version;
+  const verLbl = document.getElementById('m3-version-label');
+  if (verLbl && draft.inbody.version) { verLbl.style.display = 'block'; verLbl.textContent = `Versión detectada: ${draft.inbody.version}`; }
+  PHOTO_ANGLES.forEach(a => {
+    const file = draft.photos[a.key];
+    if (!file) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById(`photo-file-${a.key}`).files = dt.files;
+    } catch (e) { /* navegador sin soporte para DataTransfer en inputs de archivo */ }
+  });
+}
 
-    const fileInput = document.getElementById('photo-file');
-    if (fileInput && fileInput.files[0]) {
-      const fd = new FormData();
-      fd.append('photo', fileInput.files[0]);
-      fd.append('angle', document.getElementById('photo-angle').value);
-      await api(`/api/clients/${clientId}/photos`, { method: 'POST', body: fd });
-    }
+async function commitModule3Draft(clientId) {
+  const draft = window._m3Draft;
+  if (!draft || window._m3DraftClientId !== clientId) return;
+  const monthNum = window._m3NextMonthNum || 1;
 
-    const pesoTotal = document.getElementById('m3-peso-total').value;
-    if (window._m3OcrDone && pesoTotal) {
-      await api(`/api/clients/${clientId}/inbody-records`, { method: 'POST', body: JSON.stringify({
-        fecha: new Date().toISOString().slice(0, 10), version: window._m3InbodyVersion || null,
-        peso_total: pesoTotal || null, smm: document.getElementById('m3-smm').value || null,
-        grasa_pct: document.getElementById('m3-grasa-pct').value || null,
-        imc: (document.getElementById('m3-imc-display').value || null),
-        peso_objetivo: document.getElementById('m3-peso-objetivo').value || null,
-        grasa_visceral: document.getElementById('m3-grasa-visceral').value || null,
-        bmr: document.getElementById('m3-bmr').value || null,
-        angulo_fase: document.getElementById('m3-angulo-fase').value || null,
-        ecw_tbw: document.getElementById('m3-ecw-tbw').value || null,
-        masa_osea: document.getElementById('m3-masa-osea').value || null,
-        altura: document.getElementById('m3-height').value || null,
-      })});
-      window._m3OcrDone = false;
-    }
-    setStep(4);
-  } catch (e) {
-    alert('Error al guardar: ' + e.message);
+  const { cintura, brazos, hombros, piernas, gluteo } = draft.am;
+  if (cintura || brazos || hombros || piernas || gluteo) {
+    await api(`/api/clients/${clientId}/anthropometrics`, { method: 'POST', body: JSON.stringify({
+      fecha: new Date().toISOString().slice(0, 10), peso: draft.weight || null,
+      cintura: cintura || null, brazos: brazos || null, hombros: hombros || null, piernas: piernas || null, gluteo: gluteo || null,
+      mes_num: monthNum
+    })});
   }
+
+  for (const a of PHOTO_ANGLES) {
+    const file = draft.photos[a.key];
+    if (!file) continue;
+    const fd = new FormData();
+    fd.append('photo', file);
+    fd.append('angle', a.key);
+    fd.append('mes_num', monthNum);
+    await api(`/api/clients/${clientId}/photos`, { method: 'POST', body: fd });
+  }
+
+  if (draft.inbody.ocrDone && draft.inbody.pesoTotal) {
+    await api(`/api/clients/${clientId}/inbody-records`, { method: 'POST', body: JSON.stringify({
+      fecha: new Date().toISOString().slice(0, 10),
+      version: draft.inbody.version,
+      peso_total: draft.inbody.pesoTotal || null,
+      smm: draft.inbody.smm || null,
+      grasa_pct: draft.inbody.grasaPct || null,
+      imc: draft.inbody.imc || null,
+      peso_objetivo: draft.inbody.pesoObjetivo || null,
+      grasa_visceral: draft.inbody.grasaVisceral || null,
+      bmr: draft.inbody.bmr || null,
+      angulo_fase: draft.inbody.anguloFase || null,
+      ecw_tbw: draft.inbody.ecwTbw || null,
+      masa_osea: draft.inbody.masaOsea || null,
+      altura: draft.inbody.altura || null,
+      mes_num: monthNum
+    })});
+  }
+
+  window._m3NextMonthNum = monthNum + 1;
+  window._m3Draft = null;
+  window._m3DraftClientId = null;
+}
+
+function renderSimpleBarChart(containerId, dataPoints, opts = {}) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const points = dataPoints.slice().sort((a, b) => a.month - b.month);
+  if (!points.length) { el.innerHTML = '<div class="empty-state">Sin datos suficientes.</div>'; return; }
+  const unit = opts.unit || '';
+  const w = 100, h = 90, padBottom = 16;
+  const values = points.map(d => d.value);
+  const maxVal = Math.max(...values);
+  const minVal = Math.min(0, ...values);
+  const range = (maxVal - minVal) || 1;
+  const gap = 2;
+  const barWidth = Math.min(20, (w - gap * (points.length + 1)) / points.length);
+  const totalWidth = barWidth * points.length + gap * (points.length - 1);
+  const startX = (w - totalWidth) / 2;
+  const bars = points.map((d, i) => {
+    const x = startX + i * (barWidth + gap);
+    const barH = ((d.value - minVal) / range) * (h - padBottom);
+    const y = (h - padBottom) - barH;
+    const isLast = i === points.length - 1;
+    return `<g>
+      <rect x="${x}" y="${y}" width="${barWidth}" height="${Math.max(barH, 1)}" rx="3" fill="var(--terracota)"><title>Mes ${d.month}: ${d.value}${unit}</title></rect>
+      ${isLast ? `<text x="${x + barWidth / 2}" y="${Math.max(y - 3, 7)}" font-size="7" text-anchor="middle" fill="var(--ink-soft)">${d.value}${unit}</text>` : ''}
+      <text x="${x + barWidth / 2}" y="${h}" font-size="6" text-anchor="middle" fill="var(--ink-soft)">M${d.month}</text>
+    </g>`;
+  }).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${w} ${h + 2}" style="width:100%;height:120px;" preserveAspectRatio="xMidYMid meet">
+    <line x1="0" y1="${h - padBottom}" x2="${w}" y2="${h - padBottom}" stroke="var(--line)" stroke-width="0.5"/>
+    ${bars}
+  </svg>`;
+}
+
+function saveModule3() {
+  // Nada se guarda en el servidor aquí — solo queda como borrador en memoria hasta
+  // que se haga clic en "Finalizar" (ver saveOnboardingStep / commitModule3Draft).
+  captureModule3Draft();
+  window._m3DraftClientId = currentClientId();
+  setStep(4);
 }
 
 function m3UpdateIMC() {
@@ -1060,6 +1473,15 @@ async function deleteExercise(id) {
   catch (e) { alert('Error: ' + e.message); }
 }
 
+function printAsPdf(title, bodyHtml) {
+  const w = window.open('', '_blank');
+  if (!w) { alert('Habilita las ventanas emergentes para descargar el PDF.'); return; }
+  w.document.write(`<html><head><title>${title}</title><style>body{font-family:sans-serif;padding:24px;color:#222}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:12px}td,th{padding:8px;border:1px solid #ccc;text-align:left}</style></head><body><h1>${title}</h1>${bodyHtml}</body></html>`);
+  w.document.close();
+  w.focus();
+  w.print();
+}
+
 // ---------------- Módulo: Nutrición ----------------
 
 async function renderNutrition(el) {
@@ -1067,6 +1489,7 @@ async function renderNutrition(el) {
   const isAdmin = state.role === 'admin';
   try {
     const { plan, meals } = await api(`/api/clients/${clientId}/nutrition`);
+    window._nutritionData = { plan, meals };
     el.innerHTML = `
       <div class="page-header"><h2>Nutrición</h2><p>Plan de alimentación y protocolos asignados por tu mentor.</p></div>
       <div class="card">
@@ -1079,6 +1502,15 @@ async function renderNutrition(el) {
         </div>
         <div class="field"><label>Notas / protocolo</label><textarea id="nt-notes" rows="2" ${!isAdmin?'disabled':''}>${plan.notes ?? ''}</textarea></div>
         ${isAdmin ? `<button class="btn btn-primary" style="width:auto" onclick="saveNutritionPlan()">Guardar plan</button>` : ''}
+        <div class="field" style="margin-top:16px;">
+          <label>Plan de alimentación</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
+            <button class="btn btn-ghost" style="width:auto" onclick="downloadNutritionPdf()">Descargar PDF</button>
+            ${plan.pdf_url ? `<a class="btn btn-ghost" style="width:auto" href="${plan.pdf_url}" target="_blank" rel="noopener">${plan.pdf_name || 'Ver PDF adjunto'}</a>` : ''}
+          </div>
+          ${isAdmin ? `<input type="file" id="nt-pdf-input" accept="application/pdf" style="margin-top:8px;">
+          <button class="btn btn-ghost" style="width:auto;margin-top:8px;" onclick="uploadNutritionPdf()">Adjuntar PDF (opcional)</button>` : ''}
+        </div>
       </div>
       ${isAdmin ? `<div class="card">
         <div class="card-title">Agregar comida</div>
@@ -1115,6 +1547,24 @@ async function saveNutritionPlan() {
   try { await api(`/api/clients/${clientId}/nutrition`, { method: 'PUT', body: JSON.stringify(payload) }); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
 }
+function downloadNutritionPdf() {
+  const { plan, meals } = window._nutritionData || { plan: {}, meals: [] };
+  const macros = `<table><tr><th>Calorías</th><th>Proteína</th><th>Carbohidratos</th><th>Grasas</th></tr>
+    <tr><td>${plan.daily_cals ?? '-'}</td><td>${plan.protein_g ?? '-'} g</td><td>${plan.carbs_g ?? '-'} g</td><td>${plan.fat_g ?? '-'} g</td></tr></table>`;
+  const notes = plan.notes ? `<p>${plan.notes}</p>` : '';
+  const mealsTable = meals.length ? `<table><tr><th>Momento</th><th>Comida</th><th>Calorías</th><th>P</th><th>C</th><th>G</th></tr>
+    ${meals.map(m => `<tr><td>${m.meal_time}</td><td>${m.name}</td><td>${m.calories}</td><td>${m.protein_g}</td><td>${m.carbs_g}</td><td>${m.fat_g}</td></tr>`).join('')}</table>` : '<p>Sin comidas registradas.</p>';
+  printAsPdf('Plan de Alimentación', `${macros}${notes}<h2 style="font-size:16px;margin-top:20px;">Plan de comidas</h2>${mealsTable}`);
+}
+async function uploadNutritionPdf() {
+  const clientId = currentClientId();
+  const input = document.getElementById('nt-pdf-input');
+  if (!input.files[0]) return alert('Selecciona un PDF primero.');
+  const fd = new FormData();
+  fd.append('pdf', input.files[0]);
+  try { await api(`/api/clients/${clientId}/nutrition/upload-pdf`, { method: 'POST', body: fd }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
 async function createMeal() {
   const clientId = currentClientId();
   const payload = {
@@ -1141,6 +1591,7 @@ async function renderSupplementation(el) {
   const isAdmin = state.role === 'admin';
   try {
     const { supplements } = await api(`/api/clients/${clientId}/supplements`);
+    window._supplementsData = supplements;
     el.innerHTML = `
       <div class="page-header"><h2>Suplementación</h2><p>Protocolo de suplementos asignado por tu mentor.</p></div>
       ${isAdmin ? `<div class="card">
@@ -1157,6 +1608,7 @@ async function renderSupplementation(el) {
       </div>` : ''}
       <div class="card">
         <div class="card-title">Tu protocolo</div>
+        ${supplements.length ? `<button class="btn btn-ghost" style="width:auto;margin-bottom:12px;" onclick="downloadSupplementsPdf()">Descargar PDF</button>` : ''}
         ${supplements.length ? supplements.map(s => `
           <div class="list-row">
             <div><strong>${s.name}</strong> <span class="badge">${s.category || ''}</span>
@@ -1181,6 +1633,12 @@ async function createSupplement() {
   };
   try { await api(`/api/clients/${clientId}/supplements`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
+}
+function downloadSupplementsPdf() {
+  const supplements = window._supplementsData || [];
+  const table = supplements.length ? `<table><tr><th>Nombre</th><th>Marca</th><th>Dosis</th><th>Momento</th><th>Categoría</th><th>Beneficio</th></tr>
+    ${supplements.map(s => `<tr><td>${s.name}</td><td>${s.brand || '-'}</td><td>${s.dose || '-'}</td><td>${s.timing || '-'}</td><td>${s.category || '-'}</td><td>${s.benefit || '-'}</td></tr>`).join('')}</table>` : '<p>Sin suplementos asignados.</p>';
+  printAsPdf('Esquema de Suplementación', table);
 }
 async function deleteSupplement(id) {
   const clientId = currentClientId();
@@ -1291,31 +1749,38 @@ async function reserveTherapy(id) {
 async function renderEvolution(el) {
   const clientId = currentClientId();
   try {
-    const { checkins, anthropometrics } = await api(`/api/clients/${clientId}/evolution`);
+    const [{ checkins, anthropometrics, inbody }, { photos }] = await Promise.all([
+      api(`/api/clients/${clientId}/evolution`),
+      api(`/api/clients/${clientId}/photos`)
+    ]);
     const last = checkins[checkins.length - 1] || {};
     const firstAnthro = anthropometrics[0] || {};
     const lastAnthro = anthropometrics[anthropometrics.length - 1] || {};
+    const firstInbody = inbody[0] || {};
+    const lastInbody = inbody[inbody.length - 1] || {};
+    const photosByAngle = angle => photos.filter(p => p.angle === angle).sort((a, b) => (Number(a.mes_num) || 0) - (Number(b.mes_num) || 0));
     el.innerHTML = `
       <div class="page-header"><h2>Mi Evolución</h2><p>Tu progreso a lo largo del tiempo, en un solo lugar.</p></div>
       <div class="card">
-        <div class="card-title">Cómo te sientes hoy</div>
+        <div class="card-title">Check-in del mes</div>
         <div class="grid-3">
-          <div class="field"><label>Fuerza (1-10)</label><input type="number" min="1" max="10" id="ev-strength"></div>
-          <div class="field"><label>Estado de ánimo (1-10)</label><input type="number" min="1" max="10" id="ev-mood"></div>
-          <div class="field"><label>Confianza (1-10)</label><input type="number" min="1" max="10" id="ev-confidence"></div>
-          <div class="field"><label>Seguridad (1-10)</label><input type="number" min="1" max="10" id="ev-security"></div>
-          <div class="field"><label>Energía (1-10)</label><input type="number" min="1" max="10" id="ev-energy"></div>
+          <div class="field"><label>Horas de sueño promedio</label><input type="number" step="0.5" min="0" id="ev-sleep"></div>
+          <div class="field"><label>Adherencia al plan (%)</label><input type="number" min="0" max="100" id="ev-adherence"></div>
+          <div class="field"><label>Nivel de estrés (1-10)</label><input type="number" min="1" max="10" id="ev-stress"></div>
+          <div class="field"><label>¿Dolor o molestias físicas?</label><select id="ev-pain-flag" onchange="document.getElementById('ev-pain-notes-wrap').classList.toggle('conditional-hidden', this.value !== 'Sí')">
+            <option value="">Selecciona…</option><option value="Sí">Sí</option><option value="No">No</option>
+          </select></div>
+          <div class="field conditional-hidden" id="ev-pain-notes-wrap" style="grid-column:1 / -1;"><label>Describe el dolor o molestia</label><input type="text" id="ev-pain-notes"></div>
         </div>
         <button class="btn btn-primary" style="width:auto" onclick="saveCheckin()">Guardar check-in</button>
       </div>
       <div class="card">
         <div class="card-title">KPIs más recientes</div>
         <div class="kpi-row">
-          <div class="kpi-tile"><div class="val">${last.strength_score ?? '-'}</div><div class="lbl">Fuerza</div></div>
-          <div class="kpi-tile"><div class="val">${last.mood_score ?? '-'}</div><div class="lbl">Ánimo</div></div>
-          <div class="kpi-tile"><div class="val">${last.confidence_score ?? '-'}</div><div class="lbl">Confianza</div></div>
-          <div class="kpi-tile"><div class="val">${last.security_score ?? '-'}</div><div class="lbl">Seguridad</div></div>
-          <div class="kpi-tile"><div class="val">${last.energy_score ?? '-'}</div><div class="lbl">Energía</div></div>
+          <div class="kpi-tile"><div class="val">${last.sleep_hours ?? '-'}</div><div class="lbl">Horas de sueño</div></div>
+          <div class="kpi-tile"><div class="val">${last.adherence_pct != null ? last.adherence_pct + '%' : '-'}</div><div class="lbl">Adherencia</div></div>
+          <div class="kpi-tile"><div class="val">${last.stress_score ?? '-'}</div><div class="lbl">Estrés</div></div>
+          <div class="kpi-tile"><div class="val">${last.pain_flag == null ? '-' : (last.pain_flag ? 'Sí' : 'No')}</div><div class="lbl">Dolor/molestias</div></div>
         </div>
       </div>
       <div class="card">
@@ -1328,18 +1793,58 @@ async function renderEvolution(el) {
           `).join('')}
         </tbody></table>
       </div>
+      <div class="card">
+        <div class="card-title">Comparativa InBody</div>
+        ${inbody.length ? `<table><thead><tr><th></th><th>Primera medición</th><th>Última medición</th><th>Diferencia</th></tr></thead>
+        <tbody>
+          ${[['peso_total','Peso total'],['smm','Masa muscular esquelética'],['grasa_pct','% Grasa corporal'],['peso_objetivo','Peso objetivo'],['grasa_visceral','Grasa visceral'],['bmr','Metabolismo basal (BMR)'],['angulo_fase','Ángulo de fase'],['ecw_tbw','Agua corporal total'],['masa_osea','Masa ósea'],['altura','Estatura'],['imc','IMC']].map(([k, label]) => `
+            <tr><td>${label}</td><td>${firstInbody[k] ?? '-'}</td><td>${lastInbody[k] ?? '-'}</td>
+            <td>${(firstInbody[k] != null && lastInbody[k] != null) ? (lastInbody[k]-firstInbody[k]).toFixed(1) : '-'}</td></tr>
+          `).join('')}
+        </tbody></table>` : '<div class="empty-state">Aún no hay registros InBody para comparar.</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title">Comparativa de fotos</div>
+        ${photos.length ? `<div class="grid-3">
+          ${PHOTO_ANGLES.map(a => {
+            const list = photosByAngle(a.key);
+            if (!list.length) return '';
+            const firstP = list[0];
+            const lastP = list[list.length - 1];
+            return `<div>
+              <p style="font-size:13px;font-weight:600;margin:0 0 6px;">${a.label}</p>
+              <div style="display:flex;gap:8px;">
+                <div style="flex:1;"><img class="photo-thumb" src="${firstP.photo_url}" onclick="openPhotoPreview('${firstP.photo_url}','${a.label} · ${firstP.fecha}')"><p style="text-align:center;font-size:11px;color:var(--ink-soft);">${firstP.mes_num ? `Mes ${firstP.mes_num}` : firstP.fecha}</p></div>
+                ${list.length > 1 ? `<div style="flex:1;"><img class="photo-thumb" src="${lastP.photo_url}" onclick="openPhotoPreview('${lastP.photo_url}','${a.label} · ${lastP.fecha}')"><p style="text-align:center;font-size:11px;color:var(--ink-soft);">${lastP.mes_num ? `Mes ${lastP.mes_num}` : lastP.fecha}</p></div>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : '<div class="empty-state">Aún no hay fotos para comparar.</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title">Evolución mes a mes</div>
+        <div class="grid-3">
+          <div><p style="font-size:13px;font-weight:600;margin:0 0 6px;">Peso total</p><div id="ev-chart-peso"></div></div>
+          <div><p style="font-size:13px;font-weight:600;margin:0 0 6px;">% Grasa</p><div id="ev-chart-grasa"></div></div>
+          <div><p style="font-size:13px;font-weight:600;margin:0 0 6px;">Masa muscular</p><div id="ev-chart-smm"></div></div>
+        </div>
+      </div>
     `;
+    renderSimpleBarChart('ev-chart-peso', inbody.filter(r => r.mes_num && r.peso_total != null).map(r => ({ month: r.mes_num, value: Number(r.peso_total) })), { unit: ' kg' });
+    renderSimpleBarChart('ev-chart-grasa', inbody.filter(r => r.mes_num && r.grasa_pct != null).map(r => ({ month: r.mes_num, value: Number(r.grasa_pct) })), { unit: '%' });
+    renderSimpleBarChart('ev-chart-smm', inbody.filter(r => r.mes_num && r.smm != null).map(r => ({ month: r.mes_num, value: Number(r.smm) })), { unit: ' kg' });
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 async function saveCheckin() {
   const clientId = currentClientId();
+  const painFlagVal = document.getElementById('ev-pain-flag').value;
   const payload = {
     fecha: new Date().toISOString().slice(0,10),
-    strength_score: document.getElementById('ev-strength').value || null,
-    mood_score: document.getElementById('ev-mood').value || null,
-    confidence_score: document.getElementById('ev-confidence').value || null,
-    security_score: document.getElementById('ev-security').value || null,
-    energy_score: document.getElementById('ev-energy').value || null,
+    sleep_hours: document.getElementById('ev-sleep').value || null,
+    adherence_pct: document.getElementById('ev-adherence').value || null,
+    stress_score: document.getElementById('ev-stress').value || null,
+    pain_flag: painFlagVal === '' ? null : painFlagVal === 'Sí',
+    pain_notes: painFlagVal === 'Sí' ? document.getElementById('ev-pain-notes').value : null,
   };
   try { await api(`/api/clients/${clientId}/evolution`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
@@ -1363,13 +1868,14 @@ async function renderAdminClients(el) {
         <button class="btn btn-primary" style="width:auto" onclick="createClient()">Crear cliente</button>
       </div>
       <div class="card">
-        <table><thead><tr><th>Nombre</th><th>Email</th><th>Estado</th><th>Plan</th><th></th></tr></thead>
+        <table><thead><tr><th>Nombre</th><th>Email</th><th>Estado</th><th>Tipo</th><th>Vence</th><th></th></tr></thead>
         <tbody>
           ${clients.map(c => `
             <tr>
               <td>${c.name}</td><td>${c.email}</td>
               <td><span class="badge ${c.status==='inactive'?'warn':''}">${c.status}</span></td>
-              <td>${c.plan}</td>
+              <td>${CLIENT_TYPE_LABELS[c.client_type] || '-'}</td>
+              <td>${c.client_type === 'lead_wellness' ? '-' : (c.plan_end_date ? `<span class="badge ${isClientPlanExpired(c) ? 'warn' : ''}">${c.plan_end_date}</span>` : '-')}</td>
               <td><button class="small-btn" onclick="openClient('${c.id}')">Abrir</button></td>
             </tr>`).join('')}
         </tbody></table>
@@ -1386,22 +1892,168 @@ async function createClient() {
   try { await api('/api/clients', { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
 }
+async function activateClient(id) {
+  const clientType = document.getElementById('cd-client-type').value;
+  if (!clientType) return alert('Elige el tipo de cliente antes de activar (Coaching 1:1, Coaching Online o Leads Wellness).');
+  try {
+    await api(`/api/clients/${id}/client-type`, { method: 'PATCH', body: JSON.stringify({ client_type: clientType }) });
+    const { client } = await api(`/api/clients/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'active' }) });
+    applyUpdatedClient(client);
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function deactivateClient(id) {
+  try { const { client } = await api(`/api/clients/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'inactive' }) }); applyUpdatedClient(client); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function saveClientType(id) {
+  const clientType = document.getElementById('cd-client-type').value;
+  if (!clientType) return alert('Selecciona un tipo de cliente.');
+  try { const { client } = await api(`/api/clients/${id}/client-type`, { method: 'PATCH', body: JSON.stringify({ client_type: clientType }) }); applyUpdatedClient(client); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+function isClientPlanExpired(client) {
+  if (!client || !client.plan_end_date) return false;
+  return new Date().toISOString().slice(0, 10) > client.plan_end_date;
+}
+function applyUpdatedClient(client) {
+  const idx = (state.clients || []).findIndex(c => c.id === client.id);
+  if (idx !== -1) state.clients[idx] = client;
+}
+async function renewClientPlan(id) {
+  const duration = parseInt(document.getElementById('cd-plan-duration').value, 10);
+  try { const { client } = await api(`/api/clients/${id}/renew-plan`, { method: 'PATCH', body: JSON.stringify({ duration_days: duration }) }); applyUpdatedClient(client); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function saveClientPlanDates(id) {
+  const plan_start_date = document.getElementById('cd-plan-start').value;
+  const plan_end_date = document.getElementById('cd-plan-end').value;
+  if (!plan_start_date || !plan_end_date) return alert('Completa ambas fechas.');
+  try { const { client } = await api(`/api/clients/${id}/renew-plan`, { method: 'PATCH', body: JSON.stringify({ plan_start_date, plan_end_date }) }); applyUpdatedClient(client); renderMain(); alert('Fechas de membresía guardadas.'); }
+  catch (e) { alert('Error: ' + e.message); }
+}
 function openClient(id) {
   state.currentClientId = id;
   setView('admin-client-detail');
 }
 async function renderAdminClientDetail(el) {
-  const client = state.clients.find(c => c.id === state.currentClientId);
-  el.innerHTML = `
-    <div class="page-header"><h2>${client ? client.name : 'Cliente'}</h2><p>${client ? client.email : ''}</p></div>
-    <button class="btn btn-ghost" style="width:auto;margin-bottom:20px;" onclick="setView('admin-clients')">← Volver a clientes</button>
-    <div style="margin-bottom:20px;">
-      ${CLIENT_NAV.map(item => `<button class="btn btn-ghost" style="width:auto;margin:0 8px 8px 0;" onclick="setView('${item.key}')">${item.label}</button>`).join('')}
-    </div>
-  `;
+  let client = (state.clients || []).find(c => c.id === state.currentClientId);
+  try {
+    if (!client) {
+      const { client: fetchedClient } = await api(`/api/clients/${state.currentClientId}`);
+      client = fetchedClient;
+    }
+    const { personalInfo } = await api(`/api/clients/${state.currentClientId}/personal-info`);
+    const completed = personalInfo.completed_at ? 'Sí' : 'No';
+    const completedAt = personalInfo.completed_at ? personalInfo.completed_at.split('T')[0] : '-';
+    const report = personalInfo.onboarding_report || {};
+    const summaryRows = [
+      ['País', personalInfo.country],
+      ['Ciudad', personalInfo.city],
+      ['Celular', personalInfo.phone_number],
+      ['Peso', personalInfo.weight],
+      ['Altura', personalInfo.height],
+      ['Grasa corporal', personalInfo.body_fat],
+      ['Onboarding completo', completed],
+      ['Fecha de finalización', completedAt],
+    ].filter(([_, value]) => value !== undefined && value !== null && value !== '');
+
+    el.innerHTML = `
+      <div class="page-header"><h2>${client ? client.name : 'Cliente'}</h2><p>${client ? client.email : ''}</p></div>
+      <button class="btn btn-ghost" style="width:auto;margin-bottom:20px;" onclick="setView('admin-clients')">← Volver a clientes</button>
+      <div style="margin-bottom:20px;">
+        ${CLIENT_NAV.map(item => `<button class="btn btn-ghost" style="width:auto;margin:0 8px 8px 0;" onclick="setView('${item.key}')">${item.label}</button>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Cuenta</div>
+        <div class="grid-3">
+          <div class="field"><label>Estado</label><span class="badge ${client && client.status === 'inactive' ? 'warn' : ''}" style="display:block;width:fit-content;margin-top:4px;">${client ? client.status : '-'}</span></div>
+          <div class="field"><label>Tipo de cliente</label><select id="cd-client-type">
+            <option value="">Sin clasificar</option>
+            <option value="coaching_1_1" ${client && client.client_type === 'coaching_1_1' ? 'selected' : ''}>Coaching 1:1</option>
+            <option value="coaching_online" ${client && client.client_type === 'coaching_online' ? 'selected' : ''}>Coaching Online</option>
+            <option value="lead_wellness" ${client && client.client_type === 'lead_wellness' ? 'selected' : ''}>Leads Wellness</option>
+          </select></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          ${client && client.status === 'inactive' ? `<button class="btn btn-primary" style="width:auto" onclick="activateClient('${state.currentClientId}')">Activar cliente</button>` : `<button class="btn btn-danger" style="width:auto" onclick="deactivateClient('${state.currentClientId}')">Desactivar cliente</button>`}
+          <button class="btn btn-ghost" style="width:auto" onclick="saveClientType('${state.currentClientId}')">Guardar tipo de cliente</button>
+        </div>
+      </div>
+      ${client && client.client_type !== 'lead_wellness' ? `<div class="card">
+        <div class="card-title">Membresía</div>
+        <div class="grid-4">
+          <div class="field"><label>Plan contratado</label><span class="badge" style="display:block;width:fit-content;margin-top:4px;">${client.plan_duration_days ? `${client.plan_duration_days} días` : 'Sin plan'}</span></div>
+          <div class="field"><label>Inicio del plan</label><input type="date" id="cd-plan-start" value="${client.plan_start_date || ''}"></div>
+          <div class="field"><label>Vence</label><input type="date" id="cd-plan-end" value="${client.plan_end_date || ''}"></div>
+          <div class="field"><label>Estado del plan</label><span class="badge ${isClientPlanExpired(client) ? 'warn' : ''}" style="display:block;width:fit-content;margin-top:4px;">${client.plan_end_date ? (isClientPlanExpired(client) ? 'Vencido' : 'Activo') : 'Sin plan asignado'}</span></div>
+        </div>
+        <button class="btn btn-primary" style="width:auto;margin-top:8px;" onclick="saveClientPlanDates('${state.currentClientId}')">Guardar fechas de membresía</button>
+        <div style="display:flex;align-items:end;gap:8px;margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+          <div class="field" style="max-width:220px;margin:0;"><label>Renovar por</label><select id="cd-plan-duration">
+            <option value="30" ${client.plan_duration_days === 30 ? 'selected' : ''}>30 días</option>
+            <option value="90" ${client.plan_duration_days === 90 ? 'selected' : ''}>90 días</option>
+          </select></div>
+          <button class="btn btn-ghost" style="width:auto" onclick="renewClientPlan('${state.currentClientId}')">Marcar pago recibido hoy / Renovar</button>
+        </div>
+      </div>` : ''}
+      <div class="card">
+        <div class="card-title">Resumen de onboarding</div>
+        <table><tbody>
+          ${summaryRows.map(([label, value]) => `<tr><td style="padding:10px 8px;font-weight:700">${label}</td><td style="padding:10px 8px">${value}</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+      <div class="card">
+        <div class="card-title">Últimos datos enviados</div>
+        <p style="color:var(--ink-soft);font-size:14px;margin:0 0 10px;">Campos clave del último onboarding completado.</p>
+        <div class="grid-2">
+          <div class="field"><label>Condición médica</label><input disabled value="${report.condition || '-'}"></div>
+          <div class="field"><label>¿Consumes probióticos?</label><input disabled value="${report.probiotics || '-'}"></div>
+          <div class="field"><label>¿Tomas suplementos?</label><input disabled value="${report.supps_active || '-'}"></div>
+          <div class="field"><label>¿Consumo de otras sustancias?</label><input disabled value="${report.substances || '-'}"></div>
+          <div class="field" style="grid-column:1 / -1"><label>3 razones del objetivo</label><textarea disabled rows="4">${report.goal_reasons || '-'}</textarea></div>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    el.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  }
 }
 
 // ---------------- Admin: comunidad (eventos y terapias) ----------------
+
+async function renderAdminNotifications(el) {
+  try {
+    const { notifications } = await api('/api/admin/notifications');
+    state.notifications = notifications;
+    el.innerHTML = `
+      <div class="page-header"><h2>Notificaciones</h2><p>Eventos recientes de tus clientes.</p></div>
+      <div class="card">
+        ${notifications.length ? notifications.map(n => `
+          <div class="list-row" style="${n.read ? 'opacity:.6;' : ''}">
+            <div>
+              <strong>${n.message}</strong>
+              <div style="font-size:12px;color:var(--ink-soft);">${new Date(n.created_at).toLocaleString()}</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="small-btn" onclick="openClient('${n.client_id}')">Ver cliente</button>
+              ${!n.read ? `<button class="small-btn" onclick="markNotificationRead('${n.id}')">Marcar leída</button>` : ''}
+            </div>
+          </div>
+        `).join('') : '<div class="empty-state">No hay notificaciones por ahora.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function markNotificationRead(id) {
+  try {
+    await api(`/api/admin/notifications/${id}/read`, { method: 'PATCH' });
+    const n = (state.notifications || []).find(x => x.id === id);
+    if (n) n.read = true;
+    renderNav();
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
 
 async function renderAdminCommunity(el) {
   try {

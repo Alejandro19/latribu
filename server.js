@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('@supabase/supabase-js');
+const nodemailer = require('nodemailer');
 
 let pdfParse;
 try { pdfParse = require('pdf-parse'); } catch (e) { pdfParse = null; }
@@ -80,10 +81,63 @@ async function dbGetOne(table, filters = {}) {
   const rows = await dbGet(table, filters);
   return rows && rows[0] ? rows[0] : null;
 }
+function extractMissingColumnsFromSupabaseError(error) {
+  if (!error || typeof error.message !== 'string') return [];
+  const message = error.message;
+  const columns = [];
+  let match;
+
+  const regexStandard = /column\s+"?([^\s\.\"]+)"?\s+does not exist/gi;
+  while ((match = regexStandard.exec(message)) !== null) {
+    columns.push(match[1]);
+  }
+
+  const regexSchemaCache = /Could not find the '([^']+)' column of '[^']+' in the schema cache/gi;
+  while ((match = regexSchemaCache.exec(message)) !== null) {
+    columns.push(match[1]);
+  }
+
+  const regexSchemaCacheNoQuotes = /Could not find the '([^']+)' column of [^ ]+ in the schema cache/gi;
+  while ((match = regexSchemaCacheNoQuotes.exec(message)) !== null) {
+    columns.push(match[1]);
+  }
+
+  return Array.from(new Set(columns));
+}
+
 async function dbInsert(table, row) {
-  const { data, error } = await supabase.from(table).insert(row).select().single();
-  if (error) throw error;
-  return data;
+  let insertRow = sanitizeInsertRow(row);
+
+  while (true) {
+    const { data, error } = await supabase.from(table).insert(insertRow).select().single();
+    if (!error) return data;
+
+    const missingColumns = extractMissingColumnsFromSupabaseError(error);
+    if (!missingColumns.length) throw error;
+
+    const nextRow = { ...insertRow };
+    missingColumns.forEach((col) => {
+      if (col in nextRow) {
+        delete nextRow[col];
+      }
+    });
+    if (Object.keys(nextRow).length === 0) throw error;
+    if (Object.keys(nextRow).length === Object.keys(insertRow).length) throw error;
+
+    console.warn(`dbInsert: retrying insert into ${table} without unknown columns: ${missingColumns.join(', ')}`);
+    insertRow = nextRow;
+  }
+}
+function sanitizeInsertRow(row) {
+  return Object.fromEntries(Object.entries(row).filter(([, value]) => value !== undefined && value !== ''));
+}
+function formatSupabaseError(e) {
+  if (!e) return 'Error interno';
+  if (typeof e === 'string') return e;
+  if (e.message) return e.message;
+  if (e.error) return e.error;
+  if (e.details) return String(e.details);
+  try { return JSON.stringify(e); } catch (_){ return 'Error interno'; }
 }
 async function dbUpdate(table, id, patch) {
   const { data, error } = await supabase.from(table).update(patch).eq('id', id).select().single();
@@ -105,28 +159,151 @@ async function dbUpsertByClient(table, clientId, patch) {
   return data;
 }
 
+async function unlockModule(clientId, moduleKey) {
+  const client = await dbGetOne('clients', { id: clientId });
+  if (!client) return;
+  if (client.permissions && client.permissions[moduleKey] === true) return;
+  const permissions = { ...(client.permissions || {}), [moduleKey]: true };
+  await dbUpdate('clients', clientId, { permissions });
+}
+
+const EMAIL_HOST = process.env.EMAIL_HOST;
+const EMAIL_PORT = process.env.EMAIL_PORT;
+const EMAIL_SECURE = process.env.EMAIL_SECURE === 'true';
+const EMAIL_USER = process.env.EMAIL_USER;
+const EMAIL_PASS = process.env.EMAIL_PASS;
+const EMAIL_FROM = process.env.NOTIFICATION_FROM || 'no-reply@latribu.com';
+const EMAIL_TO = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.NOTIFICATION_TO || 'g619alejandro@gmail.com';
+
+async function sendClientNotification(clientId, info) {
+  const subject = `La Tribu: onboarding completado cliente ${clientId}`;
+  const summary = [`<strong>ID:</strong> ${clientId}`];
+  if (info.country) summary.push(`<strong>País:</strong> ${info.country}`);
+  if (info.city) summary.push(`<strong>Ciudad:</strong> ${info.city}`);
+  if (info.weight) summary.push(`<strong>Peso:</strong> ${info.weight}`);
+  if (info.height) summary.push(`<strong>Altura:</strong> ${info.height}`);
+  const html = `<p>El cliente ha completado el proceso de onboarding personal.</p><p>${summary.join('<br>')}</p>`;
+
+  if (!EMAIL_HOST || !EMAIL_PORT || !EMAIL_USER || !EMAIL_PASS || !EMAIL_TO) {
+    console.log('sendClientNotification: email config no disponible, se omite el envío.', { clientId, info });
+    return;
+  }
+
+  try {
+    const transporter = nodemailer.createTransport({
+      host: EMAIL_HOST,
+      port: Number(EMAIL_PORT),
+      secure: EMAIL_SECURE,
+      auth: {
+        user: EMAIL_USER,
+        pass: EMAIL_PASS,
+      }
+    });
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: EMAIL_TO,
+      subject,
+      html,
+    });
+  } catch (e) {
+    console.error('Error enviando notificación de cliente:', e);
+  }
+}
+
 // ------------------------------------------------------------
 // Auth: JWT + roles (mismo patrón que BIO360)
 // ------------------------------------------------------------
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
   if (!header || !header.startsWith('Bearer ')) return err(res, 'Token requerido.', 401);
+  let payload;
   try {
-    req.user = jwt.verify(header.slice(7), JWT_SECRET);
-    next();
+    payload = jwt.verify(header.slice(7), JWT_SECRET);
   } catch (e) {
     return err(res, 'Token inválido o expirado.', 401);
   }
+  if (payload.role === 'cliente') {
+    try {
+      const client = await dbGetOne('clients', { id: payload.id });
+      if (!client || client.status === 'inactive') return err(res, 'Tu cuenta está inactiva. Contacta al administrador.', 403);
+      req.client = client;
+      req.planExpired = isPlanExpired(client);
+    } catch (e) {
+      console.error(e);
+      return err(res, 'Error al verificar la sesión.', 500);
+    }
+  }
+  req.user = payload;
+  next();
 }
 function adminOnly(req, res, next) {
   if (req.user.role !== 'admin') return err(res, 'Acceso restringido a administradores.', 403);
   next();
 }
+function isPlanExpired(client) {
+  if (!client) return false;
+  if (!['coaching_1_1', 'coaching_online'].includes(client.client_type)) return false;
+  if (!client.plan_end_date) return false;
+  const today = new Date().toISOString().slice(0, 10);
+  return today > client.plan_end_date;
+}
 function ownerOrAdmin(req, res, next) {
   if (req.user.role === 'admin') return next();
-  if (req.user.id === req.params.id) return next();
+  if (req.user.id === req.params.id) {
+    if (req.planExpired) return err(res, 'Tu plan ha vencido. Contacta a tu coach para renovarlo.', 402);
+    return next();
+  }
   return err(res, 'No tienes permiso para acceder a estos datos.', 403);
+}
+const LEAD_BLOCKED_MODULES = ['training', 'nutrition', 'supplementation'];
+function requirePermission(moduleKey) {
+  return (req, res, next) => {
+    if (req.user.role === 'admin') return next();
+    if (LEAD_BLOCKED_MODULES.includes(moduleKey) && req.client && req.client.client_type === 'lead_wellness') {
+      return err(res, 'Este módulo no está disponible para tu tipo de cuenta.', 403);
+    }
+    const permissions = req.client && req.client.permissions;
+    if (permissions && permissions[moduleKey] === false) {
+      return err(res, 'No tienes acceso a este módulo.', 403);
+    }
+    next();
+  };
+}
+
+function blockForLeadWellness(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  if (req.client && req.client.client_type === 'lead_wellness') {
+    return err(res, 'Este módulo no está disponible para tu tipo de cuenta.', 403);
+  }
+  next();
+}
+
+async function requireOnboardingComplete(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  if (req.client && req.client.client_type === 'lead_wellness') {
+    return err(res, 'Este módulo no está disponible para tu tipo de cuenta.', 403);
+  }
+  try {
+    const info = await dbGetOne('personal_info', { client_id: req.user.id });
+    if (!info || !info.completed_at) {
+      return err(res, 'Completa tu información personal para acceder a este módulo.', 403);
+    }
+    next();
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al verificar tu información personal.', 500);
+  }
+}
+
+async function requireCommunityAccess(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  if (req.client && req.client.client_type === 'lead_wellness') {
+    if (req.client.permissions && req.client.permissions.community === true) return next();
+    return err(res, 'No tienes acceso a este módulo.', 403);
+  }
+  if (req.planExpired) return err(res, 'Tu plan ha vencido. Contacta a tu coach para renovarlo.', 402);
+  return requireOnboardingComplete(req, res, next);
 }
 
 app.post('/api/auth/login', async (req, res) => {
@@ -153,11 +330,16 @@ app.post('/api/auth/login', async (req, res) => {
     if (!valid) return err(res, 'Credenciales incorrectas.', 401);
 
     const token = jwt.sign({ id: client.id, role: 'cliente', name: client.name, email: client.email, plan: client.plan }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+    const info = await dbGetOne('personal_info', { client_id: client.id });
     return ok(res, {
       token,
       role: 'cliente',
       user: { id: client.id, name: client.name, email: client.email, plan: client.plan },
-      permissions: client.permissions || {}
+      permissions: client.permissions || {},
+      clientType: client.client_type || null,
+      planExpired: isPlanExpired(client),
+      planEndDate: client.plan_end_date || null,
+      onboardingComplete: !!(info && info.completed_at)
     });
   } catch (e) {
     console.error(e);
@@ -174,10 +356,15 @@ app.get('/api/auth/me', authMiddleware, async (req, res) => {
     }
     const client = await dbGetOne('clients', { id: req.user.id });
     if (!client) return err(res, 'No encontrado.', 404);
+    const info = await dbGetOne('personal_info', { client_id: client.id });
     return ok(res, {
       role: 'cliente',
       user: { id: client.id, name: client.name, email: client.email, plan: client.plan },
-      permissions: client.permissions || {}
+      permissions: client.permissions || {},
+      clientType: client.client_type || null,
+      planExpired: isPlanExpired(client),
+      planEndDate: client.plan_end_date || null,
+      onboardingComplete: !!(info && info.completed_at)
     });
   } catch (e) {
     console.error(e);
@@ -194,9 +381,13 @@ app.post('/api/auth/register', async (req, res) => {
     if (existing[0] || existing[1]) return err(res, 'Ese email ya está registrado.', 409);
 
     const password_hash = await bcrypt.hash(password, 10);
-    const client = await dbInsert('clients', { name, email: emailLower, password_hash });
-    const token = jwt.sign({ id: client.id, role: 'cliente', name: client.name, email: client.email, plan: client.plan }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
-    return ok(res, { token, role: 'cliente', user: { id: client.id, name: client.name, email: client.email, plan: client.plan }, permissions: client.permissions }, 201);
+    const newClient = await dbInsert('clients', { name, email: emailLower, password_hash, status: 'inactive' });
+    await dbInsert('admin_notifications', {
+      client_id: newClient.id,
+      type: 'new_registration',
+      message: `${name} se registró en la plataforma.`
+    });
+    return ok(res, { pending: true, message: 'Tu cuenta fue creada y quedará activa cuando el equipo la confirme.' }, 201);
   } catch (e) {
     console.error(e);
     return err(res, 'Error al registrar.', 500);
@@ -305,11 +496,59 @@ app.patch('/api/clients/:id/status', authMiddleware, adminOnly, async (req, res)
   }
 });
 
+const CLIENT_TYPES = ['coaching_1_1', 'coaching_online', 'lead_wellness'];
+app.patch('/api/clients/:id/client-type', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { client_type } = req.body;
+    if (!CLIENT_TYPES.includes(client_type)) return err(res, 'Tipo de cliente inválido.', 400);
+    const existing = await dbGetOne('clients', { id: req.params.id });
+    if (!existing) return err(res, 'Cliente no encontrado.', 404);
+    const patch = { client_type, updated_at: new Date().toISOString() };
+    if (client_type === 'lead_wellness') {
+      patch.permissions = { ...(existing.permissions || {}), cortisol: true, community: true };
+    }
+    const client = await dbUpdate('clients', req.params.id, patch);
+    return ok(res, { client });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al clasificar cliente.', 500);
+  }
+});
+
+app.patch('/api/clients/:id/renew-plan', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { plan_start_date, plan_end_date } = req.body;
+    let patch;
+    if (plan_start_date && plan_end_date) {
+      if (plan_end_date <= plan_start_date) return err(res, 'La fecha de vencimiento debe ser posterior a la de inicio.', 400);
+      const days = Math.round((new Date(plan_end_date) - new Date(plan_start_date)) / 86400000);
+      patch = { plan_duration_days: days, plan_start_date, plan_end_date, updated_at: new Date().toISOString() };
+    } else {
+      const duration = parseInt(req.body.duration_days, 10);
+      if (![30, 90].includes(duration)) return err(res, 'Duración de plan inválida. Usa 30 o 90 días.', 400);
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + duration);
+      patch = {
+        plan_duration_days: duration,
+        plan_start_date: today.toISOString().slice(0, 10),
+        plan_end_date: endDate.toISOString().slice(0, 10),
+        updated_at: new Date().toISOString()
+      };
+    }
+    const client = await dbUpdate('clients', req.params.id, patch);
+    return ok(res, { client });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al renovar el plan.', 500);
+  }
+});
+
 // ------------------------------------------------------------
 // Información Personal (módulos 1-9, sin módulo 10)
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
     const info = await dbGetOne('personal_info', { client_id: req.params.id });
     return ok(res, { personalInfo: info || {} });
@@ -322,9 +561,11 @@ app.get('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, async (r
 // Guarda el formulario completo de onboarding (módulos 1-9).
 // Campos estructurados del módulo 1 y datos base del módulo 3 se
 // guardan en columnas propias; el resto va en onboarding_report (JSONB).
-app.put('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.put('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
     const body = req.body || {};
+    const existing = await dbGetOne('personal_info', { client_id: req.params.id });
+    const wasAlreadyComplete = !!(existing && existing.completed_at);
     const structured = {
       birthdate: body.birthdate,
       gender: body.gender,
@@ -342,6 +583,17 @@ app.put('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, async (r
     };
     Object.keys(structured).forEach((k) => structured[k] === undefined && delete structured[k]);
     const info = await dbUpsertByClient('personal_info', req.params.id, structured);
+    if (body.complete) {
+      await sendClientNotification(req.params.id, info);
+      if (!wasAlreadyComplete) {
+        const client = await dbGetOne('clients', { id: req.params.id });
+        await dbInsert('admin_notifications', {
+          client_id: req.params.id,
+          type: 'onboarding_complete',
+          message: `${client ? client.name : 'Un cliente'} completó su información personal.`
+        });
+      }
+    }
     return ok(res, { personalInfo: info });
   } catch (e) {
     console.error(e);
@@ -349,11 +601,36 @@ app.put('/api/clients/:id/personal-info', authMiddleware, ownerOrAdmin, async (r
   }
 });
 
+app.post('/api/clients/:id/personal-info-file', authMiddleware, ownerOrAdmin, blockForLeadWellness, upload.single('checkup_file'), async (req, res) => {
+  try {
+    if (!req.file) return err(res, 'No se recibió ningún archivo.');
+    const allowed = ['application/pdf', 'image/jpeg', 'image/png'];
+    if (!allowed.includes(req.file.mimetype)) return err(res, 'Formato inválido. Usa PDF o JPG/PNG.', 400);
+    const filename = `${req.params.id}/checkups/${uuidv4()}_${req.file.originalname}`;
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+    const file_url = pub.publicUrl;
+    let report = req.body.onboarding_report || {};
+    if (typeof report === 'string') {
+      try { report = JSON.parse(report); } catch (_e) { report = {}; }
+    }
+    const payload = {
+      onboarding_report: { ...report, checkup_file_url: file_url, checkup_file_name: req.file.originalname, checkup_uploaded_at: new Date().toISOString() }
+    };
+    await dbUpsertByClient('personal_info', req.params.id, payload);
+    return ok(res, { file_url, file_name: req.file.originalname, uploaded_at: new Date().toISOString() });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al subir el archivo de chequeo.', 500);
+  }
+});
+
 // ------------------------------------------------------------
 // Composición corporal: medidas antropométricas + fotos
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/anthropometrics', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/anthropometrics', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
     const records = await dbGet('anthropometric_records', { client_id: req.params.id }, { order: { column: 'fecha', ascending: true } });
     return ok(res, { records });
@@ -363,20 +640,32 @@ app.get('/api/clients/:id/anthropometrics', authMiddleware, ownerOrAdmin, async 
   }
 });
 
-app.post('/api/clients/:id/anthropometrics', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.post('/api/clients/:id/anthropometrics', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
-    const { fecha, semana, peso, cintura, brazos, hombros, piernas, gluteo, notas } = req.body;
-    const record = await dbInsert('anthropometric_records', {
-      client_id: req.params.id, fecha, semana, peso, cintura, brazos, hombros, piernas, gluteo, notas
+    const { fecha, semana, peso, cintura, brazos, hombros, piernas, gluteo, notas, mes_num } = req.body;
+    const month = Number.isFinite(+mes_num) && +mes_num > 0 ? parseInt(mes_num, 10) : undefined;
+    const payload = sanitizeInsertRow({
+      client_id: req.params.id,
+      fecha: fecha || new Date().toISOString().slice(0, 10),
+      semana, mes_num: month, peso, cintura, brazos, hombros, piernas, gluteo, notas
     });
+    let record;
+    if (month !== undefined) {
+      const existing = await dbGetOne('anthropometric_records', { client_id: req.params.id, mes_num: month });
+      if (existing) {
+        record = await dbUpdate('anthropometric_records', existing.id, payload);
+        return ok(res, { record }, 200);
+      }
+    }
+    record = await dbInsert('anthropometric_records', payload);
     return ok(res, { record }, 201);
   } catch (e) {
-    console.error(e);
-    return err(res, 'Error al guardar medidas.', 500);
+    console.error('Anthropometric insert error:', e);
+    return err(res, 'Error al guardar medidas: ' + (e.message || 'Error interno'), 500);
   }
 });
 
-app.delete('/api/clients/:id/anthropometrics/:recordId', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.delete('/api/clients/:id/anthropometrics/:recordId', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
     await dbDelete('anthropometric_records', req.params.recordId);
     return ok(res, { message: 'Registro eliminado.' });
@@ -386,29 +675,31 @@ app.delete('/api/clients/:id/anthropometrics/:recordId', authMiddleware, ownerOr
   }
 });
 
-app.post('/api/clients/:id/photos', authMiddleware, ownerOrAdmin, upload.single('photo'), async (req, res) => {
+app.post('/api/clients/:id/photos', authMiddleware, ownerOrAdmin, blockForLeadWellness, upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) return err(res, 'No se recibió ninguna foto.');
-    const { angle, anthropometric_record_id, fecha } = req.body;
+    const { angle, anthropometric_record_id, fecha, mes_num } = req.body;
+    const month = Number.isFinite(+mes_num) && +mes_num > 0 ? parseInt(mes_num, 10) : undefined;
     const filename = `${req.params.id}/photos/${uuidv4()}_${req.file.originalname}`;
     const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype });
     if (upErr) throw upErr;
     const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
-    const photo = await dbInsert('progress_photos', {
+    const photo = await dbInsert('progress_photos', sanitizeInsertRow({
       client_id: req.params.id,
       anthropometric_record_id: anthropometric_record_id || null,
       angle: angle || 'frente',
       photo_url: pub.publicUrl,
-      fecha: fecha || new Date().toISOString().slice(0, 10)
-    });
+      fecha: fecha || new Date().toISOString().slice(0, 10),
+      mes_num: month
+    }));
     return ok(res, { photo }, 201);
   } catch (e) {
-    console.error(e);
-    return err(res, 'Error al subir la foto.', 500);
+    console.error('Photo upload error:', e);
+    return err(res, 'Error al subir la foto: ' + (e.message || 'Error interno'), 500);
   }
 });
 
-app.get('/api/clients/:id/photos', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/photos', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
     const photos = await dbGet('progress_photos', { client_id: req.params.id }, { order: { column: 'fecha', ascending: false } });
     return ok(res, { photos });
@@ -420,7 +711,7 @@ app.get('/api/clients/:id/photos', authMiddleware, ownerOrAdmin, async (req, res
 
 // Registro InBody: se guarda tras el parseo automático del PDF/imagen
 // subido en el módulo 3 (Composición Corporal, dentro de Información Personal).
-app.get('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
     const records = await dbGet('bio_inbody_records', { client_id: req.params.id }, { order: { column: 'fecha', ascending: true } });
     return ok(res, { records });
@@ -430,17 +721,29 @@ app.get('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, async (
   }
 });
 
-app.post('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.post('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
-    const { fecha, version, peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura } = req.body;
-    const record = await dbInsert('bio_inbody_records', {
-      client_id: req.params.id, fecha: fecha || new Date().toISOString().slice(0, 10), version,
-      peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura
+    const { fecha, version, peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura, mes_num } = req.body;
+    const month = Number.isFinite(+mes_num) && +mes_num > 0 ? parseInt(mes_num, 10) : undefined;
+    const row = sanitizeInsertRow({
+      client_id: req.params.id,
+      fecha: fecha || new Date().toISOString().slice(0, 10),
+      version,
+      peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura,
+      mes_num: month
     });
-    return ok(res, { record }, 201);
+
+    try {
+      const record = await dbInsert('bio_inbody_records', row);
+      return ok(res, { record }, 201);
+    } catch (e) {
+      const errorMessage = formatSupabaseError(e);
+      console.error('InBody insert failed', { requestBody: req.body, row, error: errorMessage });
+      return err(res, 'Error al guardar registro InBody: ' + errorMessage, 500);
+    }
   } catch (e) {
-    console.error(e);
-    return err(res, 'Error al guardar registro InBody.', 500);
+    console.error('InBody handler error:', e, { requestBody: req.body });
+    return err(res, 'Error al guardar registro InBody: ' + formatSupabaseError(e), 500);
   }
 });
 
@@ -448,7 +751,7 @@ app.post('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, async 
 // Entrenamiento
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/exercises', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/exercises', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
   try {
     const exercises = await dbGet('exercises', { client_id: req.params.id }, { order: { column: 'sort_order', ascending: true } });
     return ok(res, { exercises });
@@ -461,6 +764,7 @@ app.get('/api/clients/:id/exercises', authMiddleware, ownerOrAdmin, async (req, 
 app.post('/api/clients/:id/exercises', authMiddleware, adminOnly, async (req, res) => {
   try {
     const exercise = await dbInsert('exercises', { client_id: req.params.id, ...req.body });
+    await unlockModule(req.params.id, 'training');
     return ok(res, { exercise }, 201);
   } catch (e) {
     console.error(e);
@@ -507,7 +811,7 @@ app.post('/api/clients/:id/exercises/:exId/upload-video', authMiddleware, adminO
 // Nutrición (formato estándar; admin carga plan/protocolos)
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/nutrition', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/nutrition', authMiddleware, ownerOrAdmin, requirePermission('nutrition'), async (req, res) => {
   try {
     const [plan, meals] = await Promise.all([
       dbGetOne('nutrition_plans', { client_id: req.params.id }),
@@ -523,6 +827,7 @@ app.get('/api/clients/:id/nutrition', authMiddleware, ownerOrAdmin, async (req, 
 app.put('/api/clients/:id/nutrition', authMiddleware, adminOnly, async (req, res) => {
   try {
     const plan = await dbUpsertByClient('nutrition_plans', req.params.id, req.body);
+    await unlockModule(req.params.id, 'nutrition');
     return ok(res, { plan });
   } catch (e) {
     console.error(e);
@@ -530,9 +835,26 @@ app.put('/api/clients/:id/nutrition', authMiddleware, adminOnly, async (req, res
   }
 });
 
+app.post('/api/clients/:id/nutrition/upload-pdf', authMiddleware, adminOnly, upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) return err(res, 'No se recibió ningún archivo.');
+    if (req.file.mimetype !== 'application/pdf') return err(res, 'Formato inválido. Usa PDF.', 400);
+    const filename = `${req.params.id}/nutrition/${uuidv4()}_${req.file.originalname}`;
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+    const plan = await dbUpsertByClient('nutrition_plans', req.params.id, { pdf_url: pub.publicUrl, pdf_name: req.file.originalname });
+    return ok(res, { plan });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al subir el PDF.', 500);
+  }
+});
+
 app.post('/api/clients/:id/meals', authMiddleware, adminOnly, async (req, res) => {
   try {
     const meal = await dbInsert('meals', { client_id: req.params.id, ...req.body });
+    await unlockModule(req.params.id, 'nutrition');
     return ok(res, { meal }, 201);
   } catch (e) {
     console.error(e);
@@ -564,7 +886,7 @@ app.delete('/api/clients/:id/meals/:mealId', authMiddleware, adminOnly, async (r
 // Suplementación (Neuro Stacking en BIO360; admin asigna suplementos)
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/supplements', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/supplements', authMiddleware, ownerOrAdmin, requirePermission('supplementation'), async (req, res) => {
   try {
     const supplements = await dbGet('supplements', { client_id: req.params.id }, { order: { column: 'sort_order', ascending: true } });
     return ok(res, { supplements });
@@ -579,6 +901,7 @@ app.post('/api/clients/:id/supplements', authMiddleware, adminOnly, async (req, 
     const existing = await dbGet('supplements', { client_id: req.params.id, name: req.body.name });
     if (existing.length) return err(res, 'Ya existe un suplemento con ese nombre para este cliente.', 409);
     const supplement = await dbInsert('supplements', { client_id: req.params.id, ...req.body });
+    await unlockModule(req.params.id, 'supplementation');
     return ok(res, { supplement }, 201);
   } catch (e) {
     console.error(e);
@@ -610,7 +933,7 @@ app.delete('/api/clients/:id/supplements/:suppId', authMiddleware, adminOnly, as
 // Gestión de Cortisol (admin asigna técnicas)
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/cortisol-techniques', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/cortisol-techniques', authMiddleware, ownerOrAdmin, requirePermission('cortisol'), async (req, res) => {
   try {
     const techniques = await dbGet('cortisol_techniques', { client_id: req.params.id }, { order: { column: 'sort_order', ascending: true } });
     return ok(res, { techniques });
@@ -623,6 +946,7 @@ app.get('/api/clients/:id/cortisol-techniques', authMiddleware, ownerOrAdmin, as
 app.post('/api/clients/:id/cortisol-techniques', authMiddleware, adminOnly, async (req, res) => {
   try {
     const technique = await dbInsert('cortisol_techniques', { client_id: req.params.id, ...req.body });
+    await unlockModule(req.params.id, 'cortisol');
     return ok(res, { technique }, 201);
   } catch (e) {
     console.error(e);
@@ -669,7 +993,7 @@ app.post('/api/clients/:id/cortisol-techniques/:techId/upload', authMiddleware, 
 // Comunidad: Eventos
 // ------------------------------------------------------------
 
-app.get('/api/community/events', authMiddleware, async (req, res) => {
+app.get('/api/community/events', authMiddleware, requireCommunityAccess, async (req, res) => {
   try {
     const events = await dbGet('community_events', { active: true }, { order: { column: 'event_date', ascending: true } });
     return ok(res, { events });
@@ -709,12 +1033,14 @@ app.delete('/api/community/events/:eventId', authMiddleware, adminOnly, async (r
   }
 });
 
-app.post('/api/community/events/:eventId/reserve', authMiddleware, async (req, res) => {
+app.post('/api/community/events/:eventId/reserve', authMiddleware, requireCommunityAccess, async (req, res) => {
   try {
     if (req.user.role !== 'cliente') return err(res, 'Solo los clientes pueden reservar.', 403);
     const existing = await dbGetOne('event_reservations', { event_id: req.params.eventId, client_id: req.user.id });
-    if (existing) return err(res, 'Ya tienes una reserva para este evento.', 409);
-    const reservation = await dbInsert('event_reservations', { event_id: req.params.eventId, client_id: req.user.id });
+    if (existing && existing.status === 'confirmada') return err(res, 'Ya tienes una reserva para este evento.', 409);
+    const reservation = existing
+      ? await dbUpdate('event_reservations', existing.id, { status: 'confirmada' })
+      : await dbInsert('event_reservations', { event_id: req.params.eventId, client_id: req.user.id });
     return ok(res, { reservation }, 201);
   } catch (e) {
     console.error(e);
@@ -722,9 +1048,9 @@ app.post('/api/community/events/:eventId/reserve', authMiddleware, async (req, r
   }
 });
 
-app.delete('/api/community/events/:eventId/reserve', authMiddleware, async (req, res) => {
+app.delete('/api/community/events/:eventId/reserve', authMiddleware, requireCommunityAccess, async (req, res) => {
   try {
-    const reservation = await dbGetOne('event_reservations', { event_id: req.params.eventId, client_id: req.user.id });
+    const reservation = await dbGetOne('event_reservations', { event_id: req.params.eventId, client_id: req.user.id, status: 'confirmada' });
     if (!reservation) return err(res, 'No tienes una reserva para este evento.', 404);
     await dbUpdate('event_reservations', reservation.id, { status: 'cancelada' });
     return ok(res, { message: 'Reserva cancelada.' });
@@ -734,7 +1060,7 @@ app.delete('/api/community/events/:eventId/reserve', authMiddleware, async (req,
   }
 });
 
-app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, requireCommunityAccess, async (req, res) => {
   try {
     const reservations = await dbGet('event_reservations', { client_id: req.params.id });
     return ok(res, { reservations });
@@ -748,7 +1074,7 @@ app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, asy
 // Comunidad: Terapias
 // ------------------------------------------------------------
 
-app.get('/api/community/therapies', authMiddleware, async (req, res) => {
+app.get('/api/community/therapies', authMiddleware, requireCommunityAccess, async (req, res) => {
   try {
     const therapies = await dbGet('community_therapies', { active: true }, { order: { column: 'sort_order', ascending: true } });
     return ok(res, { therapies });
@@ -788,12 +1114,14 @@ app.delete('/api/community/therapies/:therapyId', authMiddleware, adminOnly, asy
   }
 });
 
-app.post('/api/community/therapies/:therapyId/reserve', authMiddleware, async (req, res) => {
+app.post('/api/community/therapies/:therapyId/reserve', authMiddleware, requireCommunityAccess, async (req, res) => {
   try {
     if (req.user.role !== 'cliente') return err(res, 'Solo los clientes pueden reservar.', 403);
     const existing = await dbGetOne('therapy_reservations', { therapy_id: req.params.therapyId, client_id: req.user.id });
-    if (existing) return err(res, 'Ya tienes una reserva para esta terapia.', 409);
-    const reservation = await dbInsert('therapy_reservations', { therapy_id: req.params.therapyId, client_id: req.user.id });
+    if (existing && existing.status === 'confirmada') return err(res, 'Ya tienes una reserva para esta terapia.', 409);
+    const reservation = existing
+      ? await dbUpdate('therapy_reservations', existing.id, { status: 'confirmada' })
+      : await dbInsert('therapy_reservations', { therapy_id: req.params.therapyId, client_id: req.user.id });
     return ok(res, { reservation }, 201);
   } catch (e) {
     console.error(e);
@@ -801,7 +1129,19 @@ app.post('/api/community/therapies/:therapyId/reserve', authMiddleware, async (r
   }
 });
 
-app.get('/api/clients/:id/therapy-reservations', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.delete('/api/community/therapies/:therapyId/reserve', authMiddleware, requireCommunityAccess, async (req, res) => {
+  try {
+    const reservation = await dbGetOne('therapy_reservations', { therapy_id: req.params.therapyId, client_id: req.user.id, status: 'confirmada' });
+    if (!reservation) return err(res, 'No tienes una reserva para esta terapia.', 404);
+    await dbUpdate('therapy_reservations', reservation.id, { status: 'cancelada' });
+    return ok(res, { message: 'Reserva cancelada.' });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al cancelar reserva.', 500);
+  }
+});
+
+app.get('/api/clients/:id/therapy-reservations', authMiddleware, ownerOrAdmin, requireCommunityAccess, async (req, res) => {
   try {
     const reservations = await dbGet('therapy_reservations', { client_id: req.params.id });
     return ok(res, { reservations });
@@ -815,7 +1155,7 @@ app.get('/api/clients/:id/therapy-reservations', authMiddleware, ownerOrAdmin, a
 // Mi Evolución: KPIs de progreso
 // ------------------------------------------------------------
 
-app.get('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.get('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, requireOnboardingComplete, async (req, res) => {
   try {
     const [checkins, anthropometrics, inbody] = await Promise.all([
       dbGet('evolution_checkins', { client_id: req.params.id }, { order: { column: 'fecha', ascending: true } }),
@@ -829,16 +1169,40 @@ app.get('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, async (req, 
   }
 });
 
-app.post('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.post('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, requireOnboardingComplete, async (req, res) => {
   try {
-    const { fecha, strength_score, mood_score, confidence_score, security_score, energy_score, notes } = req.body;
+    const { fecha, sleep_hours, adherence_pct, pain_flag, pain_notes, stress_score, notes } = req.body;
     const checkin = await dbInsert('evolution_checkins', {
-      client_id: req.params.id, fecha, strength_score, mood_score, confidence_score, security_score, energy_score, notes
+      client_id: req.params.id, fecha, sleep_hours, adherence_pct, pain_flag, pain_notes, stress_score, notes
     });
     return ok(res, { checkin }, 201);
   } catch (e) {
     console.error(e);
     return err(res, 'Error al guardar check-in de evolución.', 500);
+  }
+});
+
+// ------------------------------------------------------------
+// Notificaciones para el admin
+// ------------------------------------------------------------
+
+app.get('/api/admin/notifications', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const notifications = await dbGet('admin_notifications', {}, { order: { column: 'created_at', ascending: false } });
+    return ok(res, { notifications });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener notificaciones.', 500);
+  }
+});
+
+app.patch('/api/admin/notifications/:id/read', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const notification = await dbUpdate('admin_notifications', req.params.id, { read: true });
+    return ok(res, { notification });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al marcar la notificación como leída.', 500);
   }
 });
 
@@ -863,7 +1227,7 @@ app.get('/api/cities/:isoCode', (req, res) => {
 // patrón que BIO360, el parseo de campos InBody ocurre en el frontend.
 // ------------------------------------------------------------
 
-app.post('/api/clients/:id/ocr-vision', authMiddleware, ownerOrAdmin, async (req, res) => {
+app.post('/api/clients/:id/ocr-vision', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   const apiKey = process.env.GOOGLE_VISION_API_KEY;
   const { base64 } = req.body;
   if (!base64) return err(res, 'No se recibió imagen o PDF.');

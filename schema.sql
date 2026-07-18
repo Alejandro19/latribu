@@ -24,7 +24,14 @@ CREATE TABLE clients (
   password_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
   plan TEXT NOT NULL DEFAULT 'Miembro',
-  permissions JSONB NOT NULL DEFAULT '{"training":true,"nutrition":true,"supplementation":true,"cortisol":true,"community":true,"evolution":true}',
+  client_type TEXT CHECK (client_type IN ('coaching_1_1','coaching_online','lead_wellness')),
+  -- Membresía: solo aplica a coaching_1_1/coaching_online (no a leads).
+  -- Se renueva manualmente por el admin cuando confirma el pago (fuera del
+  -- sistema); si hoy > plan_end_date, el cliente queda bloqueado.
+  plan_duration_days INT CHECK (plan_duration_days > 0),
+  plan_start_date DATE,
+  plan_end_date DATE,
+  permissions JSONB NOT NULL DEFAULT '{"training":false,"nutrition":false,"supplementation":false,"cortisol":false,"community":true,"evolution":true}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -75,6 +82,7 @@ CREATE TABLE anthropometric_records (
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
   semana INT,
+  mes_num INT,
   peso NUMERIC(5,1),
   cintura NUMERIC(5,1),
   brazos NUMERIC(5,1),
@@ -89,9 +97,10 @@ CREATE TABLE progress_photos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   anthropometric_record_id UUID REFERENCES anthropometric_records(id) ON DELETE CASCADE,
-  angle TEXT CHECK (angle IN ('frente','perfil','espalda')),
+  angle TEXT CHECK (angle IN ('frente','lado_derecho','lado_izquierdo','espalda')),
   photo_url TEXT NOT NULL,
   fecha DATE NOT NULL DEFAULT CURRENT_DATE,
+  mes_num INT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -133,6 +142,8 @@ CREATE TABLE nutrition_plans (
   fat_g INT DEFAULT 0,
   notes TEXT,
   client_observations TEXT,
+  pdf_url TEXT,
+  pdf_name TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(client_id)
 );
@@ -254,6 +265,11 @@ CREATE TABLE evolution_checkins (
   security_score INT CHECK (security_score BETWEEN 1 AND 10),
   energy_score INT CHECK (energy_score BETWEEN 1 AND 10),
   notes TEXT,
+  sleep_hours NUMERIC(3,1),
+  adherence_pct INT CHECK (adherence_pct BETWEEN 0 AND 100),
+  pain_flag BOOLEAN,
+  pain_notes TEXT,
+  stress_score INT CHECK (stress_score BETWEEN 1 AND 10),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -276,6 +292,22 @@ CREATE TABLE bio_inbody_records (
   ecw_tbw NUMERIC(5,3),
   masa_osea NUMERIC(4,2),
   altura NUMERIC(5,1),
+  mes_num INT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------
+-- 10. NOTIFICACIONES PARA EL ADMIN
+--     Se crea una fila cuando un cliente completa su onboarding
+--     (Información Personal). El admin las revisa y marca leídas.
+-- ------------------------------------------------------------
+
+CREATE TABLE admin_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  type TEXT NOT NULL DEFAULT 'onboarding_complete',
+  message TEXT NOT NULL,
+  read BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -292,7 +324,7 @@ BEGIN
     'admins','clients','personal_info','anthropometric_records','progress_photos',
     'exercises','nutrition_plans','meals','supplements','cortisol_techniques',
     'community_events','event_reservations','community_therapies','therapy_reservations',
-    'evolution_checkins','bio_inbody_records'
+    'evolution_checkins','bio_inbody_records','admin_notifications'
   ])
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', t);
