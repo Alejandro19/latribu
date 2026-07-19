@@ -17,6 +17,17 @@ CREATE TABLE admins (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Biblioteca de frases de mentalidad (módulo Entrenamiento). Pool global que
+-- administra el admin; opcionalmente se puede fijar una frase puntual por
+-- cliente (ver clients.assigned_quote_id).
+CREATE TABLE mindset_quotes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote TEXT NOT NULL,
+  author TEXT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -32,6 +43,12 @@ CREATE TABLE clients (
   plan_start_date DATE,
   plan_end_date DATE,
   permissions JSONB NOT NULL DEFAULT '{"training":false,"nutrition":false,"supplementation":false,"cortisol":false,"community":true,"evolution":true}',
+  -- Módulo Entrenamiento: cantidad de días de entrenamiento a la semana que el
+  -- admin le asigna al cliente (define cuántos botones "Día N" ve en la app).
+  training_days INT CHECK (training_days BETWEEN 1 AND 7),
+  -- Frase de mentalidad fija asignada por el admin a este cliente en particular
+  -- (si es NULL, ve una frase aleatoria del pool global de mindset_quotes).
+  assigned_quote_id UUID REFERENCES mindset_quotes(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -112,10 +129,11 @@ CREATE TABLE exercises (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  method TEXT NOT NULL CHECK (method IN ('Fuerza','HIIT','Funcional','Cardio','Movilidad')),
-  section TEXT DEFAULT 'Entrenamiento de fuerza' CHECK (section IN ('Movilidad articular','Entrenamiento de fuerza','Estiramientos','Cardio')),
+  day_number INT NOT NULL DEFAULT 1 CHECK (day_number BETWEEN 1 AND 7),
+  category TEXT NOT NULL DEFAULT 'strength' CHECK (category IN ('warmup','cardio','strength')),
   series INT DEFAULT 3,
   reps TEXT,
+  duration TEXT, -- solo aplica a category='cardio' (reemplaza series/reps para ese caso)
   rest_time TEXT,
   description TEXT,
   recommendations TEXT,
@@ -126,6 +144,29 @@ CREATE TABLE exercises (
   sort_order INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Notificaciones para el cliente (ej. "Ahora tienes acceso a tu módulo de
+-- nutrición" cuando el admin le asigna contenido por primera vez a un módulo).
+CREATE TABLE client_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Registro de "Día N" de entrenamiento completado (todas sus categorías con
+-- ejercicios asignados terminadas). Alimenta el calendario "Nivel de
+-- disciplina" y el candado semanal (Día N+1 no se desbloquea hasta que Día N
+-- tenga un registro con completed_date dentro de la semana calendario actual).
+CREATE TABLE training_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  day_number INT NOT NULL CHECK (day_number BETWEEN 1 AND 7),
+  completed_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, day_number, completed_date)
 );
 
 -- ------------------------------------------------------------
@@ -293,6 +334,8 @@ CREATE TABLE bio_inbody_records (
   masa_osea NUMERIC(4,2),
   altura NUMERIC(5,1),
   mes_num INT,
+  file_url TEXT, -- PDF/foto original del reporte InBody que subió el cliente
+  file_name TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -324,7 +367,7 @@ BEGIN
     'admins','clients','personal_info','anthropometric_records','progress_photos',
     'exercises','nutrition_plans','meals','supplements','cortisol_techniques',
     'community_events','event_reservations','community_therapies','therapy_reservations',
-    'evolution_checkins','bio_inbody_records','admin_notifications'
+    'evolution_checkins','bio_inbody_records','admin_notifications','mindset_quotes','training_completions','client_notifications'
   ])
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', t);

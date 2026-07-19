@@ -76,3 +76,83 @@ ALTER TABLE clients
 ALTER TABLE progress_photos DROP CONSTRAINT IF EXISTS progress_photos_angle_check;
 ALTER TABLE progress_photos ADD CONSTRAINT progress_photos_angle_check
   CHECK (angle IN ('frente','lado_derecho','lado_izquierdo','espalda')) NOT VALID;
+
+-- Rediseño del módulo Entrenamiento: días (Día 1, Día 2...) con 3 categorías
+-- fijas por día (Warm Up / Cardio / Strength), en vez de la clasificación libre
+-- Método+Sección de antes. Se mapea lo existente a categoría antes de borrar
+-- las columnas viejas, y todo queda en "Día 1" por defecto (el admin reclasifica).
+CREATE TABLE IF NOT EXISTS mindset_quotes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote TEXT NOT NULL,
+  author TEXT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE mindset_quotes ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON mindset_quotes USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE clients
+  ADD COLUMN IF NOT EXISTS training_days INT CHECK (training_days BETWEEN 1 AND 7),
+  ADD COLUMN IF NOT EXISTS assigned_quote_id UUID REFERENCES mindset_quotes(id) ON DELETE SET NULL;
+
+ALTER TABLE exercises ADD COLUMN IF NOT EXISTS day_number INT DEFAULT 1;
+ALTER TABLE exercises ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'strength';
+UPDATE exercises SET category = CASE
+    WHEN method = 'Cardio' OR section = 'Cardio' THEN 'cardio'
+    WHEN section = 'Movilidad articular' THEN 'warmup'
+    ELSE 'strength'
+  END
+  WHERE category IS NULL OR category = 'strength';
+ALTER TABLE exercises ALTER COLUMN day_number SET NOT NULL;
+ALTER TABLE exercises ALTER COLUMN category SET NOT NULL;
+ALTER TABLE exercises DROP CONSTRAINT IF EXISTS exercises_day_number_check;
+ALTER TABLE exercises ADD CONSTRAINT exercises_day_number_check CHECK (day_number BETWEEN 1 AND 7);
+ALTER TABLE exercises DROP CONSTRAINT IF EXISTS exercises_category_check;
+ALTER TABLE exercises ADD CONSTRAINT exercises_category_check CHECK (category IN ('warmup','cardio','strength'));
+ALTER TABLE exercises DROP COLUMN IF EXISTS method;
+ALTER TABLE exercises DROP COLUMN IF EXISTS section;
+
+-- Cardio mide duración en vez de series/repeticiones.
+ALTER TABLE exercises ADD COLUMN IF NOT EXISTS duration TEXT;
+
+-- Nivel de disciplina: registro de "Día N" completado (calendario del cliente +
+-- candado semanal: Día N+1 no se desbloquea hasta que Día N esté completado
+-- dentro de la semana calendario actual, lunes a domingo).
+CREATE TABLE IF NOT EXISTS training_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  day_number INT NOT NULL CHECK (day_number BETWEEN 1 AND 7),
+  completed_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, day_number, completed_date)
+);
+ALTER TABLE training_completions ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON training_completions USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Notificaciones para el cliente (ej. "Ahora tienes acceso a tu módulo de
+-- nutrición" cuando el admin le asigna contenido por primera vez).
+CREATE TABLE IF NOT EXISTS client_notifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  message TEXT NOT NULL,
+  read BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE client_notifications ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON client_notifications USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- PDF/foto original del reporte InBody, para que el admin lo pueda ver y
+-- descargar desde la ficha del cliente (antes solo se guardaban los valores
+-- extraídos por OCR, no el archivo original).
+ALTER TABLE bio_inbody_records
+  ADD COLUMN IF NOT EXISTS file_url TEXT,
+  ADD COLUMN IF NOT EXISTS file_name TEXT;

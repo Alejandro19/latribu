@@ -5,13 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>La Tribu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --cream:#FBF7F1; --paper:#FFFFFF; --ink:#2B2420; --ink-soft:#6B6058;
   --terracota:#C1662F; --terracota-soft:#F1DDCB; --sage:#6B8F71; --sage-soft:#E3EDE3;
-  --gold:#D9A441; --line:#E9E1D6; --danger:#C1462F; --radius:18px;
+  --gold:#D9A441; --line:#E9E1D6; --danger:#C1462F; --radius:16px;
+  /* Sistema de diseño LATRIBU: anillo de ritmo (mañana/tarde/noche) y temas de módulo */
+  --ring-morning:#D9A441; --ring-afternoon:#5B7A4E; --ring-evening:#8A5FA0;
+  --bg-neutral:#F5F1E9; --line-neutral:#E7DFC9; --accent-neutral:#B8935A;
+  --bg-green:#EFF5E8; --line-green:#D9E4CE; --accent-green:#5B7A4E;
 }
+.theme-neutral{ --tint:var(--bg-neutral); --tint-line:var(--line-neutral); --accent:var(--accent-neutral); }
+.theme-green{ --tint:var(--bg-green); --tint-line:var(--line-green); --accent:var(--accent-green); }
 *{box-sizing:border-box;}
 body{margin:0;font-family:'Inter',sans-serif;background:var(--cream);color:var(--ink);}
 h1,h2,h3,.serif{font-family:'Fraunces',serif;}
@@ -31,21 +37,16 @@ input,select,textarea{font-family:inherit;}
 .accordion-header{width:100%;text-align:left;padding:16px 18px;background:var(--cream);border:none;cursor:pointer;font-weight:700;display:flex;justify-content:space-between;align-items:center;font-size:15px;}
 .accordion-content{display:none;padding:18px 18px 12px;background:var(--paper);}
 .accordion-content.active{display:block;}
-.accordion-toggle{font-size:14px;color:var(--terracota);}
+.accordion-toggle{font-size:14px;color:var(--accent, var(--terracota));}
 .conditional-hidden{display:none !important;}
 
-/* Login */
-#login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
-.login-card{background:var(--paper);border-radius:var(--radius);padding:48px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(43,36,32,.08);border:1px solid var(--line);}
-.login-card h1{font-size:32px;margin:0 0 6px;color:var(--terracota);}
-.login-card p.sub{color:var(--ink-soft);margin:0 0 32px;}
 .field{margin-bottom:18px;}
 .field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink-soft);}
 .field input, .field select, .field textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--cream);font-size:15px;}
 .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--terracota);outline-offset:1px;}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:999px;border:none;font-weight:600;font-size:15px;transition:transform .15s ease;}
 .btn:active{transform:scale(.97);}
-.btn-primary{background:var(--terracota);color:#fff;width:100%;}
+.btn-primary{background:var(--accent, var(--terracota));color:#fff;width:100%;}
 .btn-secondary{background:var(--sage-soft);color:var(--sage);}
 .btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);}
 .btn-danger{background:var(--terracota-soft);color:var(--danger);}
@@ -57,18 +58,29 @@ input,select,textarea{font-family:inherit;}
 #app-view{display:none;min-height:100vh;}
 #app-view.active{display:flex;}
 .sidebar{width:250px;background:var(--paper);border-right:1px solid var(--line);padding:28px 18px;display:flex;flex-direction:column;flex-shrink:0;}
-.brand{font-size:22px;color:var(--terracota);margin:0 8px 30px;}
+.brand{font-size:22px;font-weight:700;color:var(--ink);margin:0 8px 4px;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;color:var(--ink-soft);font-weight:600;font-size:14px;margin-bottom:4px;background:none;border:none;width:100%;text-align:left;}
 .nav-item:hover{background:var(--cream);}
 .nav-item.active{background:var(--terracota-soft);color:var(--terracota);}
 .sidebar-footer{margin-top:auto;padding:14px;}
+.bell-wrap{position:relative;}
+.bell-btn{position:relative;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft);padding:4px 6px;opacity:.75;}
+.bell-btn:hover{opacity:1;}
+.bell-dot{position:absolute;top:2px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--danger);}
+.alerts-panel{display:none;position:absolute;top:36px;right:0;width:300px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,.14);z-index:50;max-height:320px;overflow-y:auto;}
+.alerts-panel.open{display:block;}
+.alert-item{font-size:12px;color:var(--ink);padding:9px 8px;border-bottom:1px solid var(--line);line-height:1.4;}
+.alert-item:last-child{border-bottom:none;}
 .user-chip{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:0 4px;}
-.main{flex:1;padding:36px 44px;overflow-y:auto;max-height:100vh;}
+.main{flex:1;padding:36px 44px;overflow-y:auto;max-height:100vh;display:flex;flex-direction:column;background:var(--tint, var(--cream));transition:background .4s ease;}
+.main-topbar{display:none;justify-content:space-between;align-items:center;min-height:32px;margin-bottom:8px;}
+#main-content.fade-anim{animation:module-in .45s ease;}
+@keyframes module-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .page-header{margin-bottom:28px;}
 .page-header h2{font-size:28px;margin:0 0 6px;}
 .page-header p{color:var(--ink-soft);margin:0;}
 
-.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin-bottom:20px;}
+.card{background:var(--paper);border:1px solid var(--tint-line, var(--line));border-radius:var(--radius);padding:26px;margin-bottom:20px;}
 .card-title{font-size:18px;font-weight:700;margin:0 0 16px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
@@ -76,7 +88,7 @@ input,select,textarea{font-family:inherit;}
 @media(max-width:800px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;}}
 
 .chip{display:inline-flex;align-items:center;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--cream);font-size:13px;font-weight:600;margin:4px 6px 4px 0;cursor:pointer;color:var(--ink-soft);}
-.chip.selected{background:var(--terracota);border-color:var(--terracota);color:#fff;}
+.chip.selected{background:var(--accent, var(--terracota));border-color:var(--accent, var(--terracota));color:#fff;}
 
 .city-dropdown{position:absolute;top:100%;left:0;right:0;background:var(--paper);border:1px solid var(--line);border-radius:10px;max-height:200px;overflow-y:auto;z-index:20;box-shadow:0 8px 24px rgba(43,36,32,.12);margin-top:4px;}
 .city-dropdown-item{padding:10px 14px;font-size:14px;cursor:pointer;}
@@ -87,7 +99,7 @@ input,select,textarea{font-family:inherit;}
 .wizard-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:24px;}
 .wizard-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:var(--cream);color:var(--ink-soft);border:1px solid var(--line);}
 .wizard-dot.done{background:var(--sage);color:#fff;border-color:var(--sage);}
-.wizard-dot.current{background:var(--terracota);color:#fff;border-color:var(--terracota);}
+.wizard-dot.current{background:var(--accent, var(--terracota));color:#fff;border-color:var(--accent, var(--terracota));}
 
 .list-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);}
 .list-row:last-child{border-bottom:none;}
@@ -98,55 +110,219 @@ th{text-align:left;font-size:12px;color:var(--ink-soft);text-transform:uppercase
 td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .small-btn{padding:6px 12px;font-size:13px;border-radius:999px;border:1px solid var(--line);background:var(--cream);}
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.kpi-row.kpi-row-3{grid-template-columns:repeat(3,1fr);}
 @media(max-width:900px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
-.kpi-tile{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;}
-.kpi-tile .val{font-size:26px;font-weight:700;color:var(--terracota);}
+.kpi-tile{background:var(--paper);border:1px solid var(--tint-line, var(--line));border-radius:14px;padding:18px;text-align:center;}
+.kpi-tile .val{font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:var(--ink);}
 .kpi-tile .lbl{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+.day-tile,.category-tile{background:var(--paper);border:1px solid var(--tint-line, var(--line));border-radius:14px;padding:20px 16px;text-align:center;cursor:pointer;transition:border-color .15s;font-family:inherit;}
+.day-tile:hover,.category-tile:hover:not(:disabled){border-color:var(--accent, var(--terracota));}
+.category-tile:disabled{opacity:.45;cursor:not-allowed;}
+.day-tile .num{font-family:'Fraunces',serif;font-size:22px;font-weight:600;color:var(--ink);}
+.day-tile .count,.category-tile .count{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+.category-tile .label{font-size:16px;font-weight:700;color:var(--ink);}
+.day-tile.active-day{border:2px solid var(--accent, var(--terracota));}
+.day-tile.completed-day{background:var(--tint, var(--sage-soft));border-color:var(--accent, var(--terracota));}
+.day-tile.locked-day{opacity:.5;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:8px auto 0;max-width:280px;}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;background:var(--cream);border:1px solid var(--line);}
+.cal-day.done{background:var(--sage-soft);border-color:var(--sage);}
+.cal-day.missed{background:var(--terracota-soft);border-color:var(--terracota);}
+.cal-num{font-weight:700;font-size:10px;color:var(--ink);}
+.cal-mark{font-size:10px;line-height:1;font-weight:700;margin-top:2px;}
+.cal-day.done .cal-mark{color:var(--sage);}
+.cal-day.missed .cal-mark{color:var(--terracota);}
 .photo-thumb{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:12px;border:1px solid var(--line);cursor:zoom-in;}
 .photo-preview-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:1000;cursor:zoom-out;padding:24px;}
 .photo-preview-box{max-width:min(600px,90vw);max-height:90vh;text-align:center;}
 .photo-preview-box img{max-width:100%;max-height:80vh;border-radius:12px;object-fit:contain;}
 .photo-preview-box p{color:#fff;font-size:14px;margin-top:10px;}
 .empty-state{text-align:center;padding:40px 20px;color:var(--ink-soft);}
+
+/* ---- Anillo de ritmo (marca) ---- */
+.ring-master{transform:rotate(-90deg);}
+.ring-arc{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:76 176;opacity:.25;transition:opacity .4s ease;}
+.ring-arc-morning{stroke:var(--ring-morning);stroke-dashoffset:0;}
+.ring-arc-afternoon{stroke:var(--ring-afternoon);stroke-dashoffset:-83.8;}
+.ring-arc-evening{stroke:var(--ring-evening);stroke-dashoffset:-167.6;}
+.ring-arc.active{opacity:1;}
+.ring-arc.balanced{opacity:.5;}
+.sidebar-ring-wrap{text-align:center;margin:4px 0 22px;}
+.sidebar-ring-label{font-size:10.5px;color:var(--ink-soft);text-align:center;margin-top:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+.nav-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;display:inline-block;}
+
+/* ---- Encabezado de identidad + mantra (reutilizable en todos los módulos) ---- */
+.identity-header{margin-bottom:22px;}
+.identity-header h2{font-family:'Fraunces',serif;font-size:30px;font-weight:700;margin:0 0 6px;color:var(--ink);line-height:1.15;}
+.identity-header .subtitle{font-size:11px;color:var(--ink-soft);margin:0;text-transform:uppercase;letter-spacing:.08em;font-weight:600;}
+.mantra-card{font-family:'Fraunces',serif;font-style:italic;font-size:20px;font-weight:500;line-height:1.4;color:var(--ink);border-bottom:1px solid var(--tint-line, var(--line));padding-bottom:18px;margin-bottom:22px;}
+.mantra-card .mantra-lead{display:block;font-family:'Inter',sans-serif;font-style:normal;font-size:12px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+
+/* ---- Pillrow ---- */
+.pillrow{display:flex;flex-wrap:wrap;gap:8px;}
+.pill{display:inline-flex;align-items:center;padding:7px 14px;border-radius:999px;border:1px solid var(--tint-line, var(--line));background:var(--paper);font-size:13px;font-weight:600;color:var(--ink-soft);}
+
+/* ---- Checklist (Descanso) ---- */
+.checklist-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--tint-line, var(--line));}
+.checklist-row:last-child{border-bottom:none;}
+.checklist-row .label{font-size:14px;}
+.checklist-row.checked .label{color:var(--ink-soft);text-decoration:line-through;}
+.check-circle{width:22px;height:22px;border-radius:50%;border:2px solid var(--tint-line, var(--line));flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;background:transparent;padding:0;}
+.check-circle.checked{background:var(--accent, var(--terracota));border-color:var(--accent, var(--terracota));}
+
+/* ---- Timeline (Mi Evolución) ---- */
+.timeline{position:relative;padding-left:22px;}
+.timeline::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--tint-line, var(--line));}
+.timeline-item{position:relative;padding-bottom:18px;}
+.timeline-item::before{content:'';position:absolute;left:-22px;top:2px;width:10px;height:10px;border-radius:50%;background:var(--accent, var(--terracota));}
+.timeline-item:last-child{padding-bottom:0;}
+.timeline-item .t-label{font-weight:700;font-size:13px;}
+.timeline-item .t-meta{font-size:12px;color:var(--ink-soft);}
+
+/* ---- Community feed ---- */
+.feed-item{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--tint-line, var(--line));}
+.feed-item:last-child{border-bottom:none;}
+.feed-avatar{width:38px;height:38px;border-radius:50%;background:var(--tint, var(--cream));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--accent, var(--terracota));flex-shrink:0;}
+.live-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent, var(--sage));margin-right:6px;animation:live-pulse 1.6s ease-in-out infinite;}
+@keyframes live-pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+/* ---- Breath hero (Cortisol) ---- */
+.breath-hero{text-align:center;padding:32px 16px;}
+.breath-circles{position:relative;width:140px;height:140px;margin:0 auto 20px;}
+.breath-circle{position:absolute;border-radius:50%;background:radial-gradient(circle, var(--accent, var(--sage)) 0%, transparent 72%);}
+.breath-circle:nth-child(1){inset:0;opacity:.14;}
+.breath-circle:nth-child(2){inset:22px;opacity:.22;}
+.breath-circle:nth-child(3){inset:44px;opacity:.4;}
+.breath-hero h3{font-family:'Fraunces',serif;font-size:19px;margin:0 0 8px;}
+.breath-hero p{color:var(--ink-soft);font-size:14px;max-width:360px;margin:0 auto;}
+
+/* ---- Hero por módulo (una pieza protagonista, composición distinta por módulo) ---- */
+.hero{border-radius:20px;padding:28px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
+.hero-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;position:relative;z-index:1;}
+.hero-title{font-family:'Fraunces',serif;font-size:21px;font-weight:600;margin:0 0 6px;position:relative;z-index:1;}
+.hero-meta{font-size:13px;opacity:.75;margin:0;position:relative;z-index:1;}
+.hero-glow{position:absolute;top:-40px;right:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle, rgba(255,255,255,.16) 0%, transparent 70%);}
+.hero-row{display:flex;justify-content:space-between;align-items:center;margin-top:20px;position:relative;z-index:1;gap:16px;}
+.hero-progress-track{flex:1;height:6px;background:rgba(255,255,255,.2);border-radius:999px;overflow:hidden;max-width:180px;}
+.hero-progress-fill{height:100%;background:#D9BE8C;border-radius:999px;}
+.hero-btn{background:#D9BE8C;color:#2B2621;border:none;padding:11px 20px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;}
+.hero-btn:disabled{opacity:.5;cursor:not-allowed;}
+.section-label{font-family:'Fraunces',serif;font-size:15px;font-weight:600;margin:0 0 12px;color:var(--ink);}
+
+.hero-split{display:flex;justify-content:space-between;align-items:center;gap:20px;}
+.hero-rings{display:flex;gap:14px;position:relative;z-index:1;}
+.macro-ring{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.55);}
+.macro-ring .mval{font-size:13px;font-weight:700;line-height:1;}
+.macro-ring .mlbl{font-size:8px;text-transform:uppercase;letter-spacing:.03em;opacity:.8;margin-top:2px;}
+
+.hero-figure{font-family:'Fraunces',serif;font-size:46px;font-weight:700;margin:4px 0 6px;position:relative;z-index:1;}
+
+.hero-avatars{display:flex;position:relative;z-index:1;}
+.hero-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;background:rgba(255,255,255,.18);border:2px solid rgba(0,0,0,.25);margin-left:-14px;}
+.hero-avatar:first-child{margin-left:0;}
+
+.hero-ring-big{width:70px;height:70px;position:relative;flex-shrink:0;}
+.hero-ring-big svg{transform:rotate(-90deg);}
+.hero-ring-big .ring-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;}
+
+/* ---- Login: hero dividido con aura de color, tema según hora del día ---- */
+.theme-login-light{
+  --lh-bg:#F5EFDF; --lh-word:#2B2621; --lh-slogan:#6B6459;
+  --lf-bg:#211B17; --lf-title:#F3EFE6; --lf-label:#B0A599; --lf-input-border:#3A2F27;
+  --lf-input-bg:#2B231E; --lf-input-text:#F3EFE6; --lf-btn-bg:#D9BE8C; --lf-btn-text:#241A08;
+  --lf-foot:#B0A599; --lf-link:#D9BE8C;
+}
+.theme-login-dark{
+  --lh-bg:#211B17; --lh-word:#F3EFE6; --lh-slogan:#C9C2B4;
+  --lf-bg:#FFFDF8; --lf-title:#2B2621; --lf-label:#8A8377; --lf-input-border:#E7DFC9;
+  --lf-input-bg:#FBF7EC; --lf-input-text:#2B2621; --lf-btn-bg:#2B2621; --lf-btn-text:#F3EFE6;
+  --lf-foot:#8A8377; --lf-link:#B8935A;
+}
+#login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--cream);padding:32px;}
+.login-shell{display:flex;width:100%;max-width:840px;min-height:500px;border-radius:24px;overflow:hidden;box-shadow:0 30px 80px rgba(43,36,32,.18);}
+.login-hero{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:var(--lh-bg);transition:background .6s ease;padding:40px;text-align:center;}
+.login-aura{position:absolute;width:280px;height:280px;border-radius:50%;filter:blur(50px);opacity:.4;pointer-events:none;}
+.login-aura-gold{background:#D9A441;top:-70px;left:-70px;}
+.login-aura-sage{background:#7C8B6F;bottom:-90px;left:28%;}
+.login-aura-violet{background:#8A5FA0;top:15%;right:-90px;}
+.login-hero .ring-master{position:relative;z-index:1;}
+.login-word{position:relative;z-index:1;font-family:'Fraunces',serif;font-size:32px;font-weight:700;color:var(--lh-word);margin:18px 0 6px;transition:color .6s ease;}
+.login-slogan{position:relative;z-index:1;font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--lh-slogan);margin:0;transition:color .6s ease;}
+.login-form-panel{width:360px;max-width:100%;flex-shrink:0;background:var(--lf-bg);display:flex;align-items:center;justify-content:center;padding:40px;transition:background .6s ease;}
+.login-card{width:100%;max-width:280px;}
+.login-form-title{font-family:'Fraunces',serif;font-size:24px;font-weight:600;color:var(--lf-title);margin:0 0 26px;transition:color .6s ease;}
+.login-form-panel .field label{color:var(--lf-label);transition:color .6s ease;}
+.login-form-panel .field input{border-color:var(--lf-input-border);background:var(--lf-input-bg);color:var(--lf-input-text);transition:background .6s ease,color .6s ease,border-color .6s ease;}
+.login-form-panel .field input:focus{outline-color:var(--lf-link);}
+.login-form-panel .btn-primary{background:var(--lf-btn-bg);color:var(--lf-btn-text);transition:background .6s ease,color .6s ease;}
+.login-form-panel .foot-note{color:var(--lf-foot);transition:color .6s ease;}
+.login-form-panel .link-btn{color:var(--lf-link);font-weight:700;transition:color .6s ease;}
+@media(max-width:760px){#login-view{padding:0;}.login-shell{flex-direction:column;border-radius:0;min-height:100vh;max-width:100%;}.login-hero{padding:32px 24px;}.login-form-panel{width:100%;}}
 </style>
 </head>
 <body>
 
 <div id="login-view">
-  <div class="login-card">
-    <h1>La Tribu</h1>
-    <p class="sub">Comunidad de bienestar y alto rendimiento.</p>
-    <div id="login-error"></div>
-    <div id="login-form">
-      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tucorreo@ejemplo.com"></div>
-      <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
-      <button class="btn btn-primary" onclick="handleLogin()">Ingresar</button>
-      <p style="text-align:center;margin-top:18px;font-size:14px;color:var(--ink-soft);">
-        ¿Aún no tienes cuenta? <button class="link-btn" onclick="showRegister()">Regístrate</button>
-      </p>
-    </div>
-    <div id="register-form" class="hidden">
-      <div class="field"><label>Nombre completo</label><input type="text" id="reg-name"></div>
-      <div class="field"><label>Email</label><input type="email" id="reg-email"></div>
-      <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
-      <button class="btn btn-primary" onclick="handleRegister()">Crear cuenta</button>
-      <p style="text-align:center;margin-top:18px;font-size:14px;color:var(--ink-soft);">
-        <button class="link-btn" onclick="showLogin()">Volver a iniciar sesión</button>
-      </p>
+ <div class="login-shell">
+  <div class="login-hero">
+    <div class="login-aura login-aura-gold"></div>
+    <div class="login-aura login-aura-sage"></div>
+    <div class="login-aura login-aura-violet"></div>
+    <svg class="ring-master" viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
+      <circle class="ring-arc ring-arc-morning balanced" cx="50" cy="50" r="40"></circle>
+      <circle class="ring-arc ring-arc-afternoon balanced" cx="50" cy="50" r="40"></circle>
+      <circle class="ring-arc ring-arc-evening balanced" cx="50" cy="50" r="40"></circle>
+    </svg>
+    <h1 class="login-word">La Tribu</h1>
+    <p class="login-slogan">Comunidad de bienestar y alto rendimiento.</p>
+  </div>
+  <div class="login-form-panel">
+    <div class="login-card">
+      <h2 class="login-form-title">Qué bueno verte de nuevo</h2>
+      <div id="login-error"></div>
+      <div id="login-form">
+        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tucorreo@ejemplo.com"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
+        <button class="btn btn-primary" onclick="handleLogin()">Ingresar</button>
+        <p class="foot-note" style="text-align:center;margin-top:18px;font-size:14px;">
+          ¿Aún no tienes cuenta? <button class="link-btn" onclick="showRegister()">Regístrate</button>
+        </p>
+      </div>
+      <div id="register-form" class="hidden">
+        <div class="field"><label>Nombre completo</label><input type="text" id="reg-name"></div>
+        <div class="field"><label>Email</label><input type="email" id="reg-email"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="reg-password"></div>
+        <button class="btn btn-primary" onclick="handleRegister()">Crear cuenta</button>
+        <p class="foot-note" style="text-align:center;margin-top:18px;font-size:14px;">
+          <button class="link-btn" onclick="showLogin()">Volver a iniciar sesión</button>
+        </p>
+      </div>
     </div>
   </div>
+ </div>
 </div>
 
 <div id="app-view">
   <div class="sidebar">
     <h2 class="brand">La Tribu</h2>
+    <div class="sidebar-ring-wrap" id="sidebar-ring">
+      <svg class="ring-master" viewBox="0 0 100 100" width="56" height="56" aria-hidden="true">
+        <circle class="ring-arc ring-arc-morning" cx="50" cy="50" r="40"></circle>
+        <circle class="ring-arc ring-arc-afternoon" cx="50" cy="50" r="40"></circle>
+        <circle class="ring-arc ring-arc-evening" cx="50" cy="50" r="40"></circle>
+      </svg>
+      <div class="sidebar-ring-label" id="sidebar-ring-label">La Tribu</div>
+    </div>
     <div id="nav-items"></div>
     <div class="sidebar-footer">
       <div class="user-chip" id="user-chip"></div>
       <button class="btn btn-ghost" style="width:100%" onclick="logout()">Cerrar sesión</button>
     </div>
   </div>
-  <div class="main" id="main-content"></div>
+  <div class="main">
+    <div class="main-topbar" id="main-topbar"></div>
+    <div id="main-content"></div>
+  </div>
 </div>
 
 <script>
@@ -220,7 +396,24 @@ function logout() {
   state = { token: null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, planExpired: false, planEndDate: null, notifications: [], view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
   document.getElementById('app-view').classList.remove('active');
   document.getElementById('login-view').style.display = 'flex';
+  applyLoginTheme();
 }
+
+// Tema del login por hora real del dispositivo (no prefers-color-scheme): antes
+// de las 18:00 tema "light", desde las 18:00 tema "dark" — los paneles hero/
+// formulario intercambian toda su paleta entre uno y otro (ver CSS .theme-login-*).
+function getLoginTheme() {
+  return new Date().getHours() < 18 ? 'light' : 'dark';
+}
+function applyLoginTheme() {
+  const view = document.getElementById('login-view');
+  if (!view) return;
+  const theme = getLoginTheme();
+  view.classList.remove('theme-login-light', 'theme-login-dark');
+  view.classList.add(theme === 'light' ? 'theme-login-light' : 'theme-login-dark');
+}
+applyLoginTheme();
+setInterval(applyLoginTheme, 5 * 60 * 1000);
 
 async function boot() {
   if (!state.token) return;
@@ -243,6 +436,7 @@ async function boot() {
     }
     renderNav();
     renderMain();
+    if (state.role === 'cliente') loadClientAlerts();
   } catch (e) {
     logout();
   }
@@ -250,18 +444,35 @@ async function boot() {
 
 // ---------------- Navigation ----------------
 
+// El orden sigue el recorrido del anillo de ritmo: mañana (entrenamiento) → tarde
+// (nutrición/suplementación/cortisol) → noche (descanso/comunidad) → balance (info/evolución).
 const CLIENT_NAV = [
   { key: 'personal-info', label: 'Información Personal', visible: s => s.clientType !== 'lead_wellness' },
   { key: 'training', label: 'Entrenamiento', visible: s => s.clientType !== 'lead_wellness' && s.permissions?.training === true },
   { key: 'nutrition', label: 'Nutrición', visible: s => s.clientType !== 'lead_wellness' && s.permissions?.nutrition === true },
   { key: 'supplementation', label: 'Suplementación', visible: s => s.clientType !== 'lead_wellness' && s.permissions?.supplementation === true },
   { key: 'cortisol', label: 'Gestión de Cortisol', visible: s => s.permissions?.cortisol === true },
+  { key: 'rest', label: 'Descanso', visible: s => s.clientType !== 'lead_wellness' && s.onboardingComplete === true },
   { key: 'community', label: 'Comunidad', visible: s => s.clientType === 'lead_wellness' ? s.permissions?.community === true : s.onboardingComplete === true },
   { key: 'evolution', label: 'Mi Evolución', visible: s => s.clientType !== 'lead_wellness' && s.onboardingComplete === true },
 ];
+// Configuración del sistema de diseño por módulo: tema de fondo, arco del anillo que
+// se ilumina, y el label que aparece bajo el anillo maestro del sidebar.
+const MODULE_THEME = {
+  'personal-info': { theme: 'neutral', arc: 'balanced', ringLabel: 'Tu espacio personal' },
+  'training': { theme: 'neutral', arc: 'morning', ringLabel: 'Fase: Enfoque' },
+  'nutrition': { theme: 'green', arc: 'afternoon', ringLabel: 'Fase: Sostén' },
+  'supplementation': { theme: 'green', arc: 'afternoon', ringLabel: 'Fase: Sostén' },
+  'cortisol': { theme: 'green', arc: 'afternoon', ringLabel: 'Fase: Calma' },
+  'rest': { theme: 'neutral', arc: 'evening', ringLabel: 'Fase: Descanso' },
+  'community': { theme: 'neutral', arc: 'evening', ringLabel: 'Fase: Comunidad' },
+  'evolution': { theme: 'neutral', arc: 'balanced', ringLabel: 'Tu progreso' },
+};
+const ARC_COLOR_VAR = { morning: '--ring-morning', afternoon: '--ring-afternoon', evening: '--ring-evening', balanced: '--ink-soft' };
 const ADMIN_NAV = [
   { key: 'admin-clients', label: 'Clientes' },
   { key: 'admin-community', label: 'Comunidad' },
+  { key: 'admin-quotes', label: 'Frases' },
   { key: 'admin-notifications', label: 'Notificaciones' },
 ];
 const CLIENT_TYPE_LABELS = { coaching_1_1: 'Coaching 1:1', coaching_online: 'Coaching Online', lead_wellness: 'Leads Wellness' };
@@ -273,11 +484,118 @@ function renderNav() {
       <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}${item.key === 'admin-notifications' && unread ? ` <span class="badge">${unread}</span>` : ''}</button>
     `).join('');
   } else {
-    document.getElementById('nav-items').innerHTML = CLIENT_NAV.filter(item => item.visible(state)).map(item => `
-      <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}</button>
-    `).join('');
+    document.getElementById('nav-items').innerHTML = CLIENT_NAV.filter(item => item.visible(state)).map(item => {
+      const cfg = MODULE_THEME[item.key];
+      const dotColor = cfg ? `var(${ARC_COLOR_VAR[cfg.arc]})` : 'var(--ink-soft)';
+      return `<button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">
+        <span class="nav-dot" style="background:${dotColor}"></span>${item.label}
+      </button>`;
+    }).join('');
   }
   document.getElementById('user-chip').innerText = `${state.user?.name || ''} · ${state.role === 'admin' ? 'Admin' : 'Miembro'}`;
+  applyModuleTheme(state.view);
+  renderTopbar();
+}
+function applyModuleTheme(viewKey) {
+  const cfg = MODULE_THEME[viewKey];
+  const main = document.querySelector('.main');
+  if (main) {
+    main.classList.remove('theme-neutral', 'theme-green');
+    main.classList.add(cfg && cfg.theme === 'green' ? 'theme-green' : 'theme-neutral');
+  }
+  const ring = document.getElementById('sidebar-ring');
+  if (ring) {
+    ['morning', 'afternoon', 'evening'].forEach(arc => {
+      const arcEl = ring.querySelector('.ring-arc-' + arc);
+      if (!arcEl) return;
+      arcEl.classList.remove('active', 'balanced');
+      if (!cfg || cfg.arc === 'balanced') arcEl.classList.add('balanced');
+      else if (cfg.arc === arc) arcEl.classList.add('active');
+    });
+  }
+  const label = document.getElementById('sidebar-ring-label');
+  if (label) label.textContent = cfg ? cfg.ringLabel : 'La Tribu';
+}
+function renderTopbar() {
+  const bar = document.getElementById('main-topbar');
+  if (!bar) return;
+  const showBack = state.role === 'admin' && !!state.currentClientId && CLIENT_NAV.some(i => i.key === state.view);
+  const showBell = state.role === 'cliente';
+  bar.style.display = (showBack || showBell) ? 'flex' : 'none';
+  bar.innerHTML = `
+    ${showBack ? `<button class="btn btn-ghost" style="width:auto" onclick="setView('admin-client-detail')">← Volver a la ficha del cliente</button>` : '<span></span>'}
+    ${showBell ? (() => {
+      const hasUnread = (state.clientAlerts || []).length || (state.clientNotifications || []).some(n => !n.read);
+      return `<div class="bell-wrap">
+        <button class="bell-btn" id="notif-bell" onclick="toggleClientAlertsPanel()" aria-label="Notificaciones">🔔<span class="bell-dot" id="bell-dot" style="display:${hasUnread ? 'block' : 'none'};"></span></button>
+        <div class="alerts-panel" id="client-alerts-panel"></div>
+      </div>`;
+    })() : '<span></span>'}
+  `;
+}
+function toggleClientAlertsPanel() {
+  const panel = document.getElementById('client-alerts-panel');
+  if (!panel) return;
+  const notifItems = (state.clientNotifications || []).map(n => `<div class="alert-item">${n.message}</div>`);
+  const alertItems = (state.clientAlerts || []).map(a => `<div class="alert-item">${a}</div>`);
+  const items = [...notifItems, ...alertItems];
+  panel.innerHTML = items.length ? items.join('') : '<div class="alert-item" style="color:var(--ink-soft);">Sin novedades.</div>';
+  const willOpen = !panel.classList.contains('open');
+  panel.classList.toggle('open');
+  const unread = (state.clientNotifications || []).filter(n => !n.read);
+  if (willOpen && unread.length) {
+    api(`/api/clients/${state.user.id}/notifications/read-all`, { method: 'PATCH' })
+      .then(() => {
+        state.clientNotifications.forEach(n => n.read = true);
+        const dot = document.getElementById('bell-dot');
+        if (dot && !(state.clientAlerts || []).length) dot.style.display = 'none';
+      })
+      .catch(() => {});
+  }
+}
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('client-alerts-panel');
+  const bell = document.getElementById('notif-bell');
+  if (panel && panel.classList.contains('open') && !panel.contains(e.target) && e.target !== bell) panel.classList.remove('open');
+});
+async function loadClientAlerts() {
+  if (state.role !== 'cliente' || state.clientType === 'lead_wellness') { state.clientAlerts = []; return; }
+  const clientId = state.user.id;
+  const alerts = [];
+  try {
+    if (state.permissions?.training) {
+      const [{ client }, { completions }] = await Promise.all([
+        api(`/api/clients/${clientId}`),
+        api(`/api/clients/${clientId}/training-completions`),
+      ]);
+      const trainingDays = client.training_days || 0;
+      if (trainingDays) {
+        const weekStart = getWeekStart();
+        const doneThisWeek = new Set(completions.filter(c => c.completed_date >= weekStart).map(c => c.day_number)).size;
+        const dow = new Date().getDay();
+        const elapsedDaysThisWeek = dow === 0 ? 7 : dow;
+        const expectedByNow = Math.min(trainingDays, Math.round((elapsedDaysThisWeek / 7) * trainingDays));
+        if (doneThisWeek < expectedByNow) {
+          alerts.push(`Vas atrasado con tu entrenamiento esta semana: ${doneThisWeek}/${trainingDays} días completados.`);
+        }
+      }
+    }
+  } catch (e) { /* silencioso: el campanario no debe romper el resto de la app */ }
+  try {
+    if (state.onboardingComplete) {
+      const { checkins } = await api(`/api/clients/${clientId}/evolution`);
+      const last = checkins[checkins.length - 1];
+      if (last && last.adherence_pct != null && last.adherence_pct < 70) {
+        alerts.push(`Tu adherencia al plan de alimentación bajó a ${last.adherence_pct}% en tu último check-in.`);
+      }
+    }
+  } catch (e) { /* silencioso */ }
+  try {
+    const { notifications } = await api(`/api/clients/${clientId}/notifications`);
+    state.clientNotifications = notifications;
+  } catch (e) { state.clientNotifications = []; }
+  state.clientAlerts = alerts;
+  renderNav();
 }
 
 function renderPlanExpiredScreen() {
@@ -302,20 +620,83 @@ function setView(view, extra) {
 function renderMain() {
   const el = document.getElementById('main-content');
   el.innerHTML = '<div class="empty-state">Cargando…</div>';
+  applyModuleTheme(state.view);
   const routes = {
     'personal-info': renderPersonalInfo,
     'training': renderTraining,
     'nutrition': renderNutrition,
     'supplementation': renderSupplementation,
     'cortisol': renderCortisol,
+    'rest': renderRest,
     'community': renderCommunity,
     'evolution': renderEvolution,
     'admin-clients': renderAdminClients,
     'admin-client-detail': renderAdminClientDetail,
     'admin-community': renderAdminCommunity,
     'admin-notifications': renderAdminNotifications,
+    'admin-quotes': renderAdminQuotes,
   };
   (routes[state.view] || renderPersonalInfo)(el);
+  el.classList.remove('fade-anim');
+  void el.offsetWidth;
+  el.classList.add('fade-anim');
+}
+
+// Banco de mantras por módulo (tono de comunidad consciente, nunca genéricas de
+// gimnasio) — Entrenamiento usa su propio sistema de frases administrables
+// (ver quote-of-the-day), los demás módulos rotan sobre este banco fijo.
+const MANTRA_BANK = {
+  'personal-info': [
+    'Cada dato que compartes ajusta el ritmo a tu medida.',
+    'Conocerte es el primer paso para acompañarte bien.',
+    'Aquí no hay respuestas perfectas, solo tu punto de partida.',
+  ],
+  'nutrition': [
+    'Nutrir el cuerpo es una forma de gratitud.',
+    'Comer con conciencia también es descansar la mente.',
+    'Cada comida es una oportunidad, no un examen.',
+    'Tu plato refleja el cuidado que te estás dando hoy.',
+  ],
+  'supplementation': [
+    'Los pequeños hábitos sostienen los grandes cambios.',
+    'La constancia en lo simple construye lo profundo.',
+    'Cuidar los detalles es una forma silenciosa de disciplina.',
+  ],
+  'cortisol': [
+    'Regular no es debilidad, es estrategia.',
+    'Respirar despacio también es avanzar.',
+    'La calma se entrena igual que el cuerpo.',
+    'No tienes que apagar la tormenta, solo bajar el volumen.',
+  ],
+  'rest': [
+    'El descanso también es parte del entrenamiento.',
+    'Dormir bien es un acto de disciplina, no de pereza.',
+    'La recuperación es donde el esfuerzo se convierte en progreso.',
+  ],
+  'community': [
+    'Nadie mejora solo — la tribu sostiene el ritmo.',
+    'Presencia, no competencia.',
+    'Compartir el proceso lo hace más liviano.',
+  ],
+  'evolution': [
+    'El progreso no siempre se ve — pero se siente.',
+    'Cada registro es una prueba de que seguiste intentando.',
+    'Tu proceso no compite con el de nadie más.',
+  ],
+};
+function pickMantra(viewKey) {
+  const list = MANTRA_BANK[viewKey];
+  if (!list || !list.length) return '';
+  return list[Math.floor(Math.random() * list.length)];
+}
+function renderIdentityHeader(title, subtitle, mantraText, mantraLead) {
+  return `
+    <div class="identity-header">
+      <h2>${title}</h2>
+      ${subtitle ? `<p class="subtitle">${subtitle}</p>` : ''}
+    </div>
+    ${mantraText ? `<div class="mantra-card">${mantraLead ? `<span class="mantra-lead">${mantraLead}</span>` : ''}"${mantraText}"</div>` : ''}
+  `;
 }
 
 function currentClientId() {
@@ -449,10 +830,26 @@ function renderPersonalInfoBody(el) {
   const step = state.wizardStep || 1;
   const mod = ONBOARDING_MODULES.find(m => m.n === step);
   const saveFn = mod.custom === 'country' ? 'saveModule1()' : mod.custom === 'body' ? 'saveModule3()' : `saveOnboardingStep(${step})`;
+  const formPct = Math.round((step / 9) * 100);
+  const formCirc = 2 * Math.PI * 30;
   el.innerHTML = `
-    <div class="page-header">
-      <h2>Información Personal</h2>
-      <p>Conocerte nos permite diseñar tu experiencia dentro de La Tribu.</p>
+    ${renderIdentityHeader('Información Personal', 'Conocerte nos permite diseñar tu experiencia dentro de La Tribu.', pickMantra('personal-info'))}
+    <div class="hero" style="background:linear-gradient(135deg, #2B2621, #3A322A);">
+      <div class="hero-glow"></div>
+      <div class="hero-split">
+        <div class="hero-ring-big">
+          <svg viewBox="0 0 70 70" width="70" height="70">
+            <circle cx="35" cy="35" r="30" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="6"></circle>
+            <circle cx="35" cy="35" r="30" fill="none" stroke="#D9BE8C" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(formPct/100*formCirc).toFixed(1)} ${formCirc.toFixed(1)}"></circle>
+          </svg>
+          <div class="ring-pct">${formPct}%</div>
+        </div>
+        <div style="flex:1;">
+          <p class="hero-eyebrow" style="color:#D9BE8C;">MÓDULO ${step} DE 9</p>
+          <p class="hero-title" style="margin-bottom:2px;">${mod.title}</p>
+          <p class="hero-meta">${formPct}% de tu formulario completado</p>
+        </div>
+      </div>
     </div>
     <div class="wizard-steps">
       ${ONBOARDING_MODULES.map(m => `<div class="wizard-dot ${m.n < step ? 'done' : ''} ${m.n === step ? 'current' : ''}" onclick="setStep(${m.n})">${m.n}</div>`).join('')}
@@ -1001,6 +1398,8 @@ function captureModule3Draft() {
       imc: document.getElementById('m3-imc-display').value,
       ocrDone: !!window._m3OcrDone,
       version: window._m3InbodyVersion || null,
+      fileUrl: window._m3InbodyFileUrl || null,
+      fileName: window._m3InbodyFileName || null,
     },
     photos: Object.fromEntries(PHOTO_ANGLES.map(a => [a.key, (document.getElementById(`photo-file-${a.key}`).files || [])[0] || null])),
   };
@@ -1030,6 +1429,8 @@ function restoreModule3Draft(clientId) {
   document.getElementById('m3-imc-display').value = draft.inbody.imc || '';
   window._m3OcrDone = draft.inbody.ocrDone;
   window._m3InbodyVersion = draft.inbody.version;
+  window._m3InbodyFileUrl = draft.inbody.fileUrl || null;
+  window._m3InbodyFileName = draft.inbody.fileName || null;
   const verLbl = document.getElementById('m3-version-label');
   if (verLbl && draft.inbody.version) { verLbl.style.display = 'block'; verLbl.textContent = `Versión detectada: ${draft.inbody.version}`; }
   PHOTO_ANGLES.forEach(a => {
@@ -1082,10 +1483,14 @@ async function commitModule3Draft(clientId) {
       ecw_tbw: draft.inbody.ecwTbw || null,
       masa_osea: draft.inbody.masaOsea || null,
       altura: draft.inbody.altura || null,
-      mes_num: monthNum
+      mes_num: monthNum,
+      file_url: draft.inbody.fileUrl || null,
+      file_name: draft.inbody.fileName || null
     })});
   }
 
+  window._m3InbodyFileUrl = null;
+  window._m3InbodyFileName = null;
   window._m3NextMonthNum = monthNum + 1;
   window._m3Draft = null;
   window._m3DraftClientId = null;
@@ -1202,6 +1607,15 @@ async function m3HandlePdf(input) {
     window._m3InbodyVersion = parsed._version || null;
     const verLbl = document.getElementById('m3-version-label');
     if (parsed._version && verLbl) { verLbl.textContent = 'Detectado: ' + parsed._version; verLbl.style.display = 'block'; }
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const uploadResult = await api(`/api/clients/${clientId}/inbody-upload`, { method: 'POST', body: fd });
+      window._m3InbodyFileUrl = uploadResult.file_url;
+      window._m3InbodyFileName = uploadResult.file_name;
+    } catch (e) { /* si falla la subida del archivo original, igual se conservan los valores extraídos por OCR */ }
+
     if (st) { st.style.color = 'var(--sage)'; st.textContent = '✓ ' + count + ' campos detectados y rellenados'; }
   } catch (e) {
     let msg = e.message || 'Error al procesar el archivo.';
@@ -1413,53 +1827,480 @@ function m3ParseOcrText(text) {
 
 // ---------------- Módulo: Entrenamiento ----------------
 
+const CATEGORY_LABELS = { warmup: 'Warm Up', strength: 'Strength', cardio: 'Cardio' };
+// Estado de navegación del módulo Entrenamiento (día → categoría → ejercicio en curso).
+// Vive solo en memoria: se reinicia al recargar la app, igual que el resto de borradores
+// de sesión de este módulo.
+let trainingUI = { day: null, category: null, index: 0, completed: {} };
+
+function youtubeEmbedUrl(url) {
+  if (!url) return null;
+  const m = String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null;
+}
+function parseTimeToSeconds(value) {
+  const str = String(value || '').trim();
+  const mmss = str.match(/^(\d+):(\d{2})$/);
+  if (mmss) return parseInt(mmss[1], 10) * 60 + parseInt(mmss[2], 10);
+  const num = parseInt(str.replace(/\D/g, ''), 10);
+  return isNaN(num) || num <= 0 ? 30 : num;
+}
+function formatSeconds(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
 async function renderTraining(el) {
   const clientId = currentClientId();
   const isAdmin = state.role === 'admin';
   try {
-    const { exercises } = await api(`/api/clients/${clientId}/exercises`);
-    el.innerHTML = `
-      <div class="page-header"><h2>Entrenamiento</h2><p>Tu programa de ejercicios personalizado.</p></div>
-      ${isAdmin ? `<div class="card">
-        <div class="card-title">Agregar ejercicio</div>
-        <div class="grid-3">
-          <div class="field"><label>Título</label><input id="ex-title"></div>
-          <div class="field"><label>Método</label><select id="ex-method">${['Fuerza','HIIT','Funcional','Cardio','Movilidad'].map(o=>`<option>${o}</option>`).join('')}</select></div>
-          <div class="field"><label>Sección</label><select id="ex-section">${['Movilidad articular','Entrenamiento de fuerza','Estiramientos','Cardio'].map(o=>`<option>${o}</option>`).join('')}</select></div>
-          <div class="field"><label>Series</label><input type="number" id="ex-series" value="3"></div>
-          <div class="field"><label>Repeticiones</label><input id="ex-reps"></div>
-          <div class="field"><label>Descanso</label><input id="ex-rest"></div>
-          <div class="field"><label>Video (YouTube)</label><input id="ex-youtube"></div>
-        </div>
-        <div class="field"><label>Descripción</label><textarea id="ex-desc" rows="2"></textarea></div>
-        <button class="btn btn-primary" style="width:auto" onclick="createExercise()">Agregar</button>
-      </div>` : ''}
-      <div class="card">
-        <div class="card-title">Tu rutina</div>
-        ${exercises.length ? exercises.map(x => `
-          <div class="list-row">
-            <div>
-              <strong>${x.title}</strong> <span class="badge">${x.method}</span>
-              <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${x.section} · ${x.series} series · ${x.reps || '-'} reps · descanso ${x.rest_time || '-'}</div>
-              ${x.description ? `<p style="font-size:14px;margin:6px 0 0;">${x.description}</p>` : ''}
-              ${x.youtube_url ? `<a href="${x.youtube_url}" target="_blank">Ver video</a>` : ''}
-            </div>
-            ${isAdmin ? `<button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>` : ''}
-          </div>
-        `).join('') : '<div class="empty-state">Aún no hay ejercicios asignados.</div>'}
-      </div>
-    `;
+    const calls = [
+      api(`/api/clients/${clientId}/exercises`),
+      api(`/api/clients/${clientId}`),
+      api(`/api/clients/${clientId}/quote-of-the-day`).catch(() => ({ quote: null })),
+      api(`/api/clients/${clientId}/training-completions`).catch(() => ({ completions: [] })),
+    ];
+    if (isAdmin) calls.push(api('/api/admin/quotes').catch(() => ({ quotes: [] })));
+    const [{ exercises }, { client }, { quote }, { completions }, quotesResult] = await Promise.all(calls);
+    window._trainingExercises = exercises;
+    window._trainingCompletions = completions;
+    const adminQuotes = quotesResult ? quotesResult.quotes : [];
+
+    if (trainingUI.day && trainingUI.category) return renderTrainingPlayer(el, exercises, client, isAdmin);
+    if (trainingUI.day) return renderTrainingDay(el, exercises, client, isAdmin, completions);
+    return renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, completions);
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 
+// Semana calendario lunes→domingo: el candado de "Día N" se reinicia cada lunes.
+function calculateStreak(completions) {
+  const dates = new Set(completions.map(c => c.completed_date));
+  let streak = 0;
+  const cursor = new Date(); cursor.setHours(0, 0, 0, 0);
+  if (!dates.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
+  while (dates.has(cursor.toISOString().slice(0, 10))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+function getWeekStart(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() + ((day === 0 ? -6 : 1) - day));
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+function isDayCompletedThisWeek(dayNumber, completions) {
+  const weekStart = getWeekStart();
+  return completions.some(c => c.day_number === dayNumber && c.completed_date >= weekStart);
+}
+function isDayUnlocked(dayNumber, completions) {
+  return dayNumber === 1 || isDayCompletedThisWeek(dayNumber - 1, completions);
+}
+function renderProgressBar(done, total) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  const barWidth = Math.min(pct, 100);
+  return `<div style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-bottom:4px;"><span>Progreso</span><span>${done}/${total} · ${pct}%</span></div>
+    <div style="height:8px;background:var(--line);border-radius:999px;overflow:hidden;"><div style="height:100%;width:${barWidth}%;background:var(--terracota);border-radius:999px;"></div></div>
+  </div>`;
+}
+// El nivel de disciplina se mide contra los días de entrenamiento semanales que
+// el admin le asignó al cliente, proyectados a un mes estándar de 4 semanas
+// (ej. 3 días/semana → meta de 12 entrenamientos al mes), no contra el total
+// de días del mes calendario.
+function calculateDisciplineStats(completions, trainingDays) {
+  const now = new Date();
+  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
+  const doneDays = new Set(completions.filter(c => c.completed_date.startsWith(monthPrefix)).map(c => c.completed_date)).size;
+  const expected = (trainingDays || 0) * 4;
+  const pct = expected > 0 ? Math.round((doneDays / expected) * 100) : 0;
+  return { doneDays, expected, pct };
+}
+function renderDisciplineCalendar(completions, stats) {
+  const now = new Date();
+  const year = now.getFullYear(), month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const completedDates = new Set(completions.map(c => c.completed_date));
+  const todayStr = now.toISOString().slice(0, 10);
+  const cells = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isFuture = dateStr > todayStr;
+    const done = completedDates.has(dateStr);
+    const stateClass = isFuture ? '' : (done ? 'done' : 'missed');
+    const mark = isFuture ? '' : (done ? '✓' : '✕');
+    cells.push(`<div class="cal-day ${stateClass}"><span class="cal-num">${d}</span>${mark ? `<span class="cal-mark">${mark}</span>` : ''}</div>`);
+  }
+  return `${renderProgressBar(stats.doneDays, stats.expected)}<div class="cal-grid" style="margin-top:14px;">${cells.join('')}</div>`;
+}
+
+function getCurrentPlanWeekAndDay(client, completions) {
+  const trainingDays = client.training_days || 0;
+  if (!trainingDays) return null;
+  const anchor = client.plan_start_date || (client.created_at || '').slice(0, 10);
+  if (!anchor) return null;
+  const anchorDate = new Date(anchor + 'T00:00:00');
+  if (isNaN(anchorDate.getTime())) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((today - anchorDate) / 86400000);
+  const week = Math.max(1, Math.floor(diffDays / 7) + 1);
+  const doneThisWeek = new Set(completions.filter(c => c.completed_date >= getWeekStart()).map(c => c.day_number)).size;
+  const day = Math.min(trainingDays, doneThisWeek + 1);
+  return { week, day };
+}
+
+function renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, completions) {
+  const days = client.training_days || 0;
+  const weekDay = days ? getCurrentPlanWeekAndDay(client, completions) : null;
+  const subtitle = weekDay ? `Semana ${weekDay.week} · Día ${weekDay.day}` : 'Tu programa de ejercicios personalizado.';
+
+  let heroHtml = '';
+  if (days && weekDay) {
+    const todayDay = weekDay.day;
+    const todayExercises = exercises.filter(x => x.day_number === todayDay);
+    const todayDone = todayExercises.filter(x => trainingUI.completed[x.id]).length;
+    const todayUnlocked = isAdmin || isDayUnlocked(todayDay, completions);
+    const nextEx = todayExercises.find(x => !trainingUI.completed[x.id]);
+    const heroTitle = !todayExercises.length ? 'Aún no tienes ejercicios asignados' : nextEx ? nextEx.title : '¡Entrenamiento del día completado!';
+    const pct = todayExercises.length ? Math.round((todayDone / todayExercises.length) * 100) : 0;
+    heroHtml = `
+      <div class="hero" style="background:linear-gradient(135deg, #2B2621, #3A322A);">
+        <div class="hero-glow"></div>
+        <p class="hero-eyebrow" style="color:#D9BE8C;">HOY · DÍA ${todayDay}${nextEx ? ` · ${CATEGORY_LABELS[nextEx.category].toUpperCase()}` : ''}</p>
+        <p class="hero-title">${heroTitle}</p>
+        ${todayExercises.length ? `<p class="hero-meta">${todayExercises.length} ejercicio${todayExercises.length === 1 ? '' : 's'} programados</p>` : ''}
+        <div class="hero-row">
+          <div class="hero-progress-track"><div class="hero-progress-fill" style="width:${pct}%;"></div></div>
+          <button class="hero-btn" ${(!todayUnlocked || !nextEx) ? 'disabled' : ''} onclick="startTodaySession(${todayDay}, '${nextEx ? nextEx.category : ''}', '${nextEx ? nextEx.id : ''}')">Comenzar sesión</button>
+        </div>
+      </div>
+    `;
+  }
+
+  el.innerHTML = `
+    ${renderIdentityHeader('Entrenamiento', subtitle, quote ? quote.quote : '', `Hola ${client.name || ''}, repite después de mí:`)}
+    ${quote && quote.author ? `<p style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">— ${quote.author}</p>` : ''}
+    ${heroHtml}
+    ${isAdmin ? renderTrainingAdminPanel(client, adminQuotes) : ''}
+    <div class="card">
+      <div class="card-title">Días de entrenamiento</div>
+      ${days ? `<div class="grid-3">
+        ${Array.from({ length: days }, (_, i) => i + 1).map(d => {
+          const count = exercises.filter(x => x.day_number === d).length;
+          const unlocked = isAdmin || isDayUnlocked(d, completions);
+          const doneThisWeek = isDayCompletedThisWeek(d, completions);
+          return `<button class="day-tile" ${unlocked ? `onclick="openTrainingDay(${d})"` : 'disabled style="opacity:.5;cursor:not-allowed;"'}>
+            <div class="num">Día ${d}</div>
+            <div class="count">${!unlocked ? '<span style="font-size:13px;">🔒</span> Bloqueado' : doneThisWeek ? 'Completado esta semana' : `${count} ejercicio${count === 1 ? '' : 's'}`}</div>
+          </button>`;
+        }).join('')}
+      </div>` : `<div class="empty-state">${isAdmin ? 'Define cuántos días de entrenamiento tiene este cliente arriba.' : 'Tu coach aún no configuró tus días de entrenamiento.'}</div>`}
+    </div>
+    ${days ? (() => {
+      const stats = calculateDisciplineStats(completions, days);
+      return `<div class="card">
+        <div class="accordion">
+          <div class="accordion-item">
+            <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+              Nivel de disciplina
+              <span style="display:flex;align-items:center;gap:10px;">
+                <span style="width:70px;height:6px;background:var(--line);border-radius:999px;overflow:hidden;display:inline-block;"><span style="display:block;height:100%;width:${Math.min(stats.pct, 100)}%;background:var(--terracota);border-radius:999px;"></span></span>
+                <span style="font-size:12px;font-weight:700;color:var(--terracota);">${stats.pct}%</span>
+                <span class="accordion-toggle">Ver</span>
+              </span>
+            </button>
+            <div class="accordion-content">
+              ${renderDisciplineCalendar(completions, stats)}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    })() : ''}
+  `;
+}
+
+function renderTrainingAdminPanel(client, adminQuotes) {
+  return `
+    <div class="card">
+      <div class="card-title">Configuración del cliente</div>
+      <div class="grid-2">
+        <div class="field"><label>Días de entrenamiento por semana</label>
+          <select id="tr-training-days">
+            <option value="">Sin definir</option>
+            ${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${client.training_days === n ? 'selected' : ''}>${n} día${n === 1 ? '' : 's'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Frase asignada a este cliente</label>
+          <select id="tr-assigned-quote">
+            <option value="">Aleatoria del pool general</option>
+            ${adminQuotes.map(q => `<option value="${q.id}" ${client.assigned_quote_id === q.id ? 'selected' : ''}>${q.quote.length > 60 ? q.quote.slice(0, 60) + '…' : q.quote}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-ghost" style="width:auto" onclick="saveTrainingConfig('${client.id}')">Guardar configuración</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Agregar ejercicio</div>
+      <div class="grid-3">
+        <div class="field"><label>Título</label><input id="ex-title"></div>
+        <div class="field"><label>Día</label><select id="ex-day">${[1,2,3,4,5,6,7].map(n => `<option value="${n}">Día ${n}</option>`).join('')}</select></div>
+        <div class="field"><label>Categoría</label><select id="ex-category" onchange="toggleExerciseCategoryFields()">
+          <option value="warmup">Warm Up</option><option value="strength" selected>Strength</option><option value="cardio">Cardio</option>
+        </select></div>
+        <div class="field" id="ex-field-series"><label>Series</label><input type="number" id="ex-series" value="3"></div>
+        <div class="field" id="ex-field-reps"><label>Repeticiones</label><input id="ex-reps"></div>
+        <div class="field" id="ex-field-duration" style="display:none;"><label>Duración</label><input id="ex-duration" placeholder="20 min"></div>
+        <div class="field"><label>Descanso (seg. o mm:ss)</label><input id="ex-rest" placeholder="60"></div>
+        <div class="field"><label>Video (YouTube)</label><input id="ex-youtube" placeholder="https://youtube.com/watch?v=..."></div>
+      </div>
+      <div class="field"><label>Descripción</label><textarea id="ex-desc" rows="2"></textarea></div>
+      <button class="btn btn-primary" style="width:auto" onclick="createExercise()">Agregar</button>
+    </div>
+  `;
+}
+
+function renderTrainingAdminExerciseList(list) {
+  return `<div class="card">
+    <div class="card-title">Ejercicios de este día</div>
+    ${list.length ? list.map(x => `
+      <div class="list-row">
+        <div>
+          <strong>${x.title}</strong> <span class="badge">${CATEGORY_LABELS[x.category]}</span>
+          <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${x.category === 'cardio' ? `duración ${x.duration || '-'}` : `${x.series} series · ${x.reps || '-'} reps`} · descanso ${x.rest_time || '-'}</div>
+        </div>
+        <button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>
+      </div>
+    `).join('') : '<div class="empty-state">Aún no hay ejercicios para este día.</div>'}
+  </div>`;
+}
+
+function renderTrainingDay(el, exercises, client, isAdmin, completions) {
+  const day = trainingUI.day;
+  if (!isAdmin && !isDayUnlocked(day, completions)) {
+    el.innerHTML = `
+      <div class="page-header">
+        <button class="btn btn-ghost" style="width:auto;margin-bottom:12px;" onclick="backToTrainingHome()">← Días de entrenamiento</button>
+        <h2>Día ${day}</h2>
+      </div>
+      <div class="card"><div class="empty-state"><span style="font-size:15px;">🔒</span> Completa el Día ${day - 1} primero esta semana para desbloquear este día.</div></div>
+    `;
+    return;
+  }
+  const dayExercises = exercises.filter(x => x.day_number === day);
+  const doneCount = dayExercises.filter(x => trainingUI.completed[x.id]).length;
+  const allDone = dayExercises.length > 0 && doneCount === dayExercises.length;
+  const alreadyMarked = isDayCompletedThisWeek(day, completions);
+  el.innerHTML = `
+    <div class="page-header">
+      <button class="btn btn-ghost" style="width:auto;margin-bottom:12px;" onclick="backToTrainingHome()">← Días de entrenamiento</button>
+      <h2>Día ${day}</h2>
+      <p>Elige qué vas a entrenar hoy.</p>
+    </div>
+    <div class="grid-3">
+      ${Object.keys(CATEGORY_LABELS).map(cat => {
+        const list = dayExercises.filter(x => x.category === cat);
+        return `<button class="category-tile" ${list.length ? '' : 'disabled'} onclick="openTrainingCategory('${cat}')">
+          <div class="label">${CATEGORY_LABELS[cat]}</div>
+          <div class="count">${list.length ? `${list.length} ejercicio${list.length === 1 ? '' : 's'}` : 'Sin ejercicios'}</div>
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="card">
+      ${renderProgressBar(doneCount, dayExercises.length)}
+      <div style="text-align:center;margin-top:16px;">
+        ${alreadyMarked
+          ? '<span class="badge">Entrenamiento del día ya completado esta semana</span>'
+          : `<button class="btn btn-primary" style="width:auto" ${allDone ? '' : 'disabled style="opacity:.4"'} onclick="markTrainingDayComplete(${day})">Marcar entrenamiento del día como completado</button>`}
+      </div>
+    </div>
+    ${isAdmin ? renderTrainingAdminExerciseList(dayExercises) : ''}
+  `;
+}
+async function markTrainingDayComplete(day) {
+  const clientId = currentClientId();
+  try {
+    await api(`/api/clients/${clientId}/training-completions`, { method: 'POST', body: JSON.stringify({ day_number: day }) });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+function getCurrentTrainingList() {
+  return (window._trainingExercises || []).filter(x => x.day_number === trainingUI.day && x.category === trainingUI.category);
+}
+
+function renderTrainingPlayer(el, exercises, client, isAdmin) {
+  const { day, category } = trainingUI;
+  const list = exercises.filter(x => x.day_number === day && x.category === category);
+  if (!list.length) { trainingUI.category = null; return renderTrainingDay(el, exercises, client, isAdmin); }
+  if (trainingUI.index >= list.length) trainingUI.index = list.length - 1;
+  const ex = list[trainingUI.index];
+  const embedUrl = youtubeEmbedUrl(ex.youtube_url);
+  const isLast = trainingUI.index === list.length - 1;
+  const done = !!trainingUI.completed[ex.id];
+  const isCardio = ex.category === 'cardio';
+  const doneInCategory = list.filter(x => trainingUI.completed[x.id]).length;
+
+  el.innerHTML = `
+    <div class="page-header">
+      <button class="btn btn-ghost" style="width:auto;margin-bottom:12px;" onclick="backToTrainingDay()">← Día ${day} · ${CATEGORY_LABELS[category]}</button>
+      <h2>${ex.title}</h2>
+      <p>Ejercicio ${trainingUI.index + 1} de ${list.length}</p>
+      ${renderProgressBar(doneInCategory, list.length)}
+    </div>
+    <div class="card">
+      ${embedUrl ? `<div style="position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000;">
+        <iframe src="${embedUrl}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="${ex.title}"></iframe>
+      </div>` : ex.video_url ? `<video src="${ex.video_url}" controls style="width:100%;border-radius:14px;background:#000;"></video>` : '<div class="empty-state">Sin video asignado.</div>'}
+      <div class="grid-3" style="margin-top:16px;">
+        ${isCardio ? `
+          <div class="kpi-tile"><div class="val">${ex.duration || '-'}</div><div class="lbl">Duración</div></div>
+          <div class="kpi-tile"><div class="val">${ex.rest_time || '-'}</div><div class="lbl">Descanso</div></div>
+        ` : `
+          <div class="kpi-tile"><div class="val">${ex.series ?? '-'}</div><div class="lbl">Series</div></div>
+          <div class="kpi-tile"><div class="val">${ex.reps || '-'}</div><div class="lbl">Repeticiones</div></div>
+          <div class="kpi-tile"><div class="val">${ex.rest_time || '-'}</div><div class="lbl">Descanso</div></div>
+        `}
+      </div>
+      ${ex.description ? `<p style="margin-top:16px;">${ex.description}</p>` : ''}
+      <div id="training-duration-panel"></div>
+      <div id="training-rest-panel"></div>
+      ${isLast && done ? `<div class="empty-state" style="margin-top:16px;">Completaste ${CATEGORY_LABELS[category]} del Día ${day}.</div>` : ''}
+      <div style="display:flex;justify-content:space-between;gap:8px;margin-top:20px;">
+        <button class="btn btn-ghost" style="width:auto" ${trainingUI.index === 0 ? 'disabled style="opacity:.4"' : ''} onclick="trainingGoTo(${trainingUI.index - 1})">Anterior</button>
+        ${done
+          ? '<button class="btn btn-ghost" style="width:auto" disabled>Completado ✓</button>'
+          : isCardio
+            ? `<button class="btn btn-primary" style="width:auto" onclick="startCardioDuration('${ex.id}')">Medir duración</button>`
+            : `<button class="btn btn-primary" style="width:auto" onclick="markExerciseComplete('${ex.id}')">Marcar completado</button>`}
+        ${isLast && done
+          ? `<button class="btn btn-primary" style="width:auto" onclick="backToTrainingDay()">Finalizar</button>`
+          : `<button class="btn btn-ghost" style="width:auto" ${isLast ? 'disabled style="opacity:.4"' : ''} onclick="trainingGoTo(${trainingUI.index + 1})">Siguiente</button>`}
+      </div>
+    </div>
+  `;
+  window._trainingTimer = null;
+}
+
+function markExerciseComplete(exId) {
+  trainingUI.completed[exId] = true;
+  const list = getCurrentTrainingList();
+  const ex = list[trainingUI.index];
+  startTrainingRestTimer(parseTimeToSeconds(ex && ex.rest_time));
+}
+
+function startCardioDuration(exId) {
+  stopCardioTimer();
+  const list = getCurrentTrainingList();
+  const ex = list[trainingUI.index];
+  let remaining = parseTimeToSeconds(ex && ex.duration);
+  const panel = document.getElementById('training-duration-panel');
+  if (!panel) return;
+  const draw = () => {
+    panel.innerHTML = `
+      <div style="margin-top:16px;padding:16px;background:var(--sage-soft);border-radius:14px;text-align:center;">
+        <div style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Duración</div>
+        <div style="font-size:34px;font-weight:700;color:var(--sage);margin:4px 0;">${formatSeconds(remaining)}</div>
+        <button class="btn btn-ghost" style="width:auto" onclick="stopCardioDuration('${exId}')">Terminar</button>
+      </div>
+    `;
+  };
+  draw();
+  window._cardioTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) { stopCardioDuration(exId); return; }
+    draw();
+  }, 1000);
+}
+function stopCardioTimer() {
+  if (window._cardioTimer) { clearInterval(window._cardioTimer); window._cardioTimer = null; }
+  const panel = document.getElementById('training-duration-panel');
+  if (panel) panel.innerHTML = '';
+}
+function stopCardioDuration(exId) {
+  stopCardioTimer();
+  markExerciseComplete(exId);
+}
+
+function startTrainingRestTimer(seconds) {
+  stopTrainingRestTimer();
+  let remaining = seconds;
+  const panel = document.getElementById('training-rest-panel');
+  if (!panel) return;
+  const draw = () => {
+    panel.innerHTML = `
+      <div style="margin-top:16px;padding:16px;background:var(--terracota-soft);border-radius:14px;text-align:center;">
+        <div style="font-size:12px;color:var(--ink-soft);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Descanso</div>
+        <div style="font-size:34px;font-weight:700;color:var(--terracota);margin:4px 0;">${formatSeconds(remaining)}</div>
+        <button class="btn btn-ghost" style="width:auto" onclick="skipTrainingRest()">Saltar descanso</button>
+      </div>
+    `;
+  };
+  draw();
+  window._trainingTimer = setInterval(() => {
+    remaining -= 1;
+    if (remaining <= 0) { skipTrainingRest(); return; }
+    draw();
+  }, 1000);
+}
+function stopTrainingRestTimer() {
+  if (window._trainingTimer) { clearInterval(window._trainingTimer); window._trainingTimer = null; }
+  const panel = document.getElementById('training-rest-panel');
+  if (panel) panel.innerHTML = '';
+}
+function skipTrainingRest() {
+  stopTrainingRestTimer();
+  const list = getCurrentTrainingList();
+  if (trainingUI.index < list.length - 1) trainingGoTo(trainingUI.index + 1);
+  else renderMain();
+}
+function trainingGoTo(index) {
+  const list = getCurrentTrainingList();
+  if (index < 0 || index >= list.length) return;
+  stopTrainingRestTimer();
+  stopCardioTimer();
+  trainingUI.index = index;
+  renderMain();
+}
+function openTrainingDay(day) { trainingUI = { day, category: null, index: 0, completed: trainingUI.completed }; renderMain(); }
+function startTodaySession(day, category, exId) {
+  if (!category) return;
+  const list = (window._trainingExercises || []).filter(x => x.day_number === day && x.category === category);
+  const idx = exId ? list.findIndex(x => x.id === exId) : 0;
+  trainingUI = { day, category, index: idx >= 0 ? idx : 0, completed: trainingUI.completed };
+  renderMain();
+}
+function openTrainingCategory(category) { trainingUI.category = category; trainingUI.index = 0; renderMain(); }
+function backToTrainingHome() { stopTrainingRestTimer(); stopCardioTimer(); trainingUI = { day: null, category: null, index: 0, completed: {} }; renderMain(); }
+function backToTrainingDay() { stopTrainingRestTimer(); stopCardioTimer(); trainingUI.category = null; trainingUI.index = 0; renderMain(); }
+
+async function saveTrainingConfig(clientId) {
+  const days = document.getElementById('tr-training-days').value;
+  const quoteId = document.getElementById('tr-assigned-quote').value;
+  try {
+    if (days) await api(`/api/clients/${clientId}/training-days`, { method: 'PATCH', body: JSON.stringify({ training_days: parseInt(days, 10) }) });
+    await api(`/api/clients/${clientId}/assigned-quote`, { method: 'PATCH', body: JSON.stringify({ quote_id: quoteId || null }) });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function toggleExerciseCategoryFields() {
+  const isCardio = document.getElementById('ex-category').value === 'cardio';
+  document.getElementById('ex-field-series').style.display = isCardio ? 'none' : '';
+  document.getElementById('ex-field-reps').style.display = isCardio ? 'none' : '';
+  document.getElementById('ex-field-duration').style.display = isCardio ? '' : 'none';
+}
 async function createExercise() {
   const clientId = currentClientId();
+  const title = document.getElementById('ex-title').value.trim();
+  if (!title) return alert('Escribe un título.');
   const payload = {
-    title: document.getElementById('ex-title').value,
-    method: document.getElementById('ex-method').value,
-    section: document.getElementById('ex-section').value,
+    title,
+    day_number: parseInt(document.getElementById('ex-day').value, 10),
+    category: document.getElementById('ex-category').value,
     series: document.getElementById('ex-series').value,
     reps: document.getElementById('ex-reps').value,
+    duration: document.getElementById('ex-duration').value,
     rest_time: document.getElementById('ex-rest').value,
     youtube_url: document.getElementById('ex-youtube').value,
     description: document.getElementById('ex-desc').value,
@@ -1490,8 +2331,24 @@ async function renderNutrition(el) {
   try {
     const { plan, meals } = await api(`/api/clients/${clientId}/nutrition`);
     window._nutritionData = { plan, meals };
+    const nextMeal = meals[0];
     el.innerHTML = `
-      <div class="page-header"><h2>Nutrición</h2><p>Plan de alimentación y protocolos asignados por tu mentor.</p></div>
+      ${renderIdentityHeader('Nutrición', 'Plan de alimentación y protocolos asignados por tu mentor.', pickMantra('nutrition'))}
+      <div class="hero" style="background:linear-gradient(135deg, #3E4A34, #4C5C40);">
+        <div class="hero-glow"></div>
+        <div class="hero-split">
+          <div>
+            <p class="hero-eyebrow" style="color:#B7D19A;">${nextMeal ? `PRÓXIMA COMIDA · ${(nextMeal.meal_time || '').toUpperCase()}` : 'TU PLAN NUTRICIONAL'}</p>
+            <p class="hero-title">${nextMeal ? nextMeal.name : 'Aún sin comidas registradas'}</p>
+            <p class="hero-meta">${nextMeal && nextMeal.calories ? `${nextMeal.calories} kcal` : (plan.daily_cals ? `${plan.daily_cals} kcal/día` : '')}</p>
+          </div>
+          <div class="hero-rings">
+            <div class="macro-ring"><span class="mval">${plan.protein_g ?? '-'}g</span><span class="mlbl">Prot</span></div>
+            <div class="macro-ring"><span class="mval">${plan.carbs_g ?? '-'}g</span><span class="mlbl">Carbs</span></div>
+            <div class="macro-ring"><span class="mval">${plan.fat_g ?? '-'}g</span><span class="mlbl">Grasa</span></div>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title">Macros diarios</div>
         <div class="grid-3">
@@ -1593,7 +2450,7 @@ async function renderSupplementation(el) {
     const { supplements } = await api(`/api/clients/${clientId}/supplements`);
     window._supplementsData = supplements;
     el.innerHTML = `
-      <div class="page-header"><h2>Suplementación</h2><p>Protocolo de suplementos asignado por tu mentor.</p></div>
+      ${renderIdentityHeader('Suplementación', 'Protocolo de suplementos asignado por tu mentor.', pickMantra('supplementation'))}
       ${isAdmin ? `<div class="card">
         <div class="card-title">Asignar suplemento</div>
         <div class="grid-3">
@@ -1654,7 +2511,13 @@ async function renderCortisol(el) {
   try {
     const { techniques } = await api(`/api/clients/${clientId}/cortisol-techniques`);
     el.innerHTML = `
-      <div class="page-header"><h2>Gestión de Cortisol</h2><p>Técnicas de regulación asignadas por tu mentor.</p></div>
+      ${renderIdentityHeader('Gestión de Cortisol', 'Es momento de bajar el ritmo.', pickMantra('cortisol'))}
+      <div class="hero breath-hero" style="background:linear-gradient(180deg, #EFF5E8, #DCE8CC);border-radius:20px;">
+        <div class="breath-circles"><div class="breath-circle"></div><div class="breath-circle"></div><div class="breath-circle"></div></div>
+        <h3 style="color:#3E4A34;">${techniques.length ? techniques[0].title : 'Un momento para ti'}</h3>
+        <p style="color:#6B7A5E;">${techniques.length ? (techniques[0].description || 'Tu técnica de regulación asignada.') : 'Tu mentor aún no te ha asignado una técnica — mientras tanto, respira profundo unas cuantas veces.'}</p>
+        ${techniques.length && techniques[0].youtube_url ? `<button class="hero-btn" style="background:#5B7A4E;color:#fff;margin-top:8px;" onclick="window.open('${techniques[0].youtube_url}', '_blank')">Empezar técnica</button>` : ''}
+      </div>
       ${isAdmin ? `<div class="card">
         <div class="card-title">Asignar técnica</div>
         <div class="grid-3">
@@ -1699,6 +2562,63 @@ async function deleteTechnique(id) {
   catch (e) { alert('Error: ' + e.message); }
 }
 
+// ---------------- Módulo: Descanso ----------------
+// Versión simple: la única cifra real hoy es "horas de sueño" del último
+// check-in de Mi Evolución (evolution_checkins.sleep_hours). Calidad de sueño
+// y hora de dormir aún no se registran en ningún lado — se muestran como "—"
+// en vez de inventar un dato. El checklist es solo de la sesión actual (no se
+// persiste) y los sonidos son un placeholder visual, tal como se acordó
+// ("lógica simple, funcionalidad completa después").
+const REST_CHECKLIST_ITEMS = [
+  { id: 'screens', label: 'Pantallas apagadas 30 minutos antes de dormir' },
+  { id: 'breathing', label: 'Respiración antes de dormir' },
+  { id: 'environment', label: 'Ambiente oscuro y fresco' },
+  { id: 'log', label: 'Registrar tu sueño en Mi Evolución' },
+];
+let restChecklistState = {};
+const REST_SOUNDS = ['Lluvia', 'Bosque', 'Ruido blanco', 'Olas del mar'];
+function formatSleepHours(hours) {
+  const h = Math.floor(hours);
+  const m = Math.round((hours - h) * 60);
+  return `${h}h ${m}m`;
+}
+
+async function renderRest(el) {
+  const clientId = currentClientId();
+  try {
+    const { checkins } = await api(`/api/clients/${clientId}/evolution`);
+    const last = checkins[checkins.length - 1] || {};
+    const sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
+    el.innerHTML = `
+      ${renderIdentityHeader('Descanso', 'Tu recuperación nocturna.', pickMantra('rest'))}
+      <div class="hero" style="background:linear-gradient(135deg, #241C30, #332740);">
+        <div class="hero-glow"></div>
+        <p class="hero-eyebrow" style="color:#C6B4E0;">ANOCHE DORMISTE</p>
+        <p class="hero-figure">${sleepLabel || '—'}</p>
+        <p class="hero-meta">${sleepLabel ? 'Calidad de sueño y hora de dormir: próximamente' : 'Registra un check-in en Mi Evolución para ver tus horas de sueño aquí.'}</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Rutina nocturna</div>
+        ${REST_CHECKLIST_ITEMS.map(item => `
+          <div class="checklist-row ${restChecklistState[item.id] ? 'checked' : ''}">
+            <button class="check-circle ${restChecklistState[item.id] ? 'checked' : ''}" onclick="toggleRestChecklistItem('${item.id}')" aria-label="${item.label}">${restChecklistState[item.id] ? '✓' : ''}</button>
+            <span class="label">${item.label}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Sonidos para dormir</div>
+        <div class="pillrow">${REST_SOUNDS.map(s => `<span class="pill">${s}</span>`).join('')}</div>
+        <p style="font-size:12px;color:var(--ink-soft);margin:12px 0 0;">Próximamente: reproducción de sonidos para dormir.</p>
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+function toggleRestChecklistItem(id) {
+  restChecklistState[id] = !restChecklistState[id];
+  renderMain();
+}
+
 // ---------------- Módulo: Comunidad (Eventos + Terapias) ----------------
 
 let communityTab = 'events';
@@ -1706,8 +2626,24 @@ let communityTab = 'events';
 async function renderCommunity(el) {
   try {
     const [{ events }, { therapies }] = await Promise.all([api('/api/community/events'), api('/api/community/therapies')]);
+    const nextEvent = events[0];
     el.innerHTML = `
-      <div class="page-header"><h2>Comunidad</h2><p>Eventos de bienestar y terapias con descuentos especiales.</p></div>
+      ${renderIdentityHeader('La tribu esta semana', 'Presencia, no competencia.', pickMantra('community'))}
+      <div class="hero" style="background:linear-gradient(135deg, #3A2418, #4A311F);">
+        <div class="hero-glow"></div>
+        <div class="hero-split">
+          <div class="hero-avatars" aria-hidden="true">
+            <div class="hero-avatar"></div>
+            <div class="hero-avatar"></div>
+            <div class="hero-avatar"></div>
+          </div>
+          <div style="flex:1;">
+            <p class="hero-eyebrow" style="color:#E0B08C;">${nextEvent ? 'PRÓXIMO EVENTO' : 'COMUNIDAD'}</p>
+            <p class="hero-title">${nextEvent ? nextEvent.title : 'Aún no hay eventos programados'}</p>
+            <p class="hero-meta">${nextEvent ? `${nextEvent.event_date ? new Date(nextEvent.event_date).toLocaleString() : ''}${nextEvent.location ? ' · ' + nextEvent.location : ''}` : 'Tu coach publicará el próximo evento pronto.'}</p>
+          </div>
+        </div>
+      </div>
       <div style="margin-bottom:20px;">
         <button class="btn ${communityTab==='events'?'btn-primary':'btn-ghost'}" style="width:auto;margin-right:10px;" onclick="setCommunityTab('events')">Eventos</button>
         <button class="btn ${communityTab==='therapies'?'btn-primary':'btn-ghost'}" style="width:auto;" onclick="setCommunityTab('therapies')">Terapias</button>
@@ -1749,9 +2685,10 @@ async function reserveTherapy(id) {
 async function renderEvolution(el) {
   const clientId = currentClientId();
   try {
-    const [{ checkins, anthropometrics, inbody }, { photos }] = await Promise.all([
+    const [{ checkins, anthropometrics, inbody }, { photos }, { completions: trainingCompletions }] = await Promise.all([
       api(`/api/clients/${clientId}/evolution`),
-      api(`/api/clients/${clientId}/photos`)
+      api(`/api/clients/${clientId}/photos`),
+      api(`/api/clients/${clientId}/training-completions`).catch(() => ({ completions: [] })),
     ]);
     const last = checkins[checkins.length - 1] || {};
     const firstAnthro = anthropometrics[0] || {};
@@ -1759,8 +2696,16 @@ async function renderEvolution(el) {
     const firstInbody = inbody[0] || {};
     const lastInbody = inbody[inbody.length - 1] || {};
     const photosByAngle = angle => photos.filter(p => p.angle === angle).sort((a, b) => (Number(a.mes_num) || 0) - (Number(b.mes_num) || 0));
+    const streak = calculateStreak(trainingCompletions);
+    const weightChange = (firstAnthro.peso != null && lastAnthro.peso != null) ? (lastAnthro.peso - firstAnthro.peso) : null;
     el.innerHTML = `
-      <div class="page-header"><h2>Mi Evolución</h2><p>Tu progreso a lo largo del tiempo, en un solo lugar.</p></div>
+      ${renderIdentityHeader('Mi Evolución', 'Tu proceso, en cifras.', pickMantra('evolution'))}
+      <div class="hero" style="background:linear-gradient(135deg, #4A3510, #5C4318);">
+        <div class="hero-glow"></div>
+        <p class="hero-eyebrow" style="color:#E8C97D;">TU RACHA</p>
+        <p class="hero-figure">${streak} día${streak === 1 ? '' : 's'}</p>
+        <p class="hero-meta">${trainingCompletions.length} sesión${trainingCompletions.length === 1 ? '' : 'es'} en total${weightChange != null ? ` · ${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} kg desde tu primer registro` : ''}</p>
+      </div>
       <div class="card">
         <div class="card-title">Check-in del mes</div>
         <div class="grid-3">
@@ -1912,6 +2857,117 @@ async function saveClientType(id) {
   try { const { client } = await api(`/api/clients/${id}/client-type`, { method: 'PATCH', body: JSON.stringify({ client_type: clientType }) }); applyUpdatedClient(client); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
 }
+function calculateAge(birthdate) {
+  if (!birthdate) return null;
+  const b = new Date(birthdate + 'T00:00:00');
+  if (isNaN(b.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - b.getFullYear();
+  const m = today.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
+  return age;
+}
+
+function renderOnboardingAnswersAccordion(personalInfo, report, inbodyRecords, anthroRecords, photos) {
+  window._adminAnthroRecords = anthroRecords || [];
+  return ONBOARDING_MODULES.map(mod => {
+    if (mod.n === 3) {
+      return `<div class="accordion-item">
+        <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+          Módulo ${mod.n} · ${mod.title}
+          <span class="accordion-toggle">Ver</span>
+        </button>
+        <div class="accordion-content">
+          ${renderModule3AdminDetail(personalInfo, inbodyRecords || [], anthroRecords || [], photos || [])}
+        </div>
+      </div>`;
+    }
+    let rows;
+    if (mod.n === 1) {
+      rows = [
+        ['Fecha de nacimiento', personalInfo.birthdate],
+        ['Género', personalInfo.gender],
+        ['Ocupación', personalInfo.occupation],
+        ['Estado civil', personalInfo.marital_status],
+        ['País', personalInfo.country],
+        ['Ciudad', personalInfo.city],
+        ['Celular', personalInfo.phone_number],
+      ];
+    } else {
+      rows = mod.fields.map(f => {
+        const raw = report[f.id];
+        const value = f.type === 'chips' ? (Array.isArray(raw) && raw.length ? raw.join(', ') : null) : raw;
+        return [f.label, value];
+      });
+    }
+    rows = rows.filter(([_, value]) => value !== undefined && value !== null && value !== '');
+    return `<div class="accordion-item">
+      <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+        Módulo ${mod.n} · ${mod.title}
+        <span class="accordion-toggle">Ver</span>
+      </button>
+      <div class="accordion-content">
+        ${rows.length ? `<table><tbody>${rows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin respuestas registradas.</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderModule3AdminDetail(personalInfo, inbodyRecords, anthroRecords, photos) {
+  const basicRows = [
+    ['Peso (kg)', personalInfo.weight],
+    ['Estatura (cm)', personalInfo.height],
+    ['% Grasa corporal', personalInfo.body_fat],
+  ].filter(([_, v]) => v !== undefined && v !== null && v !== '');
+
+  const inbodyHtml = inbodyRecords.length ? inbodyRecords.map(r => `
+    <div class="list-row">
+      <div>
+        <strong>${r.mes_num ? `Mes ${r.mes_num}` : r.fecha}</strong>
+        <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">Peso total ${r.peso_total ?? '-'} · % grasa ${r.grasa_pct ?? '-'} · SMM ${r.smm ?? '-'}</div>
+      </div>
+      ${r.file_url ? `<a class="small-btn" href="${r.file_url}" target="_blank" rel="noopener">Ver / descargar PDF</a>` : '<span style="font-size:12px;color:var(--ink-soft);">Sin archivo adjunto</span>'}
+    </div>
+  `).join('') : '<div class="empty-state">Sin registros InBody.</div>';
+
+  const anthroHtml = anthroRecords.length ? `
+    <table><thead><tr><th>Mes</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
+    <tbody>${anthroRecords.map(r => `<tr><td>${r.mes_num ? `Mes ${r.mes_num}` : r.fecha}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>
+    <button class="btn btn-ghost" style="width:auto;margin-top:8px;" onclick="downloadAnthropometricsPdf('${(state.clients.find(c => c.id === state.currentClientId) || {}).name || ''}')">Descargar PDF</button>
+  ` : '<div class="empty-state">Sin medidas antropométricas.</div>';
+
+  const photosByAngleForAdmin = a => photos.filter(p => p.angle === a.key).sort((x, y) => (Number(x.mes_num) || 0) - (Number(y.mes_num) || 0));
+  const photosHtml = photos.length ? `<div class="grid-3">
+    ${PHOTO_ANGLES.map(a => {
+      const list = photosByAngleForAdmin(a);
+      if (!list.length) return '';
+      return `<div>
+        <p style="font-size:12px;font-weight:700;margin:0 0 6px;">${a.label}</p>
+        ${list.map(p => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <img class="photo-thumb" src="${p.photo_url}" style="width:44px;height:44px;" onclick="openPhotoPreview('${p.photo_url}','${a.label} · ${p.fecha}')">
+          <a class="small-btn" href="${p.photo_url}" target="_blank" rel="noopener">Descargar</a>
+        </div>`).join('')}
+      </div>`;
+    }).join('')}
+  </div>` : '<div class="empty-state">Sin fotos de progreso.</div>';
+
+  return `
+    ${basicRows.length ? `<table><tbody>${basicRows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value}</td></tr>`).join('')}</tbody></table>` : ''}
+    <p style="font-weight:700;font-size:13px;margin:16px 0 6px;">Análisis InBody</p>
+    ${inbodyHtml}
+    <p style="font-weight:700;font-size:13px;margin:16px 0 6px;">Medidas antropométricas</p>
+    ${anthroHtml}
+    <p style="font-weight:700;font-size:13px;margin:16px 0 6px;">Fotos de progreso</p>
+    ${photosHtml}
+  `;
+}
+function downloadAnthropometricsPdf(clientName) {
+  const records = window._adminAnthroRecords || [];
+  const body = `<table><thead><tr><th>Mes</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
+    <tbody>${records.map(r => `<tr><td>${r.mes_num ? `Mes ${r.mes_num}` : r.fecha}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>`;
+  printAsPdf(`Medidas antropométricas · ${clientName}`, body);
+}
+
 function isClientPlanExpired(client) {
   if (!client || !client.plan_end_date) return false;
   return new Date().toISOString().slice(0, 10) > client.plan_end_date;
@@ -1943,19 +2999,20 @@ async function renderAdminClientDetail(el) {
       const { client: fetchedClient } = await api(`/api/clients/${state.currentClientId}`);
       client = fetchedClient;
     }
-    const { personalInfo } = await api(`/api/clients/${state.currentClientId}/personal-info`);
-    const completed = personalInfo.completed_at ? 'Sí' : 'No';
-    const completedAt = personalInfo.completed_at ? personalInfo.completed_at.split('T')[0] : '-';
+    const [{ personalInfo }, { records: inbodyRecords }, { records: anthroRecords }, { photos }] = await Promise.all([
+      api(`/api/clients/${state.currentClientId}/personal-info`),
+      api(`/api/clients/${state.currentClientId}/inbody-records`).catch(() => ({ records: [] })),
+      api(`/api/clients/${state.currentClientId}/anthropometrics`).catch(() => ({ records: [] })),
+      api(`/api/clients/${state.currentClientId}/photos`).catch(() => ({ photos: [] })),
+    ]);
     const report = personalInfo.onboarding_report || {};
     const summaryRows = [
-      ['País', personalInfo.country],
-      ['Ciudad', personalInfo.city],
+      ['Nombre completo', client && client.name],
+      ['Edad', calculateAge(personalInfo.birthdate) != null ? `${calculateAge(personalInfo.birthdate)} años` : null],
       ['Celular', personalInfo.phone_number],
-      ['Peso', personalInfo.weight],
-      ['Altura', personalInfo.height],
-      ['Grasa corporal', personalInfo.body_fat],
-      ['Onboarding completo', completed],
-      ['Fecha de finalización', completedAt],
+      ['Ciudad', personalInfo.city],
+      ['Profesión', personalInfo.occupation],
+      ['Fecha de finalización del plan', client && client.plan_end_date],
     ].filter(([_, value]) => value !== undefined && value !== null && value !== '');
 
     el.innerHTML = `
@@ -2004,14 +3061,10 @@ async function renderAdminClientDetail(el) {
         </tbody></table>
       </div>
       <div class="card">
-        <div class="card-title">Últimos datos enviados</div>
-        <p style="color:var(--ink-soft);font-size:14px;margin:0 0 10px;">Campos clave del último onboarding completado.</p>
-        <div class="grid-2">
-          <div class="field"><label>Condición médica</label><input disabled value="${report.condition || '-'}"></div>
-          <div class="field"><label>¿Consumes probióticos?</label><input disabled value="${report.probiotics || '-'}"></div>
-          <div class="field"><label>¿Tomas suplementos?</label><input disabled value="${report.supps_active || '-'}"></div>
-          <div class="field"><label>¿Consumo de otras sustancias?</label><input disabled value="${report.substances || '-'}"></div>
-          <div class="field" style="grid-column:1 / -1"><label>3 razones del objetivo</label><textarea disabled rows="4">${report.goal_reasons || '-'}</textarea></div>
+        <div class="card-title">Respuestas del formulario inicial</div>
+        <p style="color:var(--ink-soft);font-size:14px;margin:0 0 10px;">Organizadas por módulo, tal como las llenó el cliente.</p>
+        <div class="accordion">
+          ${renderOnboardingAnswersAccordion(personalInfo, report, inbodyRecords, anthroRecords, photos)}
         </div>
       </div>
     `;
@@ -2053,6 +3106,54 @@ async function markNotificationRead(id) {
     renderNav();
     renderMain();
   } catch (e) { alert('Error: ' + e.message); }
+}
+
+// ---------------- Módulo admin: Biblioteca de frases de mentalidad ----------------
+
+async function renderAdminQuotes(el) {
+  try {
+    const { quotes } = await api('/api/admin/quotes');
+    state.quotes = quotes;
+    el.innerHTML = `
+      <div class="page-header"><h2>Frases de mentalidad</h2><p>Aparecen en el menú principal del módulo Entrenamiento, precedidas de "Hola [nombre], repite después de mí:". Escríbelas como afirmaciones en primera persona.</p></div>
+      <div class="card">
+        <div class="card-title">Nueva frase</div>
+        <div class="field"><label>Frase</label><textarea id="qt-new-quote" rows="2" placeholder="Ej: Estoy trabajando en mi cuerpo con amor y disciplina"></textarea></div>
+        <div class="field" style="max-width:280px;"><label>Autor (opcional)</label><input id="qt-new-author"></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createQuote()">Agregar</button>
+      </div>
+      <div class="card">
+        ${quotes.length ? quotes.map(q => `
+          <div class="list-row" style="${q.active ? '' : 'opacity:.5;'}">
+            <div>
+              <p style="margin:0;">"${q.quote}"</p>
+              ${q.author ? `<div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">— ${q.author}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button class="small-btn" onclick="toggleQuoteActive('${q.id}', ${!q.active})">${q.active ? 'Desactivar' : 'Activar'}</button>
+              <button class="small-btn" onclick="deleteQuote('${q.id}')">Eliminar</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty-state">Aún no hay frases en la biblioteca.</div>'}
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function createQuote() {
+  const quote = document.getElementById('qt-new-quote').value.trim();
+  const author = document.getElementById('qt-new-author').value.trim();
+  if (!quote) return alert('Escribe una frase.');
+  try { await api('/api/admin/quotes', { method: 'POST', body: JSON.stringify({ quote, author: author || null }) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function toggleQuoteActive(id, active) {
+  try { await api(`/api/admin/quotes/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteQuote(id) {
+  if (!confirm('¿Eliminar esta frase?')) return;
+  try { await api(`/api/admin/quotes/${id}`, { method: 'DELETE' }); renderMain(); }
+  catch (e) { alert('Error: ' + e.message); }
 }
 
 async function renderAdminCommunity(el) {

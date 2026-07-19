@@ -159,12 +159,18 @@ async function dbUpsertByClient(table, clientId, patch) {
   return data;
 }
 
+const MODULE_LABELS = { training: 'entrenamiento', nutrition: 'nutrición', supplementation: 'suplementación', cortisol: 'gestión de cortisol' };
 async function unlockModule(clientId, moduleKey) {
   const client = await dbGetOne('clients', { id: clientId });
   if (!client) return;
   if (client.permissions && client.permissions[moduleKey] === true) return;
   const permissions = { ...(client.permissions || {}), [moduleKey]: true };
   await dbUpdate('clients', clientId, { permissions });
+  const label = MODULE_LABELS[moduleKey];
+  if (label) {
+    try { await dbInsert('client_notifications', { client_id: clientId, message: `Ahora tienes acceso a tu módulo de ${label}.` }); }
+    catch (e) { console.error(e); }
+  }
 }
 
 const EMAIL_HOST = process.env.EMAIL_HOST;
@@ -723,14 +729,15 @@ app.get('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, blockFo
 
 app.post('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, blockForLeadWellness, async (req, res) => {
   try {
-    const { fecha, version, peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura, mes_num } = req.body;
+    const { fecha, version, peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura, mes_num, file_url, file_name } = req.body;
     const month = Number.isFinite(+mes_num) && +mes_num > 0 ? parseInt(mes_num, 10) : undefined;
     const row = sanitizeInsertRow({
       client_id: req.params.id,
       fecha: fecha || new Date().toISOString().slice(0, 10),
       version,
       peso_total, smm, grasa_pct, imc, peso_objetivo, grasa_visceral, bmr, angulo_fase, ecw_tbw, masa_osea, altura,
-      mes_num: month
+      mes_num: month,
+      file_url, file_name
     });
 
     try {
@@ -747,9 +754,151 @@ app.post('/api/clients/:id/inbody-records', authMiddleware, ownerOrAdmin, blockF
   }
 });
 
+app.post('/api/clients/:id/inbody-upload', authMiddleware, ownerOrAdmin, blockForLeadWellness, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return err(res, 'No se recibió ningún archivo.');
+    const filename = `${req.params.id}/inbody/${uuidv4()}_${req.file.originalname}`;
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+    return ok(res, { file_url: pub.publicUrl, file_name: req.file.originalname });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al subir el archivo InBody.', 500);
+  }
+});
+
 // ------------------------------------------------------------
 // Entrenamiento
 // ------------------------------------------------------------
+
+app.patch('/api/clients/:id/training-days', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const days = parseInt(req.body.training_days, 10);
+    if (![1,2,3,4,5,6,7].includes(days)) return err(res, 'Días de entrenamiento inválidos (1-7).', 400);
+    const client = await dbUpdate('clients', req.params.id, { training_days: days, updated_at: new Date().toISOString() });
+    return ok(res, { client });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al actualizar días de entrenamiento.', 500);
+  }
+});
+
+app.patch('/api/clients/:id/assigned-quote', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const client = await dbUpdate('clients', req.params.id, { assigned_quote_id: req.body.quote_id || null, updated_at: new Date().toISOString() });
+    return ok(res, { client });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al asignar la frase.', 500);
+  }
+});
+
+app.get('/api/clients/:id/quote-of-the-day', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
+  try {
+    const client = await dbGetOne('clients', { id: req.params.id });
+    if (client && client.assigned_quote_id) {
+      const assigned = await dbGetOne('mindset_quotes', { id: client.assigned_quote_id });
+      if (assigned) return ok(res, { quote: assigned });
+    }
+    const pool = await dbGet('mindset_quotes', { active: true });
+    if (!pool.length) return ok(res, { quote: null });
+    return ok(res, { quote: pool[Math.floor(Math.random() * pool.length)] });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener la frase del día.', 500);
+  }
+});
+
+// Biblioteca de frases de mentalidad (panel admin)
+app.get('/api/admin/quotes', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const quotes = await dbGet('mindset_quotes', {}, { order: { column: 'created_at', ascending: false } });
+    return ok(res, { quotes });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener las frases.', 500);
+  }
+});
+app.post('/api/admin/quotes', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { quote, author } = req.body;
+    if (!quote) return err(res, 'La frase no puede estar vacía.', 400);
+    const created = await dbInsert('mindset_quotes', { quote, author: author || null });
+    return ok(res, { quote: created }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al crear la frase.', 500);
+  }
+});
+app.patch('/api/admin/quotes/:qid', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { quote, author, active } = req.body;
+    const patch = {};
+    if (quote !== undefined) patch.quote = quote;
+    if (author !== undefined) patch.author = author;
+    if (active !== undefined) patch.active = active;
+    const updated = await dbUpdate('mindset_quotes', req.params.qid, patch);
+    return ok(res, { quote: updated });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al actualizar la frase.', 500);
+  }
+});
+app.delete('/api/admin/quotes/:qid', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    await dbDelete('mindset_quotes', req.params.qid);
+    return ok(res, { message: 'Frase eliminada.' });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al eliminar la frase.', 500);
+  }
+});
+
+app.get('/api/clients/:id/notifications', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const notifications = await dbGet('client_notifications', { client_id: req.params.id }, { order: { column: 'created_at', ascending: false } });
+    return ok(res, { notifications });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener notificaciones.', 500);
+  }
+});
+app.patch('/api/clients/:id/notifications/read-all', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const unread = await dbGet('client_notifications', { client_id: req.params.id, read: false });
+    await Promise.all(unread.map(n => dbUpdate('client_notifications', n.id, { read: true })));
+    return ok(res, { message: 'ok' });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al marcar notificaciones como leídas.', 500);
+  }
+});
+
+app.get('/api/clients/:id/training-completions', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
+  try {
+    const completions = await dbGet('training_completions', { client_id: req.params.id }, { order: { column: 'completed_date', ascending: false } });
+    return ok(res, { completions });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener el historial de entrenamiento.', 500);
+  }
+});
+
+app.post('/api/clients/:id/training-completions', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
+  try {
+    const dayNumber = parseInt(req.body.day_number, 10);
+    if (![1,2,3,4,5,6,7].includes(dayNumber)) return err(res, 'Día inválido.', 400);
+    const today = new Date().toISOString().slice(0, 10);
+    const existing = await dbGetOne('training_completions', { client_id: req.params.id, day_number: dayNumber, completed_date: today });
+    if (existing) return ok(res, { completion: existing });
+    const completion = await dbInsert('training_completions', { client_id: req.params.id, day_number: dayNumber, completed_date: today });
+    return ok(res, { completion }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al marcar el día como completado.', 500);
+  }
+});
 
 app.get('/api/clients/:id/exercises', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
   try {
