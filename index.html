@@ -81,6 +81,7 @@ input,select,textarea{font-family:inherit;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;color:var(--ink-soft);font-weight:600;font-size:14px;margin-bottom:4px;background:none;border:none;width:100%;text-align:left;}
 .nav-item:hover{background:var(--cream);}
 .nav-item.active{background:var(--terracota-soft);color:var(--terracota);}
+.nav-subitem{padding-left:32px;font-size:13px;font-weight:500;}
 .sidebar-footer{margin-top:auto;padding:14px;}
 .bell-wrap{position:relative;}
 .bell-btn{position:relative;background:none;border:none;cursor:pointer;font-size:18px;color:var(--ink-soft);padding:4px 6px;opacity:.75;}
@@ -152,11 +153,6 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .unlock-card .unlock-icon{font-size:26px;margin-bottom:10px;}
 .unlock-card h3{font-family:'Fraunces',serif;font-size:17px;margin:0 0 6px;color:var(--ink);}
 .unlock-card p{font-size:13px;color:var(--ink-soft);margin:0 0 16px;}
-.admin-nav-pill{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:14px;border:1px solid #E7DFC9;background:#FFFFFF;font-family:'Fraunces',serif;font-weight:600;font-size:14px;color:#2B2621;cursor:pointer;transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;margin:0 8px 8px 0;}
-.admin-nav-pill svg{color:#8A8377;flex-shrink:0;transition:color .2s ease;}
-.admin-nav-pill:hover{border-color:#B8935A;box-shadow:0 6px 16px rgba(184,147,90,.15);}
-.admin-nav-pill.active{border-color:#B8935A;background:#FBF4E7;box-shadow:0 0 0 3px rgba(217,164,65,.16), 0 6px 18px rgba(184,147,90,.2);}
-.admin-nav-pill.active svg{color:#B8935A;}
 .back-link{background:none;border:none;padding:0;margin-bottom:12px;display:inline-block;font-size:12px;font-weight:600;color:#5C574E;cursor:pointer;}
 .back-link:hover{text-decoration:underline;}
 .progress-card-row{display:flex;align-items:center;gap:16px;}
@@ -404,7 +400,7 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 
 <script>
 const API = '';
-let state = { token: localStorage.getItem('lt_token') || null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, notifications: [], view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
+let state = { token: localStorage.getItem('lt_token') || null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, notifications: [], view: 'personal-info', clients: [], currentClientId: null, moduleClientIds: {}, adminHubOpen: false, wizardStep: 1 };
 
 async function api(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -463,14 +459,14 @@ function onAuthSuccess(data) {
   state.planExpired = !!data.planExpired;
   state.planEndDate = data.planEndDate || null;
   localStorage.setItem('lt_token', data.token);
-  if (data.role === 'admin') state.view = 'admin-clients';
+  if (data.role === 'admin') state.view = 'admin-home';
   else state.view = (CLIENT_NAV.find(item => item.visible(state)) || CLIENT_NAV[0]).key;
   boot();
 }
 
 function logout() {
   localStorage.removeItem('lt_token');
-  state = { token: null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, planExpired: false, planEndDate: null, notifications: [], view: 'personal-info', clients: [], currentClientId: null, wizardStep: 1 };
+  state = { token: null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, planExpired: false, planEndDate: null, notifications: [], view: 'personal-info', clients: [], currentClientId: null, moduleClientIds: {}, adminHubOpen: false, wizardStep: 1 };
   document.getElementById('app-view').classList.remove('active');
   document.getElementById('login-view').style.display = 'flex';
   applyLoginTheme();
@@ -504,7 +500,7 @@ async function boot() {
       renderPlanExpiredScreen();
       return;
     }
-    if (!state.view || (state.view === 'personal-info' && state.role === 'admin')) state.view = 'admin-clients';
+    if (!state.view || (state.view === 'personal-info' && state.role === 'admin')) state.view = 'admin-home';
     if (state.role === 'cliente' && !CLIENT_NAV.some(item => item.key === state.view && item.visible(state))) {
       state.view = (CLIENT_NAV.find(item => item.visible(state)) || CLIENT_NAV[0]).key;
     }
@@ -543,18 +539,6 @@ const CLIENT_NAV = [
   { key: 'community', label: 'Comunidad', visible: s => s.clientType === 'lead_wellness' ? true : s.onboardingComplete === true },
   { key: 'evolution', label: 'Mi Evolución', visible: s => s.clientType === 'lead_wellness' ? true : s.onboardingComplete === true },
 ];
-const ADMIN_NAV_ICONS = {
-  'personal-info': '<circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M3.5 15c1-3 3.2-4.5 5.5-4.5s4.5 1.5 5.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"/>',
-  'training': '<rect x="1.5" y="7" width="3" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="13.5" y="7" width="3" height="4.5" rx="1" stroke="currentColor" stroke-width="1.3" fill="none"/><path d="M4.5 9.2h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
-  'nutrition': '<circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="9" cy="9" r="2.6" stroke="currentColor" stroke-width="1.1" fill="none"/>',
-  'cortisol': '<path d="M4 14c-1.5-4.5 1-8.5 8-9.5-1 6-4 9-8 9.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/><path d="M5 13c2-2 4-4 6.5-7" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>',
-  'rest': '<path d="M13 9.8A5.5 5.5 0 1 1 8.2 3a4.3 4.3 0 0 0 4.8 6.8Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>',
-  'community': '<circle cx="6.5" cy="7" r="2.2" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="12" cy="7" r="2.2" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M2.5 15c.6-2.3 2-3.5 4-3.5s3.4 1.2 4 3.5M10.5 15c.5-2 1.7-3.2 3.5-3.2s3 1.2 3.5 3.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/>',
-  'evolution': '<path d="M2.5 14.5 7 9l3 3 5.5-6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M12 5.5h3.5V9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
-};
-function adminNavIcon(key) {
-  return `<svg width="18" height="18" viewBox="0 0 18 18" fill="none">${ADMIN_NAV_ICONS[key] || ''}</svg>`;
-}
 // Configuración del sistema de diseño por módulo: tema de fondo, arco del anillo que
 // se ilumina, y el label que aparece bajo el anillo maestro del sidebar.
 const MODULE_THEME = {
@@ -568,25 +552,50 @@ const MODULE_THEME = {
 };
 const ARC_COLOR_VAR = { morning: '--ring-morning', afternoon: '--ring-afternoon', evening: '--ring-evening', balanced: '--ink-soft' };
 const ADMIN_NAV = [
-  { key: 'admin-clients', label: 'Clientes' },
+  { key: 'admin-hub', label: 'Administración' },
+  { key: 'personal-info', label: 'Información Personal' },
+  { key: 'training', label: 'Entrenamiento' },
+  { key: 'nutrition', label: 'Nutrición' },
+  { key: 'cortisol', label: 'Gestión de Cortisol' },
+  { key: 'rest', label: 'Descanso' },
+  { key: 'evolution', label: 'Mi Evolución' },
   { key: 'admin-community', label: 'Comunidad' },
-  { key: 'admin-quotes', label: 'Frases' },
   { key: 'admin-notifications', label: 'Notificaciones' },
 ];
 const CLIENT_TYPE_LABELS = { coaching_1_1: 'Coaching 1:1', coaching_online: 'Coaching Online', lead_wellness: 'Leads Wellness' };
 
+const ADMIN_HUB_SUBITEMS = [
+  { key: 'admin-clients', label: 'Clientes' },
+  { key: 'admin-quotes', label: 'Frases' },
+];
+
+function toggleAdminHubMenu() {
+  state.adminHubOpen = !state.adminHubOpen;
+  renderNav();
+}
 function renderNav() {
   if (state.role === 'admin') {
     const unread = (state.notifications || []).filter(n => !n.read).length;
-    document.getElementById('nav-items').innerHTML = ADMIN_NAV.map(item => `
-      <button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}${item.key === 'admin-notifications' && unread ? ` <span class="badge">${unread}</span>` : ''}</button>
-    `).join('');
+    const hubSubViews = new Set(ADMIN_HUB_SUBITEMS.map(s => s.key));
+    const hubExpanded = state.adminHubOpen || hubSubViews.has(state.view);
+    document.getElementById('nav-items').innerHTML = ADMIN_NAV.map(item => {
+      if (item.key === 'admin-hub') {
+        const button = `<button class="nav-item ${hubExpanded ? 'active' : ''}" onclick="toggleAdminHubMenu()">${item.label}</button>`;
+        if (!hubExpanded) return button;
+        const subItems = ADMIN_HUB_SUBITEMS.map(sub => `
+          <button class="nav-item nav-subitem ${state.view === sub.key ? 'active' : ''}" onclick="setView('${sub.key}')">${sub.label}</button>
+        `).join('');
+        return button + subItems;
+      }
+      return `<button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${item.label}${item.key === 'admin-notifications' && unread ? ` <span class="badge">${unread}</span>` : ''}</button>`;
+    }).join('');
   } else {
     document.getElementById('nav-items').innerHTML = CLIENT_NAV.filter(item => item.visible(state)).map(item => {
       const cfg = MODULE_THEME[item.key];
       const dotColor = cfg ? `var(${ARC_COLOR_VAR[cfg.arc]})` : 'var(--ink-soft)';
+      const locked = state.clientType === 'lead_wellness' && (item.key === 'training' || item.key === 'nutrition');
       return `<button class="nav-item ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">
-        <span class="nav-dot" style="background:${dotColor}"></span>${item.label}
+        <span class="nav-dot" style="background:${dotColor}"></span>${item.label}${locked ? ' <span style="font-size:12px;">🔒</span>' : ''}
       </button>`;
     }).join('');
   }
@@ -617,11 +626,9 @@ function applyModuleTheme(viewKey) {
 function renderTopbar() {
   const bar = document.getElementById('main-topbar');
   if (!bar) return;
-  const showBack = state.role === 'admin' && !!state.currentClientId && CLIENT_NAV.some(i => i.key === state.view);
   const showBell = state.role === 'cliente';
-  bar.style.display = (showBack || showBell) ? 'flex' : 'none';
+  bar.style.display = showBell ? 'flex' : 'none';
   bar.innerHTML = `
-    ${showBack ? `<button class="back-link" style="margin-bottom:0;" onclick="setView('admin-client-detail')">← Volver a la ficha del cliente</button>` : '<span></span>'}
     ${showBell ? (() => {
       const hasUnread = (state.clientAlerts || []).length || (state.clientNotifications || []).some(n => !n.read);
       return `<div class="bell-wrap">
@@ -727,6 +734,7 @@ function renderMain() {
     'rest': renderRest,
     'community': renderCommunity,
     'evolution': renderEvolution,
+    'admin-home': renderAdminHome,
     'admin-clients': renderAdminClients,
     'admin-client-detail': renderAdminClientDetail,
     'admin-community': renderAdminCommunity,
@@ -795,7 +803,7 @@ function renderIdentityHeader(title, subtitle, mantraText, mantraLead) {
 // una vista previa representativa cuando no hay datos reales que mostrar
 // para un lead) se ve desenfocado detrás de una tarjeta de desbloqueo — la
 // persona ve qué se está perdiendo, no solo que algo falta.
-function renderLockedOverlay(previewHtml, { title, subtitle, ctaLabel, ctaStyle }) {
+function renderLockedOverlay(previewHtml, { title, subtitle, ctaLabel, ctaStyle, ctaAction }) {
   return `
     <div class="locked-preview">
       <div class="locked-preview-content" aria-hidden="true">${previewHtml}</div>
@@ -803,7 +811,7 @@ function renderLockedOverlay(previewHtml, { title, subtitle, ctaLabel, ctaStyle 
         <div class="unlock-icon">🔒</div>
         <h3>${title}</h3>
         <p>${subtitle}</p>
-        <button class="btn ${ctaStyle ? '' : 'btn-primary'}" style="width:auto;${ctaStyle || ''}" onclick="openUpgradeCta()">${ctaLabel}</button>
+        <button class="btn ${ctaStyle ? '' : 'btn-primary'}" style="width:auto;${ctaStyle || ''}" onclick="${ctaAction || 'openUpgradeCta()'}">${ctaLabel}</button>
       </div>
     </div>
   `;
@@ -811,16 +819,81 @@ function renderLockedOverlay(previewHtml, { title, subtitle, ctaLabel, ctaStyle 
 function openUpgradeCta() {
   alert('Escríbele a tu coach para conocer los planes disponibles y desbloquear este contenido.');
 }
+const COACH_WHATSAPP_NUMBER = '573214973677';
+function openWhatsappCta() {
+  if (!COACH_WHATSAPP_NUMBER) { alert('Escríbele a tu coach para desbloquear este contenido.'); return; }
+  window.open(`https://wa.me/${COACH_WHATSAPP_NUMBER}`, '_blank');
+}
 
+// Cada módulo de administración (Entrenamiento, Nutrición, ...) mantiene su
+// propio cliente seleccionado — independiente de los demás módulos — para
+// que cambiar de cliente en uno no afecte a los otros. `admin-client-detail`
+// (la ficha "Resumen") es la excepción: usa state.currentClientId porque se
+// entra a ella siempre desde la lista de Clientes con un cliente ya elegido.
 function currentClientId() {
-  return state.role === 'admin' ? state.currentClientId : state.user.id;
+  if (state.role !== 'admin') return state.user.id;
+  if (state.view === 'admin-client-detail') return state.currentClientId;
+  return (state.moduleClientIds || {})[state.view] || null;
+}
+async function ensureClientsLoaded() {
+  if (state.clients && state.clients.length) return;
+  try { const { clients } = await api('/api/clients'); state.clients = clients; } catch (e) { /* silencioso: el switcher solo se degrada a vacío */ }
+}
+// Devuelve solo el campo de búsqueda (sin card propia) para que cada módulo
+// lo integre dentro de su primera card — no como una card aparte.
+function renderAdminClientSwitcher(moduleKey) {
+  const clients = state.clients || [];
+  const currentId = (state.moduleClientIds || {})[moduleKey];
+  const current = clients.find(c => c.id === currentId);
+  return `
+    <div class="field" style="margin-bottom:18px;">
+      <label>Cliente</label>
+      <div style="display:flex;gap:8px;">
+        <input list="admin-module-client-list-${moduleKey}" id="admin-module-client-search-${moduleKey}" placeholder="Escribe un nombre..." value="${current ? current.name : ''}" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAdminModuleClientSearch('${moduleKey}');}">
+        <button type="button" class="btn btn-ghost" style="width:auto;" onclick="submitAdminModuleClientSearch('${moduleKey}')">Buscar</button>
+      </div>
+      <datalist id="admin-module-client-list-${moduleKey}">
+        ${clients.map(c => `<option value="${c.name}"></option>`).join('')}
+      </datalist>
+    </div>
+  `;
+}
+function submitAdminModuleClientSearch(moduleKey) {
+  const input = document.getElementById(`admin-module-client-search-${moduleKey}`);
+  if (input) handleAdminModuleClientPick(moduleKey, input.value);
+}
+function handleAdminModuleClientPick(moduleKey, name) {
+  const clients = state.clients || [];
+  const match = clients.find(c => c.name === name);
+  if (!match) return;
+  if (!state.moduleClientIds) state.moduleClientIds = {};
+  if (state.moduleClientIds[moduleKey] !== match.id) {
+    state.moduleClientIds[moduleKey] = match.id;
+    renderMain();
+  }
+}
+function goToClientModule(moduleKey) {
+  if (!state.moduleClientIds) state.moduleClientIds = {};
+  state.moduleClientIds[moduleKey] = state.currentClientId;
+  setView(moduleKey);
+}
+async function renderAdminModulePicker(el, title, subtitle, moduleKey) {
+  await ensureClientsLoaded();
+  el.innerHTML = `
+    ${renderIdentityHeader(title, subtitle, '')}
+    <div class="card">
+      <div class="card-title">Cliente</div>
+      ${renderAdminClientSwitcher(moduleKey)}
+    </div>
+  `;
 }
 // state.clientType solo es exacto para la propia sesión del cliente. Cuando
-// el admin navega la ficha de un cliente, hay que leer el tipo desde el
-// cliente que se está viendo (cache de state.clients), no del admin.
+// el admin navega el módulo de un cliente, hay que leer el tipo desde el
+// cliente seleccionado en ESE módulo (cache de state.clients), no del admin.
 function currentClientType() {
   if (state.role !== 'admin') return state.clientType;
-  const c = (state.clients || []).find(c => c.id === state.currentClientId);
+  const id = currentClientId();
+  const c = (state.clients || []).find(c => c.id === id);
   return c ? c.client_type : null;
 }
 
@@ -1028,7 +1101,8 @@ function renderModuleAnswerRows(mod, personalInfo, report) {
   return rows.length ? `<table><tbody>${rows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin respuestas registradas.</div>';
 }
 async function renderPersonalInfoAdminView(el) {
-  const clientId = state.currentClientId;
+  if (!currentClientId()) return renderAdminModulePicker(el, 'Información Personal', 'Selecciona un cliente para ver sus respuestas del formulario inicial.', 'personal-info');
+  const clientId = currentClientId();
   el.innerHTML = '<div class="empty-state">Cargando…</div>';
   try {
     const [{ personalInfo }, { records: inbodyRecords }, { records: anthroRecords }, { photos }] = await Promise.all([
@@ -1048,6 +1122,7 @@ async function renderPersonalInfoAdminView(el) {
       </div>
       <div class="card">
         <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
+        ${renderAdminClientSwitcher('personal-info')}
         ${mod.n === 3 ? renderModule3AdminDetail(personalInfo, inbodyRecords || [], anthroRecords || [], photos || []) : renderModuleAnswerRows(mod, personalInfo, report)}
         <div style="display:flex;justify-content:space-between;margin-top:24px;">
           <button class="btn btn-ghost" ${step === 1 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step - 1})">Anterior</button>
@@ -2107,13 +2182,15 @@ function renderTrainingLocked(el) {
       title: 'Un plan de entrenamiento hecho para ti',
       subtitle: 'Este módulo requiere que tu mentor arme tu plan — habla con un coach para desbloquearlo.',
       ctaLabel: 'Hablar con un coach',
+      ctaAction: 'openWhatsappCta()',
     })}
   `;
 }
 
 async function renderTraining(el) {
-  const clientId = currentClientId();
   const isAdmin = state.role === 'admin';
+  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Entrenamiento', 'Selecciona un cliente para ver y asignar su plan de entrenamiento.', 'training');
+  const clientId = currentClientId();
   if (!isAdmin && state.clientType === 'lead_wellness') return renderTrainingLocked(el);
   try {
     const calls = [
@@ -2123,6 +2200,7 @@ async function renderTraining(el) {
       api(`/api/clients/${clientId}/training-completions`).catch(() => ({ completions: [] })),
     ];
     if (isAdmin) calls.push(api('/api/admin/quotes').catch(() => ({ quotes: [] })));
+    if (isAdmin) await ensureClientsLoaded();
     const [{ exercises }, { client }, { quote }, { completions }, quotesResult] = await Promise.all(calls);
     window._trainingExercises = exercises;
     window._trainingCompletions = completions;
@@ -2233,6 +2311,13 @@ function getCurrentPlanWeekAndDay(client, completions) {
 }
 
 function renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, completions) {
+  if (isAdmin) {
+    el.innerHTML = `
+      ${renderTrainingAdminPanel(client, adminQuotes)}
+      ${renderTrainingAdminExercisesByDay(exercises, client.training_days || 0)}
+    `;
+    return;
+  }
   const days = client.training_days || 0;
   const weekDay = days ? getCurrentPlanWeekAndDay(client, completions) : null;
   const subtitle = weekDay ? `Semana ${weekDay.week} · Día ${weekDay.day}` : 'Tu programa de ejercicios personalizado.';
@@ -2246,7 +2331,7 @@ function renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, 
     const todayDay = weekDay.day;
     const todayExercises = exercises.filter(x => x.day_number === todayDay);
     const todayDone = todayExercises.filter(x => trainingUI.completed[x.id]).length;
-    const todayUnlocked = isAdmin || isDayUnlocked(todayDay, completions);
+    const todayUnlocked = isDayUnlocked(todayDay, completions);
     const nextEx = todayExercises.find(x => !trainingUI.completed[x.id]);
     const heroTitle = !todayExercises.length ? 'Aún no tienes ejercicios asignados' : isOnlineProgram ? `Fuerza en 8 semanas — Día ${todayDay}` : nextEx ? nextEx.title : '¡Entrenamiento del día completado!';
     const pct = todayExercises.length ? Math.round((todayDone / todayExercises.length) * 100) : 0;
@@ -2268,20 +2353,19 @@ function renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, 
     ${renderIdentityHeader('Entrenamiento', subtitle, quote ? quote.quote : '', `Hola ${client.name || ''}, repite después de mí:`)}
     ${quote && quote.author ? `<p style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">— ${quote.author}</p>` : ''}
     ${heroHtml}
-    ${isAdmin ? renderTrainingAdminPanel(client, adminQuotes) : ''}
     <div class="card">
       <div class="card-title">Días de entrenamiento</div>
       ${days ? `<div class="grid-3">
         ${Array.from({ length: days }, (_, i) => i + 1).map(d => {
           const count = exercises.filter(x => x.day_number === d).length;
-          const unlocked = isAdmin || isDayUnlocked(d, completions);
+          const unlocked = isDayUnlocked(d, completions);
           const doneThisWeek = isDayCompletedThisWeek(d, completions);
           return `<button class="day-tile" ${unlocked ? `onclick="openTrainingDay(${d})"` : 'disabled style="opacity:.5;cursor:not-allowed;"'}>
             <div class="num">Día ${d}</div>
             <div class="count">${!unlocked ? '<span style="font-size:13px;">🔒</span> Bloqueado' : doneThisWeek ? 'Completado esta semana' : `${count} ejercicio${count === 1 ? '' : 's'}`}</div>
           </button>`;
         }).join('')}
-      </div>` : `<div class="empty-state">${isAdmin ? 'Define cuántos días de entrenamiento tiene este cliente arriba.' : 'Tu coach aún no configuró tus días de entrenamiento.'}</div>`}
+      </div>` : `<div class="empty-state">Tu coach aún no configuró tus días de entrenamiento.</div>`}
     </div>
     ${days ? (() => {
       const stats = calculateDisciplineStats(completions, days);
@@ -2310,6 +2394,7 @@ function renderTrainingAdminPanel(client, adminQuotes) {
   return `
     <div class="card">
       <div class="card-title">Configuración del cliente</div>
+      ${renderAdminClientSwitcher('training')}
       <div class="grid-2">
         <div class="field"><label>Días de entrenamiento por semana</label>
           <select id="tr-training-days">
@@ -2358,6 +2443,34 @@ function renderTrainingAdminExerciseList(list) {
         <button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>
       </div>
     `).join('') : '<div class="empty-state">Aún no hay ejercicios para este día.</div>'}
+  </div>`;
+}
+function renderTrainingAdminExercisesByDay(exercises, days) {
+  const dayCount = days || 7;
+  return `<div class="card">
+    <div class="card-title">Ejercicios asignados</div>
+    <div class="accordion">
+      ${Array.from({ length: dayCount }, (_, i) => i + 1).map(d => {
+        const list = exercises.filter(x => x.day_number === d);
+        return `<div class="accordion-item">
+          <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+            Día ${d} <span style="color:var(--ink-soft);font-weight:400;">— ${list.length} ejercicio${list.length === 1 ? '' : 's'}</span>
+            <span class="accordion-toggle">Ver</span>
+          </button>
+          <div class="accordion-content">
+            ${list.length ? list.map(x => `
+              <div class="list-row">
+                <div>
+                  <strong>${x.title}</strong> <span class="badge">${CATEGORY_LABELS[x.category]}</span>
+                  <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${x.category === 'cardio' ? `duración ${x.duration || '-'}` : `${x.series} series · ${x.reps || '-'} reps`} · descanso ${x.rest_time || '-'}</div>
+                </div>
+                <button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>
+              </div>
+            `).join('') : '<div class="empty-state">Sin ejercicios este día.</div>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
   </div>`;
 }
 
@@ -2766,13 +2879,15 @@ function renderNutritionLocked(el) {
       title: 'Macros y plan de comidas a tu medida',
       subtitle: 'Este módulo requiere que tu mentor arme tu plan — habla con un coach para desbloquearlo.',
       ctaLabel: 'Hablar con un coach',
+      ctaAction: 'openWhatsappCta()',
     })}
   `;
 }
 
 async function renderNutrition(el) {
-  const clientId = currentClientId();
   const isAdmin = state.role === 'admin';
+  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Nutrición', 'Selecciona un cliente para ver y asignar su plan nutricional.', 'nutrition');
+  const clientId = currentClientId();
   if (!isAdmin && state.clientType === 'lead_wellness') return renderNutritionLocked(el);
   try {
     const [{ plan }, supplementsRes] = await Promise.all([
@@ -2782,7 +2897,34 @@ async function renderNutrition(el) {
     const supplements = supplementsRes.supplements || [];
     window._nutritionData = { plan };
     window._supplementsData = supplements;
-    if (isAdmin) { initMenuDraftIfNeeded(plan); initPlanDraftIfNeeded(plan); initSupplementsDraftIfNeeded(supplements); }
+    if (isAdmin) {
+      initMenuDraftIfNeeded(plan); initPlanDraftIfNeeded(plan); initSupplementsDraftIfNeeded(supplements);
+      await ensureClientsLoaded();
+      el.innerHTML = `
+        <div class="card">
+        <div class="card-title">Plan nutricional (admin)</div>
+        ${renderAdminClientSwitcher('nutrition')}
+        <div class="field"><label>Resumen del cliente (una línea, como nota clínica — separa cada campo con " · " para que quede parejo, ej. **Perfil:** Hombre · **Edad:** 50 años)</label><textarea id="nt-summary" rows="2" oninput="updatePlanDraftField('summary', this.value)" placeholder="Ej. **Perfil:** Hombre · **Edad:** 50 años · **Peso:** 73 kg · **Estatura:** 1.71 m · **Objetivo:** Recomposición corporal con enfoque antiinflamatorio.">${nutritionUI.planDraft.summary}</textarea></div>
+        <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin:18px 0 8px;">Macronutrientes diarios</label>
+        <div class="grid-3">
+          <div class="field"><label>Calorías</label><input type="number" id="nt-cals" value="${nutritionUI.planDraft.daily_cals}" oninput="updatePlanDraftField('daily_cals', this.value)"></div>
+          <div class="field"><label>Proteína (g)</label><input type="number" id="nt-protein" value="${nutritionUI.planDraft.protein_g}" oninput="updatePlanDraftField('protein_g', this.value)"></div>
+          <div class="field"><label>Carbohidratos (g)</label><input type="number" id="nt-carbs" value="${nutritionUI.planDraft.carbs_g}" oninput="updatePlanDraftField('carbs_g', this.value)"></div>
+          <div class="field"><label>Grasas (g)</label><input type="number" id="nt-fat" value="${nutritionUI.planDraft.fat_g}" oninput="updatePlanDraftField('fat_g', this.value)"></div>
+        </div>
+        <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin:18px 0 8px;">Menú (comidas con Opción 1 / Opción 2)</label>
+        <div id="menu-draft-editor">${renderMenuDraftEditor()}</div>
+        <button type="button" class="btn btn-ghost" style="width:auto;margin-top:4px;" onclick="addMenuMealDraft()">+ Agregar comida</button>
+        <div class="field" style="margin-top:18px;"><label>Recomendaciones adicionales (una por línea)</label><textarea id="nt-recommendations" rows="3" oninput="updatePlanDraftField('recommendations', this.value)">${nutritionUI.planDraft.recommendations}</textarea></div>
+        <div class="field"><label>Mensaje de cierre (cita del PDF)</label><textarea id="nt-closing" rows="2" oninput="updatePlanDraftField('closing_message', this.value)">${nutritionUI.planDraft.closing_message}</textarea></div>
+        <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin:18px 0 8px;">Suplementos</label>
+        <div id="supplements-draft-editor">${renderSupplementsDraftEditor()}</div>
+        <button type="button" class="btn btn-ghost" style="width:auto;margin-top:4px;margin-bottom:18px;" onclick="addSupplementDraft()">+ Agregar suplemento</button>
+        <button class="btn btn-primary" style="width:auto" onclick="saveNutritionPlan()">Guardar plan</button>
+        </div>
+      `;
+      return;
+    }
     const menu = Array.isArray(plan.menu_plan) ? plan.menu_plan : [];
     const nextMeal = menu[0];
     const nextMealDish = nextMeal && nextMeal.options && nextMeal.options[0] && nextMeal.options[0].items[0];
@@ -2813,26 +2955,6 @@ async function renderNutrition(el) {
           <div class="macro-stat-card"><div class="msc-val">${plan.fat_g ?? '—'}g</div><div class="msc-lbl">Grasas</div></div>
         </div>
       </div>
-      ${isAdmin ? `<div class="card">
-        <div class="card-title">Plan nutricional (admin)</div>
-        <div class="field"><label>Resumen del cliente (una línea, como nota clínica — separa cada campo con " · " para que quede parejo, ej. **Perfil:** Hombre · **Edad:** 50 años)</label><textarea id="nt-summary" rows="2" oninput="updatePlanDraftField('summary', this.value)" placeholder="Ej. **Perfil:** Hombre · **Edad:** 50 años · **Peso:** 73 kg · **Estatura:** 1.71 m · **Objetivo:** Recomposición corporal con enfoque antiinflamatorio.">${nutritionUI.planDraft.summary}</textarea></div>
-        <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin:18px 0 8px;">Macronutrientes diarios</label>
-        <div class="grid-3">
-          <div class="field"><label>Calorías</label><input type="number" id="nt-cals" value="${nutritionUI.planDraft.daily_cals}" oninput="updatePlanDraftField('daily_cals', this.value)"></div>
-          <div class="field"><label>Proteína (g)</label><input type="number" id="nt-protein" value="${nutritionUI.planDraft.protein_g}" oninput="updatePlanDraftField('protein_g', this.value)"></div>
-          <div class="field"><label>Carbohidratos (g)</label><input type="number" id="nt-carbs" value="${nutritionUI.planDraft.carbs_g}" oninput="updatePlanDraftField('carbs_g', this.value)"></div>
-          <div class="field"><label>Grasas (g)</label><input type="number" id="nt-fat" value="${nutritionUI.planDraft.fat_g}" oninput="updatePlanDraftField('fat_g', this.value)"></div>
-        </div>
-        <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin:18px 0 8px;">Menú (comidas con Opción 1 / Opción 2)</label>
-        <div id="menu-draft-editor">${renderMenuDraftEditor()}</div>
-        <button type="button" class="btn btn-ghost" style="width:auto;margin-top:4px;" onclick="addMenuMealDraft()">+ Agregar comida</button>
-        <div class="field" style="margin-top:18px;"><label>Recomendaciones adicionales (una por línea)</label><textarea id="nt-recommendations" rows="3" oninput="updatePlanDraftField('recommendations', this.value)">${nutritionUI.planDraft.recommendations}</textarea></div>
-        <div class="field"><label>Mensaje de cierre (cita del PDF)</label><textarea id="nt-closing" rows="2" oninput="updatePlanDraftField('closing_message', this.value)">${nutritionUI.planDraft.closing_message}</textarea></div>
-        <label style="font-size:13px;font-weight:600;color:var(--ink-soft);display:block;margin:18px 0 8px;">Suplementos</label>
-        <div id="supplements-draft-editor">${renderSupplementsDraftEditor()}</div>
-        <button type="button" class="btn btn-ghost" style="width:auto;margin-top:4px;margin-bottom:18px;" onclick="addSupplementDraft()">+ Agregar suplemento</button>
-        <button class="btn btn-primary" style="width:auto" onclick="saveNutritionPlan()">Guardar plan</button>
-      </div>` : ''}
       <div class="card">
         <div class="card-title">Vista previa de tu plan</div>
         ${menu.length ? `
@@ -3069,9 +3191,11 @@ function renderBreathCircles() {
 }
 
 async function renderCortisol(el) {
-  const clientId = currentClientId();
   const isAdmin = state.role === 'admin';
+  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Gestión de Cortisol', 'Selecciona un cliente para ver y asignar sus técnicas.', 'cortisol');
+  const clientId = currentClientId();
   try {
+    if (isAdmin) await ensureClientsLoaded();
     let [{ techniques }, completionsRes, checkinRes, tipRes] = await Promise.all([
       api(`/api/clients/${clientId}/cortisol-techniques`),
       api(`/api/clients/${clientId}/cortisol-completions`).catch(() => ({ completions: [] })),
@@ -3129,6 +3253,50 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
   const recommended = CORTISOL_RECOMMENDATIONS[emotion] || CORTISOL_RECOMMENDATIONS.cansado;
   const matched = techniques.find(t => (t.title || '').trim().toLowerCase() === recommended.title.toLowerCase()) || techniques[0] || null;
 
+  if (isAdmin) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="card-title">Asignar técnica</div>
+        ${renderAdminClientSwitcher('cortisol')}
+        <div class="grid-3">
+          <div class="field"><label>Título</label><input id="ct-title"></div>
+          <div class="field"><label>Tipo</label><select id="ct-type">${['Respiración','Breathwork','Meditación','Mindfulness'].map(o=>`<option>${o}</option>`).join('')}</select></div>
+          <div class="field"><label>Duración</label><input id="ct-duration"></div>
+          <div class="field"><label>Video (YouTube)</label><input id="ct-youtube"></div>
+        </div>
+        <div class="field"><label>Descripción</label><textarea id="ct-desc" rows="2"></textarea></div>
+        <button class="btn btn-primary" style="width:auto" onclick="createTechnique()">Asignar</button>
+      </div>
+      <div class="card">
+        <div class="accordion">
+          <div class="accordion-item">
+            <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+              Tips educativos ("Sabías que...")
+              <span class="accordion-toggle">Ver</span>
+            </button>
+            <div class="accordion-content">
+              <p style="font-size:13px;color:var(--ink-soft);margin:0 0 14px;">Se muestran al azar entre los que estén activos, uno por visita al módulo.</p>
+              <div class="field"><label>Nuevo tip</label><textarea id="ctp-new-content" rows="2" placeholder="Ej: la luz solar en los primeros 30 minutos del día ayuda a regular tu ritmo de cortisol natural."></textarea></div>
+              <button class="btn btn-primary" style="width:auto" onclick="createCortisolTip()">Agregar</button>
+              <div style="margin-top:16px;">
+                ${(adminTips || []).length ? adminTips.map(t => `
+                  <div class="list-row" style="${t.active ? '' : 'opacity:.5;'}">
+                    <p style="margin:0;">${t.content}</p>
+                    <div style="display:flex;gap:8px;flex-shrink:0;">
+                      <button class="small-btn" onclick="toggleCortisolTipActive('${t.id}', ${!t.active})">${t.active ? 'Desactivar' : 'Activar'}</button>
+                      <button class="small-btn" onclick="deleteCortisolTip('${t.id}')">Eliminar</button>
+                    </div>
+                  </div>
+                `).join('') : '<div class="empty-state">Aún no hay tips en el banco.</div>'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
   el.innerHTML = `
     ${renderIdentityHeader('Gestión de Cortisol', 'Es momento de bajar el ritmo.')}
     <div class="card" style="padding:18px 20px;">
@@ -3146,17 +3314,6 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
       <p style="color:#6B7A5E;">${recommended.desc}</p>
       ${matched ? `<button class="hero-btn" style="background:#5B7A4E;color:#fff;margin-top:8px;" onclick="openCortisolTechnique('${matched.id}')">Empezar técnica</button>` : ''}
     </div>
-    ${isAdmin ? `<div class="card">
-      <div class="card-title">Asignar técnica</div>
-      <div class="grid-3">
-        <div class="field"><label>Título</label><input id="ct-title"></div>
-        <div class="field"><label>Tipo</label><select id="ct-type">${['Respiración','Breathwork','Meditación','Mindfulness'].map(o=>`<option>${o}</option>`).join('')}</select></div>
-        <div class="field"><label>Duración</label><input id="ct-duration"></div>
-        <div class="field"><label>Video (YouTube)</label><input id="ct-youtube"></div>
-      </div>
-      <div class="field"><label>Descripción</label><textarea id="ct-desc" rows="2"></textarea></div>
-      <button class="btn btn-primary" style="width:auto" onclick="createTechnique()">Asignar</button>
-    </div>` : ''}
     <div class="card">
       <div class="card-title">Tus técnicas</div>
       ${techniques.length ? techniques.map(t => `
@@ -3170,7 +3327,6 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
           </div>
           <div style="display:flex;gap:8px;">
             ${t.youtube_url || t.video_url ? `<button class="small-btn" onclick="openCortisolTechnique('${t.id}')">Reproducir</button>` : ''}
-            ${isAdmin ? `<button class="small-btn" onclick="deleteTechnique('${t.id}')">Eliminar</button>` : ''}
           </div>
         </div>`).join('') : '<div class="empty-state">Aún no tienes técnicas asignadas.</div>'}
     </div>
@@ -3183,32 +3339,6 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
     </div>` : ''}
     ${tip ? `<div class="card" style="background:#FBFDF9;border:1px dashed #D9E4CE;">
       <p style="font-size:12px;color:#4B5A3F;margin:0;"><strong>Sabías que</strong> ${tip.content}</p>
-    </div>` : ''}
-    ${isAdmin ? `<div class="card">
-      <div class="accordion">
-        <div class="accordion-item">
-          <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
-            Tips educativos ("Sabías que...")
-            <span class="accordion-toggle">Ver</span>
-          </button>
-          <div class="accordion-content">
-            <p style="font-size:13px;color:var(--ink-soft);margin:0 0 14px;">Se muestran al azar entre los que estén activos, uno por visita al módulo.</p>
-            <div class="field"><label>Nuevo tip</label><textarea id="ctp-new-content" rows="2" placeholder="Ej: la luz solar en los primeros 30 minutos del día ayuda a regular tu ritmo de cortisol natural."></textarea></div>
-            <button class="btn btn-primary" style="width:auto" onclick="createCortisolTip()">Agregar</button>
-            <div style="margin-top:16px;">
-              ${(adminTips || []).length ? adminTips.map(t => `
-                <div class="list-row" style="${t.active ? '' : 'opacity:.5;'}">
-                  <p style="margin:0;">${t.content}</p>
-                  <div style="display:flex;gap:8px;flex-shrink:0;">
-                    <button class="small-btn" onclick="toggleCortisolTipActive('${t.id}', ${!t.active})">${t.active ? 'Desactivar' : 'Activar'}</button>
-                    <button class="small-btn" onclick="deleteCortisolTip('${t.id}')">Eliminar</button>
-                  </div>
-                </div>
-              `).join('') : '<div class="empty-state">Aún no hay tips en el banco.</div>'}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>` : ''}
   `;
 }
@@ -3381,13 +3511,17 @@ function toggleRestJournal() {
 }
 
 async function renderRest(el) {
+  const isAdmin = state.role === 'admin';
+  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Descanso', 'Selecciona un cliente para ver su recuperación nocturna.', 'rest');
   const clientId = currentClientId();
   stopRestToolTimer();
   try {
+    if (isAdmin) await ensureClientsLoaded();
     const { checkins } = await api(`/api/clients/${clientId}/evolution`);
     const last = checkins[checkins.length - 1] || {};
     const sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
     el.innerHTML = `
+      ${isAdmin ? `<div class="card"><div class="card-title">Cliente</div>${renderAdminClientSwitcher('rest')}</div>` : ''}
       ${renderIdentityHeader('Descanso', 'Tu recuperación nocturna.', pickMantra('rest'))}
       <div class="hero" style="background:linear-gradient(135deg, #241C30, #332740);">
         <div class="hero-glow"></div>
@@ -3614,9 +3748,12 @@ async function renderEvolutionLocked(el) {
 }
 
 async function renderEvolution(el) {
+  const isAdmin = state.role === 'admin';
+  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Mi Evolución', 'Selecciona un cliente para ver su proceso.', 'evolution');
   const clientId = currentClientId();
-  if (state.role !== 'admin' && state.clientType === 'lead_wellness') return renderEvolutionLocked(el);
+  if (!isAdmin && state.clientType === 'lead_wellness') return renderEvolutionLocked(el);
   try {
+    if (isAdmin) await ensureClientsLoaded();
     const [{ checkins, anthropometrics, inbody }, { photos }, { completions: trainingCompletions }, { completions: cortisolCompletions }] = await Promise.all([
       api(`/api/clients/${clientId}/evolution`),
       api(`/api/clients/${clientId}/photos`),
@@ -3642,6 +3779,7 @@ async function renderEvolution(el) {
       </div>
       <div class="card">
         <div class="card-title">Check-in del mes</div>
+        ${isAdmin ? renderAdminClientSwitcher('evolution') : ''}
         <div class="grid-3">
           <div class="field"><label>Horas de sueño promedio</label><input type="number" step="0.5" min="0" id="ev-sleep"></div>
           <div class="field"><label>Adherencia al plan (%)</label><input type="number" min="0" max="100" id="ev-adherence"></div>
@@ -3747,6 +3885,12 @@ async function saveCheckin() {
   catch (e) { alert('Error: ' + e.message); }
 }
 
+function renderAdminHome(el) {
+  el.innerHTML = `
+    <div class="page-header"><h2>Hola, Admin</h2><p>Elige un módulo en el menú para empezar.</p></div>
+  `;
+}
+
 // ---------------- Admin: gestión de clientes ----------------
 
 async function renderAdminClients(el) {
@@ -3841,7 +3985,7 @@ function renderModule3AdminDetail(personalInfo, inbodyRecords, anthroRecords, ph
   const anthroHtml = anthroRecords.length ? `
     <table><thead><tr><th>Mes</th><th>Cintura</th><th>Brazos</th><th>Hombros</th><th>Piernas</th><th>Glúteo</th></tr></thead>
     <tbody>${anthroRecords.map(r => `<tr><td>${r.mes_num ? `Mes ${r.mes_num}` : r.fecha}</td><td>${r.cintura ?? '-'}</td><td>${r.brazos ?? '-'}</td><td>${r.hombros ?? '-'}</td><td>${r.piernas ?? '-'}</td><td>${r.gluteo ?? '-'}</td></tr>`).join('')}</tbody></table>
-    <button class="btn btn-ghost" style="width:auto;margin-top:8px;" onclick="downloadAnthropometricsPdf('${(state.clients.find(c => c.id === state.currentClientId) || {}).name || ''}')">Descargar PDF</button>
+    <button class="btn btn-ghost" style="width:auto;margin-top:8px;" onclick="downloadAnthropometricsPdf('${(state.clients.find(c => c.id === currentClientId()) || {}).name || ''}')">Descargar PDF</button>
   ` : '<div class="empty-state">Sin medidas antropométricas.</div>';
 
   const photosByAngleForAdmin = a => photos.filter(p => p.angle === a.key).sort((x, y) => (Number(x.mes_num) || 0) - (Number(y.mes_num) || 0));
@@ -3920,9 +4064,6 @@ async function renderAdminClientDetail(el) {
     el.innerHTML = `
       <div class="page-header"><h2>${client ? client.name : 'Cliente'}</h2><p>${client ? client.email : ''}</p></div>
       <button class="back-link" style="margin-bottom:20px;" onclick="setView('admin-clients')">← Volver a clientes</button>
-      <div style="margin-bottom:20px;">
-        ${CLIENT_NAV.map(item => `<button class="admin-nav-pill ${state.view === item.key ? 'active' : ''}" onclick="setView('${item.key}')">${adminNavIcon(item.key)}${item.label}</button>`).join('')}
-      </div>
       <div class="card">
         <div class="card-title">Cuenta</div>
         <div class="grid-2">
@@ -3958,6 +4099,33 @@ async function renderAdminClientDetail(el) {
           <button class="small-btn" onclick="renewClientPlan('${state.currentClientId}')">Marcar pago recibido hoy / Renovar</button>
         </div>
       </div>` : ''}
+      <div class="card">
+        <div class="card-title">Módulos asignados</div>
+        <div class="list-row" style="cursor:pointer;" onclick="goToClientModule('personal-info')">
+          <div><strong>Información Personal</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">Respuestas del formulario inicial</div></div>
+          <span class="badge">Ver</span>
+        </div>
+        <div class="list-row" style="cursor:pointer;" onclick="goToClientModule('training')">
+          <div><strong>Entrenamiento</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${client && client.training_days ? `${client.training_days} día${client.training_days === 1 ? '' : 's'}/semana asignados` : 'Sin configurar'}</div></div>
+          <span class="badge">Ver</span>
+        </div>
+        <div class="list-row" style="cursor:pointer;" onclick="goToClientModule('nutrition')">
+          <div><strong>Nutrición</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">Plan y suplementación</div></div>
+          <span class="badge">Ver</span>
+        </div>
+        <div class="list-row" style="cursor:pointer;" onclick="goToClientModule('cortisol')">
+          <div><strong>Gestión de Cortisol</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">Técnicas y constancia</div></div>
+          <span class="badge">Ver</span>
+        </div>
+        <div class="list-row" style="cursor:pointer;" onclick="goToClientModule('rest')">
+          <div><strong>Descanso</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">Protocolo de sueño</div></div>
+          <span class="badge">Ver</span>
+        </div>
+        <div class="list-row" style="cursor:pointer;" onclick="goToClientModule('evolution')">
+          <div><strong>Mi Evolución</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">Progreso y check-ins</div></div>
+          <span class="badge">Ver</span>
+        </div>
+      </div>
       <div class="card">
         <div class="card-title">Resumen de onboarding</div>
         <table><tbody>
@@ -4056,7 +4224,14 @@ async function deleteQuote(id) {
 let adminCommunityPreviewType = 'coaching_1_1';
 function setAdminCommunityPreviewType(t) { adminCommunityPreviewType = t; renderMain(); }
 
+let adminCommunityTab = 'gestion';
+function setAdminCommunityTab(t) { adminCommunityTab = t; renderMain(); }
+
+let adminCommunityNewType = 'event';
+function setAdminCommunityNewType(t) { adminCommunityNewType = t; renderMain(); }
+
 async function renderAdminCommunity(el) {
+  if (adminCommunityTab === 'reservas') return renderAdminCommunityReservations(el);
   try {
     const [{ events }, { therapies }] = await Promise.all([api('/api/community/events'), api('/api/community/therapies')]);
     const previewUnlocked = adminCommunityPreviewType !== 'lead_wellness';
@@ -4073,15 +4248,33 @@ async function renderAdminCommunity(el) {
         );
     el.innerHTML = `
       <div class="page-header"><h2>Comunidad — Administración</h2><p>Publica eventos y terapias disponibles.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+        <button class="btn ${adminCommunityTab==='gestion'?'btn-primary':'btn-ghost'}" style="width:auto" onclick="setAdminCommunityTab('gestion')">Gestión</button>
+        <button class="btn ${adminCommunityTab==='reservas'?'btn-primary':'btn-ghost'}" style="width:auto" onclick="setAdminCommunityTab('reservas')">Reservas</button>
+      </div>
       <div class="card">
-        <div class="card-title">Nuevo evento</div>
-        <div class="grid-3">
-          <div class="field"><label>Título</label><input id="ev-new-title"></div>
-          <div class="field"><label>Fecha</label><input type="datetime-local" id="ev-new-date"></div>
-          <div class="field"><label>Lugar</label><input id="ev-new-location"></div>
+        <div class="card-title">Crear nuevo</div>
+        <div class="segmented-group" style="max-width:280px;margin-bottom:16px;">
+          <button type="button" class="segmented-cell ${adminCommunityNewType==='event'?'selected':''}" onclick="setAdminCommunityNewType('event')">Evento</button>
+          <button type="button" class="segmented-cell ${adminCommunityNewType==='therapy'?'selected':''}" onclick="setAdminCommunityNewType('therapy')">Terapia</button>
         </div>
-        <div class="field"><label>Descripción</label><textarea id="ev-new-desc" rows="2"></textarea></div>
-        <button class="btn btn-primary" style="width:auto" onclick="createEvent()">Publicar evento</button>
+        ${adminCommunityNewType === 'event' ? `
+          <div class="grid-3">
+            <div class="field"><label>Título</label><input id="ev-new-title"></div>
+            <div class="field"><label>Fecha</label><input type="datetime-local" id="ev-new-date"></div>
+            <div class="field"><label>Lugar</label><input id="ev-new-location"></div>
+          </div>
+          <div class="field"><label>Descripción</label><textarea id="ev-new-desc" rows="2"></textarea></div>
+          <button class="btn btn-primary" style="width:auto" onclick="createCommunityEvent()">Crear evento</button>
+        ` : `
+          <div class="grid-3">
+            <div class="field"><label>Título</label><input id="th-new-title"></div>
+            <div class="field"><label>Proveedor</label><input id="th-new-provider"></div>
+            <div class="field"><label>Descuento (%)</label><input type="number" id="th-new-discount"></div>
+          </div>
+          <div class="field"><label>Descripción</label><textarea id="th-new-desc" rows="2"></textarea></div>
+          <button class="btn btn-primary" style="width:auto" onclick="createTherapy()">Crear terapia</button>
+        `}
       </div>
       <div class="card">
         <div class="card-title">Eventos publicados</div>
@@ -4093,16 +4286,6 @@ async function renderAdminCommunity(el) {
               <button class="small-btn" onclick="deleteEvent('${e.id}')">Eliminar</button>
             </div>
           </div>`).join('') || '<div class="empty-state">Sin eventos.</div>'}
-      </div>
-      <div class="card">
-        <div class="card-title">Nueva terapia</div>
-        <div class="grid-3">
-          <div class="field"><label>Título</label><input id="th-new-title"></div>
-          <div class="field"><label>Proveedor</label><input id="th-new-provider"></div>
-          <div class="field"><label>Descuento (%)</label><input type="number" id="th-new-discount"></div>
-        </div>
-        <div class="field"><label>Descripción</label><textarea id="th-new-desc" rows="2"></textarea></div>
-        <button class="btn btn-primary" style="width:auto" onclick="createTherapy()">Publicar terapia</button>
       </div>
       <div class="card">
         <div class="card-title">Terapias publicadas</div>
@@ -4128,7 +4311,82 @@ async function renderAdminCommunity(el) {
     `;
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
-async function createEvent() {
+async function renderAdminCommunityReservations(el) {
+  try {
+    const { eventReservations, therapyReservations } = await api('/api/community/reservations');
+
+    const groupBy = (rows, idKey) => {
+      const groups = new Map();
+      rows.forEach((r) => {
+        const key = r[idKey] || 'sin-id';
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      });
+      return Array.from(groups.values());
+    };
+
+    const eventGroups = groupBy(eventReservations, 'eventId');
+    const therapyGroups = groupBy(therapyReservations, 'therapyId');
+
+    const renderPersonRow = (name, phone) => `
+      <div class="list-row">
+        <div><strong>${name}</strong></div>
+        <div style="color:var(--ink-soft);font-size:13px;">${phone || 'Sin celular registrado'}</div>
+      </div>`;
+
+    const eventAccordionHtml = eventGroups.length
+      ? eventGroups.map((group) => {
+          const first = group[0];
+          const dateLabel = first.eventDate ? new Date(first.eventDate).toLocaleString() : 'Sin fecha';
+          return `
+            <div class="accordion-item">
+              <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+                ${first.eventTitle} <span style="color:var(--ink-soft);font-weight:400;">— ${group.length} reserva${group.length === 1 ? '' : 's'}</span>
+                <span class="accordion-toggle">Ver</span>
+              </button>
+              <div class="accordion-content">
+                <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">${dateLabel}${first.eventLocation ? ' · ' + first.eventLocation : ''}</div>
+                ${group.map((r) => renderPersonRow(r.clientName, r.clientPhone)).join('')}
+              </div>
+            </div>`;
+        }).join('')
+      : '<div class="empty-state">Sin reservas de eventos.</div>';
+
+    const therapyAccordionHtml = therapyGroups.length
+      ? therapyGroups.map((group) => {
+          const first = group[0];
+          return `
+            <div class="accordion-item">
+              <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+                ${first.therapyTitle} <span style="color:var(--ink-soft);font-weight:400;">— ${group.length} reserva${group.length === 1 ? '' : 's'}</span>
+                <span class="accordion-toggle">Ver</span>
+              </button>
+              <div class="accordion-content">
+                <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;">${first.therapyProvider || ''}${first.therapyDiscountPct ? ' · -' + first.therapyDiscountPct + '%' : ''}</div>
+                ${group.map((r) => renderPersonRow(r.clientName, r.clientPhone)).join('')}
+              </div>
+            </div>`;
+        }).join('')
+      : '<div class="empty-state">Sin reservas de terapias.</div>';
+
+    el.innerHTML = `
+      <div class="page-header"><h2>Comunidad — Administración</h2><p>Reservas de eventos y terapias.</p></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+        <button class="btn ${adminCommunityTab==='gestion'?'btn-primary':'btn-ghost'}" style="width:auto" onclick="setAdminCommunityTab('gestion')">Gestión</button>
+        <button class="btn ${adminCommunityTab==='reservas'?'btn-primary':'btn-ghost'}" style="width:auto" onclick="setAdminCommunityTab('reservas')">Reservas</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Reservas de Eventos</div>
+        <div class="accordion">${eventAccordionHtml}</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Reservas de Terapias</div>
+        <div class="accordion">${therapyAccordionHtml}</div>
+      </div>
+    `;
+  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+async function createCommunityEvent() {
   const payload = {
     title: document.getElementById('ev-new-title').value,
     event_date: document.getElementById('ev-new-date').value || null,

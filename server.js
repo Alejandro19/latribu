@@ -1422,6 +1422,72 @@ app.get('/api/clients/:id/therapy-reservations', authMiddleware, ownerOrAdmin, r
   }
 });
 
+app.get('/api/community/reservations', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { data: eventRows, error: eventErr } = await supabase
+      .from('event_reservations')
+      .select('id, status, created_at, client_id, event_id, clients(name), community_events(title, event_date, location)')
+      .eq('status', 'confirmada')
+      .order('created_at', { ascending: false });
+    if (eventErr) throw eventErr;
+
+    const { data: therapyRows, error: therapyErr } = await supabase
+      .from('therapy_reservations')
+      .select('id, status, created_at, client_id, therapy_id, clients(name), community_therapies(title, provider, discount_pct)')
+      .eq('status', 'confirmada')
+      .order('created_at', { ascending: false });
+    if (therapyErr) throw therapyErr;
+
+    const clientIds = Array.from(new Set([
+      ...eventRows.map(r => r.client_id),
+      ...therapyRows.map(r => r.client_id),
+    ]));
+
+    let phoneByClientId = {};
+    if (clientIds.length) {
+      const { data: infoRows, error: infoErr } = await supabase
+        .from('personal_info')
+        .select('client_id, phone_code, phone_number')
+        .in('client_id', clientIds);
+      if (infoErr) throw infoErr;
+      infoRows.forEach((row) => {
+        const number = (row.phone_number || '').trim();
+        const alreadyHasCode = !row.phone_code || number.startsWith('+') || number.startsWith(row.phone_code);
+        phoneByClientId[row.client_id] = alreadyHasCode
+          ? (number || null)
+          : [row.phone_code, number].filter(Boolean).join(' ') || null;
+      });
+    }
+
+    const eventReservations = eventRows.map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      clientName: r.clients?.name || 'Cliente eliminado',
+      clientPhone: phoneByClientId[r.client_id] || null,
+      eventId: r.event_id,
+      eventTitle: r.community_events?.title || 'Evento eliminado',
+      eventDate: r.community_events?.event_date || null,
+      eventLocation: r.community_events?.location || null,
+    }));
+
+    const therapyReservations = therapyRows.map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      clientName: r.clients?.name || 'Cliente eliminado',
+      clientPhone: phoneByClientId[r.client_id] || null,
+      therapyId: r.therapy_id,
+      therapyTitle: r.community_therapies?.title || 'Terapia eliminada',
+      therapyProvider: r.community_therapies?.provider || null,
+      therapyDiscountPct: r.community_therapies?.discount_pct || null,
+    }));
+
+    return ok(res, { eventReservations, therapyReservations });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener reservas.', 500);
+  }
+});
+
 // ------------------------------------------------------------
 // Mi Evolución: KPIs de progreso
 // ------------------------------------------------------------
