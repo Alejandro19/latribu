@@ -35,7 +35,7 @@ CREATE TABLE clients (
   password_hash TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
   plan TEXT NOT NULL DEFAULT 'Miembro',
-  client_type TEXT CHECK (client_type IN ('coaching_1_1','coaching_online','lead_wellness')),
+  client_type TEXT NOT NULL DEFAULT 'lead_wellness' CHECK (client_type IN ('coaching_1_1','coaching_online','lead_wellness')),
   -- Membresía: solo aplica a coaching_1_1/coaching_online (no a leads).
   -- Se renueva manualmente por el admin cuando confirma el pago (fuera del
   -- sistema); si hoy > plan_end_date, el cliente queda bloqueado.
@@ -185,6 +185,10 @@ CREATE TABLE nutrition_plans (
   client_observations TEXT,
   pdf_url TEXT,
   pdf_name TEXT,
+  summary TEXT,
+  menu_plan JSONB DEFAULT '[]'::jsonb,
+  recommendations JSONB DEFAULT '[]'::jsonb,
+  closing_message TEXT,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(client_id)
 );
@@ -239,6 +243,38 @@ CREATE TABLE cortisol_techniques (
   video_name TEXT,
   youtube_url TEXT,
   sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seguimiento de constancia: un chulito por día en que el cliente marcó como
+-- reproducida/completada su técnica de cortisol (igual que training_completions,
+-- pero sin day_number ya que aquí no hay días de la semana asignados).
+CREATE TABLE cortisol_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  technique_id UUID REFERENCES cortisol_techniques(id) ON DELETE SET NULL,
+  completed_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, completed_date)
+);
+
+-- Check-in emocional de una sola selección por día ("¿Cómo te sientes ahora
+-- mismo?"), usado para recomendar dinámicamente la técnica del hero.
+CREATE TABLE cortisol_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  emotion TEXT NOT NULL CHECK (emotion IN ('ansioso','irritable','cansado','abrumado','tranquilo','energia')),
+  checkin_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, checkin_date)
+);
+
+-- Banco de tips educativos ("Sabías que...") que el admin administra desde el
+-- propio módulo Gestión de Cortisol; se asignan al azar entre los activos.
+CREATE TABLE cortisol_tips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -77,8 +77,8 @@ async function dbGet(table, filters = {}, opts = {}) {
   if (error) throw error;
   return data;
 }
-async function dbGetOne(table, filters = {}) {
-  const rows = await dbGet(table, filters);
+async function dbGetOne(table, filters = {}, opts = {}) {
+  const rows = await dbGet(table, filters, opts);
   return rows && rows[0] ? rows[0] : null;
 }
 function extractMissingColumnsFromSupabaseError(error) {
@@ -231,7 +231,7 @@ async function authMiddleware(req, res, next) {
   }
   if (payload.role === 'cliente') {
     try {
-      const client = await dbGetOne('clients', { id: payload.id });
+      const client = await dbGetOne('clients', { id: payload.id }, { select: 'id,status,client_type,permissions,plan_end_date' });
       if (!client || client.status === 'inactive') return err(res, 'Tu cuenta está inactiva. Contacta al administrador.', 403);
       req.client = client;
       req.planExpired = isPlanExpired(client);
@@ -277,6 +277,8 @@ function requirePermission(moduleKey) {
   };
 }
 
+// Información Personal (el onboarding de 9 módulos, incluida la composición
+// corporal) requiere ser cliente de coaching — lead_wellness no tiene acceso.
 function blockForLeadWellness(req, res, next) {
   if (req.user.role === 'admin') return next();
   if (req.client && req.client.client_type === 'lead_wellness') {
@@ -287,9 +289,11 @@ function blockForLeadWellness(req, res, next) {
 
 async function requireOnboardingComplete(req, res, next) {
   if (req.user.role === 'admin') return next();
-  if (req.client && req.client.client_type === 'lead_wellness') {
-    return err(res, 'Este módulo no está disponible para tu tipo de cuenta.', 403);
-  }
+  // lead_wellness sí puede hacer su check-in del día en Mi Evolución (el
+  // front le oculta el historial/gráficas, pero el registro básico es
+  // autoservicio, igual que Cortisol/Descanso) — no se le exige onboarding
+  // completo ni se le bloquea aquí.
+  if (req.client && req.client.client_type === 'lead_wellness') return next();
   try {
     const info = await dbGetOne('personal_info', { client_id: req.user.id });
     if (!info || !info.completed_at) {
@@ -302,10 +306,22 @@ async function requireOnboardingComplete(req, res, next) {
   }
 }
 
+// Eventos es funnel de conversión — abierto para los 3 tipos de cliente sin
+// ninguna condición (ni plan vencido, ni onboarding, ni permissions).
+function requireEventsAccess(req, res, next) {
+  if (req.user.role === 'admin') return next();
+  if (!req.client) return err(res, 'No tienes permiso para acceder a estos datos.', 403);
+  next();
+}
+
+// Reservar/gestionar Terapias: bloqueado únicamente para lead_wellness — la
+// diferencia entre coaching_1_1 y coaching_online no aplica aquí, ambos ven
+// y reservan exactamente igual. Ver la lista (GET) es más abierto — usa
+// `requireEventsAccess` en su lugar para que un lead pueda ver una vista
+// previa real (desenfocada) de los aliados, no una inventada.
 async function requireCommunityAccess(req, res, next) {
   if (req.user.role === 'admin') return next();
   if (req.client && req.client.client_type === 'lead_wellness') {
-    if (req.client.permissions && req.client.permissions.community === true) return next();
     return err(res, 'No tienes acceso a este módulo.', 403);
   }
   if (req.planExpired) return err(res, 'Tu plan ha vencido. Contacta a tu coach para renovarlo.', 402);
@@ -1138,11 +1154,117 @@ app.post('/api/clients/:id/cortisol-techniques/:techId/upload', authMiddleware, 
   }
 });
 
+app.get('/api/clients/:id/cortisol-completions', authMiddleware, ownerOrAdmin, requirePermission('cortisol'), async (req, res) => {
+  try {
+    const completions = await dbGet('cortisol_completions', { client_id: req.params.id }, { order: { column: 'completed_date', ascending: false } });
+    return ok(res, { completions });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener el historial de cortisol.', 500);
+  }
+});
+
+app.post('/api/clients/:id/cortisol-completions', authMiddleware, ownerOrAdmin, requirePermission('cortisol'), async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const existing = await dbGetOne('cortisol_completions', { client_id: req.params.id, completed_date: today });
+    if (existing) return ok(res, { completion: existing });
+    const completion = await dbInsert('cortisol_completions', { client_id: req.params.id, technique_id: req.body.technique_id || null, completed_date: today });
+    return ok(res, { completion }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al marcar como completado.', 500);
+  }
+});
+
+app.get('/api/clients/:id/cortisol-checkin', authMiddleware, ownerOrAdmin, requirePermission('cortisol'), async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const checkin = await dbGetOne('cortisol_checkins', { client_id: req.params.id, checkin_date: today });
+    return ok(res, { checkin });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener el check-in de hoy.', 500);
+  }
+});
+
+app.post('/api/clients/:id/cortisol-checkin', authMiddleware, ownerOrAdmin, requirePermission('cortisol'), async (req, res) => {
+  try {
+    const validEmotions = ['ansioso', 'irritable', 'cansado', 'abrumado', 'tranquilo', 'energia'];
+    if (!validEmotions.includes(req.body.emotion)) return err(res, 'Emoción inválida.', 400);
+    const today = new Date().toISOString().slice(0, 10);
+    const existing = await dbGetOne('cortisol_checkins', { client_id: req.params.id, checkin_date: today });
+    const checkin = existing
+      ? await dbUpdate('cortisol_checkins', existing.id, { emotion: req.body.emotion })
+      : await dbInsert('cortisol_checkins', { client_id: req.params.id, emotion: req.body.emotion, checkin_date: today });
+    return ok(res, { checkin });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al guardar el check-in.', 500);
+  }
+});
+
+app.get('/api/clients/:id/cortisol-tip-of-the-day', authMiddleware, ownerOrAdmin, requirePermission('cortisol'), async (req, res) => {
+  try {
+    const pool = await dbGet('cortisol_tips', { active: true });
+    if (!pool.length) return ok(res, { tip: null });
+    return ok(res, { tip: pool[Math.floor(Math.random() * pool.length)] });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener el tip del día.', 500);
+  }
+});
+
+// Banco de tips de cortisol (creado/gestionado desde el propio panel admin
+// del módulo Gestión de Cortisol, no un ítem de nav separado).
+app.get('/api/admin/cortisol-tips', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const tips = await dbGet('cortisol_tips', {}, { order: { column: 'created_at', ascending: false } });
+    return ok(res, { tips });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener los tips.', 500);
+  }
+});
+app.post('/api/admin/cortisol-tips', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) return err(res, 'El tip no puede estar vacío.', 400);
+    const created = await dbInsert('cortisol_tips', { content });
+    return ok(res, { tip: created }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al crear el tip.', 500);
+  }
+});
+app.patch('/api/admin/cortisol-tips/:tipId', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { content, active } = req.body;
+    const patch = {};
+    if (content !== undefined) patch.content = content;
+    if (active !== undefined) patch.active = active;
+    const updated = await dbUpdate('cortisol_tips', req.params.tipId, patch);
+    return ok(res, { tip: updated });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al actualizar el tip.', 500);
+  }
+});
+app.delete('/api/admin/cortisol-tips/:tipId', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    await dbDelete('cortisol_tips', req.params.tipId);
+    return ok(res, { message: 'Tip eliminado.' });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al eliminar el tip.', 500);
+  }
+});
+
 // ------------------------------------------------------------
 // Comunidad: Eventos
 // ------------------------------------------------------------
 
-app.get('/api/community/events', authMiddleware, requireCommunityAccess, async (req, res) => {
+app.get('/api/community/events', authMiddleware, requireEventsAccess, async (req, res) => {
   try {
     const events = await dbGet('community_events', { active: true }, { order: { column: 'event_date', ascending: true } });
     return ok(res, { events });
@@ -1182,7 +1304,7 @@ app.delete('/api/community/events/:eventId', authMiddleware, adminOnly, async (r
   }
 });
 
-app.post('/api/community/events/:eventId/reserve', authMiddleware, requireCommunityAccess, async (req, res) => {
+app.post('/api/community/events/:eventId/reserve', authMiddleware, requireEventsAccess, async (req, res) => {
   try {
     if (req.user.role !== 'cliente') return err(res, 'Solo los clientes pueden reservar.', 403);
     const existing = await dbGetOne('event_reservations', { event_id: req.params.eventId, client_id: req.user.id });
@@ -1197,7 +1319,7 @@ app.post('/api/community/events/:eventId/reserve', authMiddleware, requireCommun
   }
 });
 
-app.delete('/api/community/events/:eventId/reserve', authMiddleware, requireCommunityAccess, async (req, res) => {
+app.delete('/api/community/events/:eventId/reserve', authMiddleware, requireEventsAccess, async (req, res) => {
   try {
     const reservation = await dbGetOne('event_reservations', { event_id: req.params.eventId, client_id: req.user.id, status: 'confirmada' });
     if (!reservation) return err(res, 'No tienes una reserva para este evento.', 404);
@@ -1209,7 +1331,7 @@ app.delete('/api/community/events/:eventId/reserve', authMiddleware, requireComm
   }
 });
 
-app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, requireCommunityAccess, async (req, res) => {
+app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, requireEventsAccess, async (req, res) => {
   try {
     const reservations = await dbGet('event_reservations', { client_id: req.params.id });
     return ok(res, { reservations });
@@ -1223,7 +1345,7 @@ app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, req
 // Comunidad: Terapias
 // ------------------------------------------------------------
 
-app.get('/api/community/therapies', authMiddleware, requireCommunityAccess, async (req, res) => {
+app.get('/api/community/therapies', authMiddleware, requireEventsAccess, async (req, res) => {
   try {
     const therapies = await dbGet('community_therapies', { active: true }, { order: { column: 'sort_order', ascending: true } });
     return ok(res, { therapies });

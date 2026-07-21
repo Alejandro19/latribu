@@ -156,3 +156,68 @@ END $$;
 ALTER TABLE bio_inbody_records
   ADD COLUMN IF NOT EXISTS file_url TEXT,
   ADD COLUMN IF NOT EXISTS file_name TEXT;
+
+-- Datos de la plantilla estándar del PDF "Plan nutricional" (resumen del
+-- mentor, menú con Opción 1/Opción 2 por comida, recomendaciones y mensaje
+-- de cierre) — independientes de la tabla `meals` (que sigue alimentando la
+-- tarjeta de macros y el hero de "próxima comida" en pantalla).
+ALTER TABLE nutrition_plans
+  ADD COLUMN IF NOT EXISTS summary TEXT,
+  ADD COLUMN IF NOT EXISTS menu_plan JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS recommendations JSONB DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS closing_message TEXT;
+
+-- Seguimiento de constancia para Gestión de Cortisol: un chulito por día en
+-- que el cliente marcó como reproducida/completada su técnica, para poder
+-- mostrar un calendario de constancia igual al de "Nivel de disciplina" en
+-- Entrenamiento.
+CREATE TABLE IF NOT EXISTS cortisol_completions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  technique_id UUID REFERENCES cortisol_techniques(id) ON DELETE SET NULL,
+  completed_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, completed_date)
+);
+ALTER TABLE cortisol_completions ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON cortisol_completions USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Check-in emocional de una sola selección por día, para recomendar
+-- dinámicamente la técnica del hero de Gestión de Cortisol.
+CREATE TABLE IF NOT EXISTS cortisol_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  emotion TEXT NOT NULL CHECK (emotion IN ('ansioso','irritable','cansado','abrumado','tranquilo','energia')),
+  checkin_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, checkin_date)
+);
+ALTER TABLE cortisol_checkins ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON cortisol_checkins USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Banco de tips educativos ("Sabías que...") administrado por el admin desde
+-- el propio módulo Gestión de Cortisol; se asignan al azar entre los activos.
+CREATE TABLE IF NOT EXISTS cortisol_tips (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  content TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE cortisol_tips ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON cortisol_tips USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Un cliente nuevo sin clasificar nunca debe quedar en NULL (equivalía a
+-- comportarse como coaching, el nivel de acceso más alto, por accidente).
+-- El valor por defecto y más restringido es lead_wellness.
+UPDATE clients SET client_type = 'lead_wellness' WHERE client_type IS NULL;
+ALTER TABLE clients ALTER COLUMN client_type SET DEFAULT 'lead_wellness';
+ALTER TABLE clients ALTER COLUMN client_type SET NOT NULL;
