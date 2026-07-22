@@ -221,3 +221,53 @@ END $$;
 UPDATE clients SET client_type = 'lead_wellness' WHERE client_type IS NULL;
 ALTER TABLE clients ALTER COLUMN client_type SET DEFAULT 'lead_wellness';
 ALTER TABLE clients ALTER COLUMN client_type SET NOT NULL;
+
+-- Descanso: protocolo de sueño personalizado escrito por el mentor. Solo
+-- aplica a clientes con plan activo (coaching_1_1/coaching_online) — para
+-- lead_wellness se sigue mostrando el protocolo genérico de 4 pilares.
+-- Un solo campo de texto libre (no una recomendación por pilar) para que el
+-- mentor escriba el protocolo como quiera, sin estructura rígida.
+CREATE TABLE IF NOT EXISTS sleep_protocols (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE UNIQUE,
+  protocol_text TEXT,
+  sleep_window TEXT,
+  supplement TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE sleep_protocols ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON sleep_protocols USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- Fix: la tabla sleep_protocols ya se había creado con el esquema viejo por
+-- pilar (mentor_note/tip_light/...) antes de simplificarla a un solo campo
+-- de texto libre. CREATE TABLE IF NOT EXISTS no la actualizó, así que hay
+-- que migrar las columnas explícitamente.
+ALTER TABLE sleep_protocols ADD COLUMN IF NOT EXISTS protocol_text TEXT;
+UPDATE sleep_protocols SET protocol_text = mentor_note WHERE protocol_text IS NULL AND mentor_note IS NOT NULL;
+ALTER TABLE sleep_protocols DROP COLUMN IF EXISTS mentor_note;
+ALTER TABLE sleep_protocols DROP COLUMN IF EXISTS tip_light;
+ALTER TABLE sleep_protocols DROP COLUMN IF EXISTS tip_temperature;
+ALTER TABLE sleep_protocols DROP COLUMN IF EXISTS tip_consistency;
+ALTER TABLE sleep_protocols DROP COLUMN IF EXISTS tip_digital_sunset;
+
+-- Mi Evolución — "Tu evolución física": récords personales configurables
+-- por el mentor (no autoreportados) y fecha de próxima medición en persona.
+CREATE TABLE IF NOT EXISTS personal_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  exercise_name TEXT NOT NULL,
+  initial_value TEXT,
+  current_value TEXT,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE personal_records ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON personal_records USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS next_checkin_date DATE;

@@ -279,6 +279,21 @@ CREATE TABLE cortisol_tips (
 );
 
 -- ------------------------------------------------------------
+-- Descanso: protocolo de sueño personalizado, escrito por el mentor.
+-- Solo aplica a clientes con plan activo (coaching_1_1 / coaching_online) —
+-- para lead_wellness se muestra siempre el protocolo genérico de 4 pilares,
+-- nunca esta tarjeta (son mutuamente excluyentes en el frontend).
+-- ------------------------------------------------------------
+CREATE TABLE sleep_protocols (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE UNIQUE,
+  protocol_text TEXT,
+  sleep_window TEXT,
+  supplement TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ------------------------------------------------------------
 -- 8. COMUNIDAD: Eventos + Terapias
 -- ------------------------------------------------------------
 
@@ -374,6 +389,23 @@ CREATE TABLE bio_inbody_records (
   file_name TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Récords personales de Mi Evolución ("Tu evolución física"): lista de
+-- ejercicios configurable por el mentor, con progreso inicial → actual.
+-- No autoreportado por el cliente — lo ingresa el admin en cada seguimiento.
+CREATE TABLE personal_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  exercise_name TEXT NOT NULL,
+  initial_value TEXT,
+  current_value TEXT,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Fecha de la próxima medición/seguimiento en persona con el mentor. La
+-- agenda el admin manualmente; se omite en pantalla si no está definida.
+ALTER TABLE clients ADD COLUMN next_checkin_date DATE;
 
 -- ------------------------------------------------------------
 -- 10. NOTIFICACIONES PARA EL ADMIN

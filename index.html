@@ -62,6 +62,7 @@ input,select,textarea{font-family:inherit;}
 .field{margin-bottom:18px;}
 .field label{display:flex;align-items:center;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink-soft);}
 .field input, .field select, .field textarea{width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--cream);font-size:15px;}
+.field select{-webkit-appearance:none;-moz-appearance:none;appearance:none;}
 .field input:focus, .field select:focus, .field textarea:focus{outline:2px solid var(--terracota);outline-offset:1px;}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:13px 22px;border-radius:999px;border:none;font-weight:600;font-size:15px;transition:transform .15s ease;}
 .btn:active{transform:scale(.97);}
@@ -93,7 +94,7 @@ input,select,textarea{font-family:inherit;}
 .alert-item:last-child{border-bottom:none;}
 .user-chip{font-size:13px;color:var(--ink-soft);margin-bottom:10px;padding:0 4px;}
 .main{flex:1;padding:36px 44px;overflow-y:auto;max-height:100vh;display:flex;flex-direction:column;background:var(--tint, var(--cream));transition:background .4s ease;}
-.main-topbar{display:none;justify-content:space-between;align-items:center;min-height:32px;margin-bottom:8px;}
+.main-topbar{display:none;justify-content:flex-end;align-items:center;min-height:32px;margin-bottom:8px;}
 #main-content.fade-anim{animation:module-in .45s ease;}
 @keyframes module-in{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .page-header{margin-bottom:28px;}
@@ -224,14 +225,6 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .pillrow{display:flex;flex-wrap:wrap;gap:8px;}
 .pill{display:inline-flex;align-items:center;padding:7px 14px;border-radius:999px;border:1px solid var(--tint-line, var(--line));background:var(--paper);font-size:13px;font-weight:600;color:var(--ink-soft);}
 
-/* ---- Checklist (Descanso) ---- */
-.checklist-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--tint-line, var(--line));}
-.checklist-row:last-child{border-bottom:none;}
-.checklist-row .label{font-size:14px;}
-.checklist-row.checked .label{color:var(--ink-soft);text-decoration:line-through;}
-.check-circle{width:22px;height:22px;border-radius:50%;border:2px solid var(--tint-line, var(--line));flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;background:transparent;padding:0;}
-.check-circle.checked{background:var(--accent, var(--terracota));border-color:var(--accent, var(--terracota));}
-
 /* ---- Timeline (Mi Evolución) ---- */
 .timeline{position:relative;padding-left:22px;}
 .timeline::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--tint-line, var(--line));}
@@ -259,16 +252,6 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .cortisol-emotion.selected .ce-label{color:#fff;}
 .source-pill{display:inline-flex;align-items:center;gap:6px;background:#EFF5E8;color:#5B7A4E;font-size:11px;font-weight:700;padding:6px 11px;border-radius:999px;margin-bottom:14px;}
 .source-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:#5B7A4E;flex-shrink:0;}
-.constancy-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;max-width:280px;margin:0 auto;}
-.constancy-cal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:9.5px;background:#FBF7EC;color:#B0A99C;}
-.constancy-cal-day.done{background:#E4EEDD;color:#4B5E40;font-weight:700;}
-.constancy-cal-day.today{box-shadow:0 0 0 1.5px #B8935A;}
-.constancy-cal-legend{display:flex;justify-content:center;gap:14px;margin-top:10px;font-size:9.5px;color:#8A8377;}
-.ccl-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;}
-.ccl-dot.done{background:#8FBB6A;}
-.ccl-dot.none{background:#D9D2C4;}
-.ccl-dot.today{background:#B8935A;}
-
 /* ---- Hero por módulo (una pieza protagonista, composición distinta por módulo) ---- */
 .hero{border-radius:20px;padding:28px;color:#fff;margin-bottom:24px;position:relative;overflow:hidden;}
 .hero-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px;position:relative;z-index:1;}
@@ -293,6 +276,23 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .hero-avatars{display:flex;position:relative;z-index:1;}
 .hero-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;background:rgba(255,255,255,.18);border:2px solid rgba(0,0,0,.25);margin-left:-14px;}
 .hero-avatar:first-child{margin-left:0;}
+
+.detail-card{background:#FFFFFF;border:1px solid #E7DFC9;border-radius:16px;overflow:hidden;margin-bottom:16px;}
+.detail-card-header{padding:20px 22px 16px;display:flex;gap:14px;}
+.detail-card-icon{width:44px;height:44px;border-radius:12px;background:#F5E4D8;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.detail-card-title{font-family:'Fraunces',serif;font-weight:600;font-size:17px;margin:0;}
+.detail-card-desc{font-size:12px;color:#8A8377;margin:2px 0 0;}
+.detail-card-info{padding:0 22px 16px;display:flex;gap:20px;flex-wrap:wrap;}
+.detail-card-info-label{font-size:9px;text-transform:uppercase;font-weight:700;color:#B8935A;margin:0 0 3px;letter-spacing:.03em;}
+.detail-card-info-value{font-size:12.5px;font-weight:700;color:#2B2621;margin:0;}
+.attendance-strip{padding:14px 22px;background:#FBF7EC;border-top:1px solid #E7DFC9;display:flex;align-items:center;gap:10px;}
+.attendance-avatars{display:flex;flex-shrink:0;}
+.attendance-avatar{width:26px;height:26px;border-radius:50%;margin-left:-9px;border:2px solid #FBF7EC;}
+.attendance-avatars .attendance-avatar:first-child{margin-left:0;}
+.attendance-count{font-size:11.5px;color:#5C574E;flex:1;}
+.attendance-spots{font-size:10px;font-weight:700;color:#B8935A;background:#F3E3C2;padding:4px 9px;border-radius:100px;white-space:nowrap;}
+.detail-card-action{padding:18px 22px 22px;}
+.detail-card-action .btn{width:100%;background:#2B2621;color:#F3EFE6;font-size:13px;font-weight:700;padding:13px;border-radius:100px;}
 
 .hero-ring-big{width:70px;height:70px;position:relative;flex-shrink:0;}
 .hero-ring-big svg{transform:rotate(-90deg);}
@@ -354,8 +354,8 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
       <h2 class="login-form-title">Qué bueno verte de nuevo</h2>
       <div id="login-error"></div>
       <div id="login-form">
-        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tucorreo@ejemplo.com"></div>
-        <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••"></div>
+        <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tucorreo@ejemplo.com" onkeydown="if(event.key==='Enter'){event.preventDefault();handleLogin();}"></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter'){event.preventDefault();handleLogin();}"></div>
         <button class="btn btn-primary" onclick="handleLogin()">Ingresar</button>
         <p class="foot-note" style="text-align:center;margin-top:18px;font-size:14px;">
           ¿Aún no tienes cuenta? <button class="link-btn" onclick="showRegister()">Regístrate</button>
@@ -628,14 +628,13 @@ function renderTopbar() {
   if (!bar) return;
   const showBell = state.role === 'cliente';
   bar.style.display = showBell ? 'flex' : 'none';
+  if (!showBell) { bar.innerHTML = ''; return; }
+  const hasUnread = (state.clientAlerts || []).length || (state.clientNotifications || []).some(n => !n.read);
   bar.innerHTML = `
-    ${showBell ? (() => {
-      const hasUnread = (state.clientAlerts || []).length || (state.clientNotifications || []).some(n => !n.read);
-      return `<div class="bell-wrap">
-        <button class="bell-btn" id="notif-bell" onclick="toggleClientAlertsPanel()" aria-label="Notificaciones">🔔<span class="bell-dot" id="bell-dot" style="display:${hasUnread ? 'block' : 'none'};"></span></button>
-        <div class="alerts-panel" id="client-alerts-panel"></div>
-      </div>`;
-    })() : '<span></span>'}
+    <div class="bell-wrap">
+      <button class="bell-btn" id="notif-bell" onclick="toggleClientAlertsPanel()" aria-label="Notificaciones">🔔<span class="bell-dot" id="bell-dot" style="display:${hasUnread ? 'block' : 'none'};"></span></button>
+      <div class="alerts-panel" id="client-alerts-panel"></div>
+    </div>
   `;
 }
 function toggleClientAlertsPanel() {
@@ -803,12 +802,12 @@ function renderIdentityHeader(title, subtitle, mantraText, mantraLead) {
 // una vista previa representativa cuando no hay datos reales que mostrar
 // para un lead) se ve desenfocado detrás de una tarjeta de desbloqueo — la
 // persona ve qué se está perdiendo, no solo que algo falta.
-function renderLockedOverlay(previewHtml, { title, subtitle, ctaLabel, ctaStyle, ctaAction }) {
+function renderLockedOverlay(previewHtml, { title, subtitle, ctaLabel, ctaStyle, ctaAction, icon }) {
   return `
     <div class="locked-preview">
       <div class="locked-preview-content" aria-hidden="true">${previewHtml}</div>
       <div class="unlock-card">
-        <div class="unlock-icon">🔒</div>
+        <div class="unlock-icon">${icon || '🔒'}</div>
         <h3>${title}</h3>
         <p>${subtitle}</p>
         <button class="btn ${ctaStyle ? '' : 'btn-primary'}" style="width:auto;${ctaStyle || ''}" onclick="${ctaAction || 'openUpgradeCta()'}">${ctaLabel}</button>
@@ -877,13 +876,14 @@ function goToClientModule(moduleKey) {
   state.moduleClientIds[moduleKey] = state.currentClientId;
   setView(moduleKey);
 }
-async function renderAdminModulePicker(el, title, subtitle, moduleKey) {
+async function renderAdminModulePicker(el, title, subtitle, moduleKey, cardTitle) {
   await ensureClientsLoaded();
   el.innerHTML = `
     ${renderIdentityHeader(title, subtitle, '')}
     <div class="card">
-      <div class="card-title">Cliente</div>
+      <div class="card-title">${cardTitle}</div>
       ${renderAdminClientSwitcher(moduleKey)}
+      <div class="empty-state">Selecciona un cliente para continuar.</div>
     </div>
   `;
 }
@@ -1101,7 +1101,23 @@ function renderModuleAnswerRows(mod, personalInfo, report) {
   return rows.length ? `<table><tbody>${rows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin respuestas registradas.</div>';
 }
 async function renderPersonalInfoAdminView(el) {
-  if (!currentClientId()) return renderAdminModulePicker(el, 'Información Personal', 'Selecciona un cliente para ver sus respuestas del formulario inicial.', 'personal-info');
+  if (!currentClientId()) {
+    await ensureClientsLoaded();
+    const step = state.wizardStep || 1;
+    const mod = ONBOARDING_MODULES.find(m => m.n === step);
+    el.innerHTML = `
+      ${renderIdentityHeader('Información Personal', 'Selecciona un cliente para ver sus respuestas del formulario inicial.', '')}
+      <div class="wizard-steps">
+        ${ONBOARDING_MODULES.map(m => `<div class="wizard-dot ${m.n === step ? 'current' : ''}" onclick="setStep(${m.n})">${m.n}</div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
+        ${renderAdminClientSwitcher('personal-info')}
+        <div class="empty-state">Selecciona un cliente para ver sus respuestas.</div>
+      </div>
+    `;
+    return;
+  }
   const clientId = currentClientId();
   el.innerHTML = '<div class="empty-state">Cargando…</div>';
   try {
@@ -1814,39 +1830,11 @@ async function commitModule3Draft(clientId) {
   window._m3DraftClientId = null;
 }
 
-function renderSimpleBarChart(containerId, dataPoints, opts = {}) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  const points = dataPoints.slice().sort((a, b) => a.month - b.month);
-  if (!points.length) { el.innerHTML = '<div class="empty-state">Sin datos suficientes.</div>'; return; }
-  const unit = opts.unit || '';
-  const w = 100, h = 90, padBottom = 16;
-  const values = points.map(d => d.value);
-  const maxVal = Math.max(...values);
-  const minVal = Math.min(0, ...values);
-  const range = (maxVal - minVal) || 1;
-  const gap = 2;
-  const barWidth = Math.min(20, (w - gap * (points.length + 1)) / points.length);
-  const totalWidth = barWidth * points.length + gap * (points.length - 1);
-  const startX = (w - totalWidth) / 2;
-  const bars = points.map((d, i) => {
-    const x = startX + i * (barWidth + gap);
-    const barH = ((d.value - minVal) / range) * (h - padBottom);
-    const y = (h - padBottom) - barH;
-    const isLast = i === points.length - 1;
-    return `<g>
-      <rect x="${x}" y="${y}" width="${barWidth}" height="${Math.max(barH, 1)}" rx="3" fill="var(--terracota)"><title>Mes ${d.month}: ${d.value}${unit}</title></rect>
-      ${isLast ? `<text x="${x + barWidth / 2}" y="${Math.max(y - 3, 7)}" font-size="7" text-anchor="middle" fill="var(--ink-soft)">${d.value}${unit}</text>` : ''}
-      <text x="${x + barWidth / 2}" y="${h}" font-size="6" text-anchor="middle" fill="var(--ink-soft)">M${d.month}</text>
-    </g>`;
-  }).join('');
-  el.innerHTML = `<svg viewBox="0 0 ${w} ${h + 2}" style="width:100%;height:120px;" preserveAspectRatio="xMidYMid meet">
-    <line x1="0" y1="${h - padBottom}" x2="${w}" y2="${h - padBottom}" stroke="var(--line)" stroke-width="0.5"/>
-    ${bars}
-  </svg>`;
-}
-
 function saveModule3() {
+  if (window._m3UploadInProgress) {
+    alert('Espera a que termine de subirse el archivo InBody antes de continuar.');
+    return;
+  }
   // Nada se guarda en el servidor aquí — solo queda como borrador en memoria hasta
   // que se haga clic en "Finalizar" (ver saveOnboardingStep / commitModule3Draft).
   captureModule3Draft();
@@ -1872,6 +1860,7 @@ async function m3HandlePdf(input) {
     return;
   }
   if (st) { st.style.color = 'var(--sage)'; st.textContent = 'Procesando archivo…'; }
+  window._m3UploadInProgress = true;
 
   try {
     const base64 = await new Promise((resolve, reject) => {
@@ -1926,20 +1915,29 @@ async function m3HandlePdf(input) {
     const verLbl = document.getElementById('m3-version-label');
     if (parsed._version && verLbl) { verLbl.textContent = 'Detectado: ' + parsed._version; verLbl.style.display = 'block'; }
 
+    let fileAttached = false;
     try {
       const fd = new FormData();
       fd.append('file', file);
       const uploadResult = await api(`/api/clients/${clientId}/inbody-upload`, { method: 'POST', body: fd });
       window._m3InbodyFileUrl = uploadResult.file_url;
       window._m3InbodyFileName = uploadResult.file_name;
-    } catch (e) { /* si falla la subida del archivo original, igual se conservan los valores extraídos por OCR */ }
+      fileAttached = true;
+    } catch (e) { console.error('inbody-upload falló:', e); /* se conservan los valores extraídos por OCR aunque no se pudo adjuntar el archivo original */ }
 
-    if (st) { st.style.color = 'var(--sage)'; st.textContent = '✓ ' + count + ' campos detectados y rellenados'; }
+    if (st) {
+      st.style.color = fileAttached ? 'var(--sage)' : 'var(--danger)';
+      st.textContent = fileAttached
+        ? '✓ ' + count + ' campos detectados y rellenados. Archivo adjuntado.'
+        : '⚠ ' + count + ' campos detectados y rellenados, pero el archivo original NO se pudo adjuntar — inténtalo de nuevo antes de continuar.';
+    }
   } catch (e) {
     let msg = e.message || 'Error al procesar el archivo.';
     if (msg.toLowerCase().includes('forbidden') || msg.toLowerCase().includes('cloud vision api no habilitada')) msg = 'Cloud Vision API no habilitada en Google Cloud Console.';
     else if (msg.toLowerCase().includes('no está configurada')) msg = 'Google Vision no está configurado en el servidor (falta GOOGLE_VISION_API_KEY).';
     if (st) { st.style.color = 'var(--danger)'; st.textContent = '✗ ' + msg; }
+  } finally {
+    window._m3UploadInProgress = false;
   }
 }
 
@@ -2149,7 +2147,7 @@ const CATEGORY_LABELS = { warmup: 'Warm Up', strength: 'Strength', cardio: 'Card
 // Estado de navegación del módulo Entrenamiento (día → categoría → ejercicio en curso).
 // Vive solo en memoria: se reinicia al recargar la app, igual que el resto de borradores
 // de sesión de este módulo.
-let trainingUI = { day: null, category: null, index: 0, completed: {}, lastCategory: null };
+let trainingUI = { day: null, category: null, index: 0, completed: {}, lastCategory: null, editingExerciseId: null, openDayAccordion: null };
 
 function youtubeEmbedUrl(url) {
   if (!url) return null;
@@ -2189,10 +2187,16 @@ function renderTrainingLocked(el) {
 
 async function renderTraining(el) {
   const isAdmin = state.role === 'admin';
-  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Entrenamiento', 'Selecciona un cliente para ver y asignar su plan de entrenamiento.', 'training');
-  const clientId = currentClientId();
   if (!isAdmin && state.clientType === 'lead_wellness') return renderTrainingLocked(el);
+  const clientId = currentClientId();
   try {
+    if (isAdmin && !clientId) {
+      await ensureClientsLoaded();
+      const adminQuotes = (await api('/api/admin/quotes').catch(() => ({ quotes: [] }))).quotes || [];
+      window._trainingExercises = [];
+      window._trainingClientDays = 0;
+      return renderTrainingHome(el, [], { training_days: null, assigned_quote_id: null }, true, null, adminQuotes, []);
+    }
     const calls = [
       api(`/api/clients/${clientId}/exercises`),
       api(`/api/clients/${clientId}`),
@@ -2213,17 +2217,6 @@ async function renderTraining(el) {
 }
 
 // Semana calendario lunes→domingo: el candado de "Día N" se reinicia cada lunes.
-function calculateStreak(completions) {
-  const dates = new Set(completions.map(c => c.completed_date));
-  let streak = 0;
-  const cursor = new Date(); cursor.setHours(0, 0, 0, 0);
-  if (!dates.has(cursor.toISOString().slice(0, 10))) cursor.setDate(cursor.getDate() - 1);
-  while (dates.has(cursor.toISOString().slice(0, 10))) {
-    streak++;
-    cursor.setDate(cursor.getDate() - 1);
-  }
-  return streak;
-}
 function getWeekStart(date = new Date()) {
   const d = new Date(date);
   const day = d.getDay();
@@ -2312,6 +2305,7 @@ function getCurrentPlanWeekAndDay(client, completions) {
 
 function renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, completions) {
   if (isAdmin) {
+    window._trainingClientDays = client.training_days || 0;
     el.innerHTML = `
       ${renderTrainingAdminPanel(client, adminQuotes)}
       ${renderTrainingAdminExercisesByDay(exercises, client.training_days || 0)}
@@ -2409,7 +2403,7 @@ function renderTrainingAdminPanel(client, adminQuotes) {
           </select>
         </div>
       </div>
-      <button class="btn btn-ghost" style="width:auto" onclick="saveTrainingConfig('${client.id}')">Guardar configuración</button>
+      <button class="btn btn-ghost" style="width:auto" onclick="saveTrainingConfig()">Guardar configuración</button>
     </div>
     <div class="card">
       <div class="card-title">Agregar ejercicio</div>
@@ -2445,26 +2439,95 @@ function renderTrainingAdminExerciseList(list) {
     `).join('') : '<div class="empty-state">Aún no hay ejercicios para este día.</div>'}
   </div>`;
 }
+function renderExerciseEditForm(x) {
+  return `
+    <div class="list-row" style="display:block;">
+      <div class="grid-3">
+        <div class="field"><label>Título</label><input id="ex-edit-title-${x.id}" value="${x.title || ''}"></div>
+        <div class="field"><label>Categoría</label><select id="ex-edit-category-${x.id}">
+          <option value="warmup" ${x.category === 'warmup' ? 'selected' : ''}>Warm Up</option>
+          <option value="strength" ${x.category === 'strength' ? 'selected' : ''}>Strength</option>
+          <option value="cardio" ${x.category === 'cardio' ? 'selected' : ''}>Cardio</option>
+        </select></div>
+        <div class="field"><label>Día</label><select id="ex-edit-day-${x.id}">${[1,2,3,4,5,6,7].map(n => `<option value="${n}" ${x.day_number === n ? 'selected' : ''}>Día ${n}</option>`).join('')}</select></div>
+        <div class="field"><label>Series</label><input type="number" id="ex-edit-series-${x.id}" value="${x.series ?? ''}"></div>
+        <div class="field"><label>Repeticiones</label><input id="ex-edit-reps-${x.id}" value="${x.reps || ''}"></div>
+        <div class="field"><label>Duración</label><input id="ex-edit-duration-${x.id}" value="${x.duration || ''}" placeholder="20 min"></div>
+        <div class="field"><label>Descanso (seg. o mm:ss)</label><input id="ex-edit-rest-${x.id}" value="${x.rest_time || ''}"></div>
+        <div class="field"><label>Video (YouTube)</label><input id="ex-edit-youtube-${x.id}" value="${x.youtube_url || ''}"></div>
+      </div>
+      <div class="field"><label>Descripción</label><textarea id="ex-edit-desc-${x.id}" rows="2">${x.description || ''}</textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="width:auto" onclick="updateExercise('${x.id}')">Guardar</button>
+        <button class="btn btn-ghost" style="width:auto" onclick="toggleEditExercise(null)">Cancelar</button>
+      </div>
+    </div>
+  `;
+}
+function refreshTrainingExercisesByDay() {
+  const container = document.getElementById('training-exercises-by-day');
+  if (!container) return;
+  container.outerHTML = renderTrainingAdminExercisesByDay(window._trainingExercises || [], window._trainingClientDays || 0);
+}
+async function refetchTrainingExercisesByDay() {
+  const container = document.getElementById('training-exercises-by-day');
+  if (!container) return;
+  const clientId = currentClientId();
+  const { exercises } = await api(`/api/clients/${clientId}/exercises`);
+  window._trainingExercises = exercises;
+  container.outerHTML = renderTrainingAdminExercisesByDay(exercises, window._trainingClientDays || 0);
+}
+function toggleTrainingDayAccordion(day) {
+  trainingUI.openDayAccordion = trainingUI.openDayAccordion === day ? null : day;
+  refreshTrainingExercisesByDay();
+}
+function toggleEditExercise(id) {
+  trainingUI.editingExerciseId = id;
+  refreshTrainingExercisesByDay();
+}
+async function updateExercise(id) {
+  const clientId = currentClientId();
+  const payload = {
+    title: document.getElementById(`ex-edit-title-${id}`).value,
+    category: document.getElementById(`ex-edit-category-${id}`).value,
+    day_number: parseInt(document.getElementById(`ex-edit-day-${id}`).value, 10),
+    series: document.getElementById(`ex-edit-series-${id}`).value || null,
+    reps: document.getElementById(`ex-edit-reps-${id}`).value,
+    duration: document.getElementById(`ex-edit-duration-${id}`).value,
+    rest_time: document.getElementById(`ex-edit-rest-${id}`).value,
+    youtube_url: document.getElementById(`ex-edit-youtube-${id}`).value,
+    description: document.getElementById(`ex-edit-desc-${id}`).value,
+  };
+  try {
+    await api(`/api/clients/${clientId}/exercises/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    trainingUI.editingExerciseId = null;
+    await refetchTrainingExercisesByDay();
+  } catch (e) { alert('Error: ' + e.message); }
+}
 function renderTrainingAdminExercisesByDay(exercises, days) {
   const dayCount = days || 7;
-  return `<div class="card">
+  return `<div class="card" id="training-exercises-by-day">
     <div class="card-title">Ejercicios asignados</div>
     <div class="accordion">
       ${Array.from({ length: dayCount }, (_, i) => i + 1).map(d => {
         const list = exercises.filter(x => x.day_number === d);
+        const isOpen = trainingUI.openDayAccordion === d;
         return `<div class="accordion-item">
-          <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+          <button class="accordion-header" type="button" onclick="toggleTrainingDayAccordion(${d})">
             Día ${d} <span style="color:var(--ink-soft);font-weight:400;">— ${list.length} ejercicio${list.length === 1 ? '' : 's'}</span>
             <span class="accordion-toggle">Ver</span>
           </button>
-          <div class="accordion-content">
-            ${list.length ? list.map(x => `
+          <div class="accordion-content ${isOpen ? 'active' : ''}">
+            ${list.length ? list.map(x => trainingUI.editingExerciseId === x.id ? renderExerciseEditForm(x) : `
               <div class="list-row">
                 <div>
                   <strong>${x.title}</strong> <span class="badge">${CATEGORY_LABELS[x.category]}</span>
                   <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${x.category === 'cardio' ? `duración ${x.duration || '-'}` : `${x.series} series · ${x.reps || '-'} reps`} · descanso ${x.rest_time || '-'}</div>
                 </div>
-                <button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>
+                <div style="display:flex;gap:8px;">
+                  <button class="small-btn" onclick="toggleEditExercise('${x.id}')">Editar</button>
+                  <button class="small-btn" onclick="deleteExercise('${x.id}')">Eliminar</button>
+                </div>
               </div>
             `).join('') : '<div class="empty-state">Sin ejercicios este día.</div>'}
           </div>
@@ -2679,7 +2742,9 @@ function openTrainingCategory(category) { trainingUI.category = category; traini
 function backToTrainingHome() { stopTrainingRestTimer(); stopCardioTimer(); trainingUI = { day: null, category: null, index: 0, completed: {}, lastCategory: null }; renderMain(); }
 function backToTrainingDay() { stopTrainingRestTimer(); stopCardioTimer(); trainingUI.category = null; trainingUI.index = 0; renderMain(); }
 
-async function saveTrainingConfig(clientId) {
+async function saveTrainingConfig() {
+  const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
   const days = document.getElementById('tr-training-days').value;
   const quoteId = document.getElementById('tr-assigned-quote').value;
   try {
@@ -2696,6 +2761,7 @@ function toggleExerciseCategoryFields() {
 }
 async function createExercise() {
   const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
   const title = document.getElementById('ex-title').value.trim();
   if (!title) return alert('Escribe un título.');
   const payload = {
@@ -2709,13 +2775,21 @@ async function createExercise() {
     youtube_url: document.getElementById('ex-youtube').value,
     description: document.getElementById('ex-desc').value,
   };
-  try { await api(`/api/clients/${clientId}/exercises`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api(`/api/clients/${clientId}/exercises`, { method: 'POST', body: JSON.stringify(payload) });
+    if (document.getElementById('training-exercises-by-day')) {
+      ['ex-title', 'ex-series', 'ex-reps', 'ex-duration', 'ex-rest', 'ex-youtube', 'ex-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      await refetchTrainingExercisesByDay();
+    } else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 async function deleteExercise(id) {
   const clientId = currentClientId();
-  try { await api(`/api/clients/${clientId}/exercises/${id}`, { method: 'DELETE' }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api(`/api/clients/${clientId}/exercises/${id}`, { method: 'DELETE' });
+    if (document.getElementById('training-exercises-by-day')) await refetchTrainingExercisesByDay();
+    else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 
 function printAsPdf(title, bodyHtml) {
@@ -2730,6 +2804,7 @@ function printAsPdf(title, bodyHtml) {
 // ---------------- Módulo: Nutrición ----------------
 
 let nutritionUI = { menuDraft: null, planDraft: null, supplementsDraft: null, deletedSupplementIds: null };
+let _nutritionDraftLoadedFor = null;
 const SUPPLEMENT_ICONS = {
   sueño: '<path d="M11.5 3.5A6.5 6.5 0 1 0 14.5 16a8 8 0 0 1-3-12.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/>',
   adaptógeno: '<path d="M9 16c-4-1-6-5-4-9 4 0 7 2 8 5 1-3 4-5 8-5 2 4 0 8-4 9-2 .5-3.5.5-4 3-.5-2.5-2-2.5-4-3Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round" fill="none"/>',
@@ -2886,18 +2961,27 @@ function renderNutritionLocked(el) {
 
 async function renderNutrition(el) {
   const isAdmin = state.role === 'admin';
-  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Nutrición', 'Selecciona un cliente para ver y asignar su plan nutricional.', 'nutrition');
   const clientId = currentClientId();
   if (!isAdmin && state.clientType === 'lead_wellness') return renderNutritionLocked(el);
   try {
-    const [{ plan }, supplementsRes] = await Promise.all([
-      api(`/api/clients/${clientId}/nutrition`),
-      api(`/api/clients/${clientId}/supplements`).catch(() => ({ supplements: [] })),
-    ]);
-    const supplements = supplementsRes.supplements || [];
+    let plan = {}, supplements = [];
+    if (isAdmin && !clientId) {
+      await ensureClientsLoaded();
+    } else {
+      const [{ plan: fetchedPlan }, supplementsRes] = await Promise.all([
+        api(`/api/clients/${clientId}/nutrition`),
+        api(`/api/clients/${clientId}/supplements`).catch(() => ({ supplements: [] })),
+      ]);
+      plan = fetchedPlan;
+      supplements = supplementsRes.supplements || [];
+    }
     window._nutritionData = { plan };
     window._supplementsData = supplements;
     if (isAdmin) {
+      if (_nutritionDraftLoadedFor !== clientId) {
+        nutritionUI = { menuDraft: null, planDraft: null, supplementsDraft: null, deletedSupplementIds: null };
+        _nutritionDraftLoadedFor = clientId;
+      }
       initMenuDraftIfNeeded(plan); initPlanDraftIfNeeded(plan); initSupplementsDraftIfNeeded(supplements);
       await ensureClientsLoaded();
       el.innerHTML = `
@@ -2984,6 +3068,7 @@ async function renderNutrition(el) {
 }
 async function saveNutritionPlan() {
   const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
   const menu_plan = (nutritionUI.menuDraft || [])
     .filter(m => m.name.trim())
     .map(m => ({
@@ -3150,7 +3235,7 @@ function downloadSupplementsPdf() {
 
 // ---------------- Módulo: Gestión de Cortisol ----------------
 
-let cortisolUI = { activeId: null };
+let cortisolUI = { activeId: null, editingTechniqueId: null, techniquesOpen: false };
 
 // Catálogo base de técnicas — se siembra automáticamente (una sola vez, solo
 // cuando el admin abre el módulo) para que la librería siempre esté completa
@@ -3192,10 +3277,13 @@ function renderBreathCircles() {
 
 async function renderCortisol(el) {
   const isAdmin = state.role === 'admin';
-  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Gestión de Cortisol', 'Selecciona un cliente para ver y asignar sus técnicas.', 'cortisol');
   const clientId = currentClientId();
   try {
-    if (isAdmin) await ensureClientsLoaded();
+    if (isAdmin && !clientId) {
+      await ensureClientsLoaded();
+      const adminTips = (await api('/api/admin/cortisol-tips').catch(() => ({ tips: [] }))).tips || [];
+      return renderCortisolHome(el, [], true, [], null, null, adminTips);
+    }
     let [{ techniques }, completionsRes, checkinRes, tipRes] = await Promise.all([
       api(`/api/clients/${clientId}/cortisol-techniques`),
       api(`/api/clients/${clientId}/cortisol-completions`).catch(() => ({ completions: [] })),
@@ -3203,6 +3291,7 @@ async function renderCortisol(el) {
       api(`/api/clients/${clientId}/cortisol-tip-of-the-day`).catch(() => ({ tip: null })),
     ]);
     if (isAdmin) {
+      await ensureClientsLoaded();
       const haveTitles = new Set(techniques.map(t => (t.title || '').trim().toLowerCase()));
       const missing = DEFAULT_CORTISOL_TECHNIQUES.filter(d => !haveTitles.has(d.title.toLowerCase()));
       if (missing.length) {
@@ -3224,14 +3313,6 @@ async function renderCortisol(el) {
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 
-function calculateCortisolMonthlyStats(completions) {
-  const now = new Date();
-  const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-`;
-  const doneDays = new Set(completions.filter(c => c.completed_date.startsWith(monthPrefix)).map(c => c.completed_date)).size;
-  const expected = now.getDate();
-  const pct = expected > 0 ? Math.round((doneDays / expected) * 100) : 0;
-  return { doneDays, expected, pct };
-}
 function calculateCortisolWeeklyStats(completions) {
   const weekStart = getWeekStart();
   const count = new Set(completions.filter(c => c.completed_date >= weekStart).map(c => c.completed_date)).size;
@@ -3254,6 +3335,7 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
   const matched = techniques.find(t => (t.title || '').trim().toLowerCase() === recommended.title.toLowerCase()) || techniques[0] || null;
 
   if (isAdmin) {
+    window._cortisolTechniques = techniques;
     el.innerHTML = `
       <div class="card">
         <div class="card-title">Asignar técnica</div>
@@ -3267,6 +3349,7 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
         <div class="field"><label>Descripción</label><textarea id="ct-desc" rows="2"></textarea></div>
         <button class="btn btn-primary" style="width:auto" onclick="createTechnique()">Asignar</button>
       </div>
+      ${renderCortisolTechniquesCard(techniques)}
       <div class="card">
         <div class="accordion">
           <div class="accordion-item">
@@ -3400,6 +3483,7 @@ async function deleteCortisolTip(id) {
 }
 async function createTechnique() {
   const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
   const payload = {
     title: document.getElementById('ct-title').value,
     type: document.getElementById('ct-type').value,
@@ -3407,29 +3491,107 @@ async function createTechnique() {
     youtube_url: document.getElementById('ct-youtube').value,
     description: document.getElementById('ct-desc').value,
   };
-  try { await api(`/api/clients/${clientId}/cortisol-techniques`, { method: 'POST', body: JSON.stringify(payload) }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api(`/api/clients/${clientId}/cortisol-techniques`, { method: 'POST', body: JSON.stringify(payload) });
+    if (document.getElementById('cortisol-techniques-list')) {
+      ['ct-title', 'ct-duration', 'ct-youtube', 'ct-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      await refetchCortisolTechniques();
+    } else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 async function deleteTechnique(id) {
   const clientId = currentClientId();
-  try { await api(`/api/clients/${clientId}/cortisol-techniques/${id}`, { method: 'DELETE' }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api(`/api/clients/${clientId}/cortisol-techniques/${id}`, { method: 'DELETE' });
+    if (document.getElementById('cortisol-techniques-list')) await refetchCortisolTechniques();
+    else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function renderTechniqueEditForm(t) {
+  return `
+    <div class="list-row" style="display:block;">
+      <div class="grid-3">
+        <div class="field"><label>Título</label><input id="ct-edit-title-${t.id}" value="${t.title || ''}"></div>
+        <div class="field"><label>Tipo</label><select id="ct-edit-type-${t.id}">${['Respiración','Breathwork','Meditación','Mindfulness'].map(o=>`<option ${t.type === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
+        <div class="field"><label>Duración</label><input id="ct-edit-duration-${t.id}" value="${t.duration || ''}"></div>
+        <div class="field"><label>Video (YouTube)</label><input id="ct-edit-youtube-${t.id}" value="${t.youtube_url || ''}"></div>
+      </div>
+      <div class="field"><label>Descripción</label><textarea id="ct-edit-desc-${t.id}" rows="2">${t.description || ''}</textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="width:auto" onclick="updateTechnique('${t.id}')">Guardar</button>
+        <button class="btn btn-ghost" style="width:auto" onclick="toggleEditTechnique(null)">Cancelar</button>
+      </div>
+    </div>
+  `;
+}
+function toggleEditTechnique(id) {
+  cortisolUI.editingTechniqueId = id;
+  refreshCortisolTechniquesList();
+}
+async function updateTechnique(id) {
+  const clientId = currentClientId();
+  const payload = {
+    title: document.getElementById(`ct-edit-title-${id}`).value,
+    type: document.getElementById(`ct-edit-type-${id}`).value,
+    duration: document.getElementById(`ct-edit-duration-${id}`).value,
+    youtube_url: document.getElementById(`ct-edit-youtube-${id}`).value,
+    description: document.getElementById(`ct-edit-desc-${id}`).value,
+  };
+  try {
+    await api(`/api/clients/${clientId}/cortisol-techniques/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    cortisolUI.editingTechniqueId = null;
+    await refetchCortisolTechniques();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function toggleCortisolTechniquesAccordion() {
+  cortisolUI.techniquesOpen = !cortisolUI.techniquesOpen;
+  refreshCortisolTechniquesList();
+}
+function refreshCortisolTechniquesList() {
+  const container = document.getElementById('cortisol-techniques-list');
+  if (!container) return;
+  container.outerHTML = renderCortisolTechniquesCard(window._cortisolTechniques || []);
+}
+async function refetchCortisolTechniques() {
+  const container = document.getElementById('cortisol-techniques-list');
+  if (!container) return;
+  const clientId = currentClientId();
+  const { techniques } = await api(`/api/clients/${clientId}/cortisol-techniques`);
+  window._cortisolTechniques = techniques;
+  container.outerHTML = renderCortisolTechniquesCard(techniques);
+}
+function renderCortisolTechniquesCard(techniques) {
+  return `<div class="card" id="cortisol-techniques-list">
+    <div class="accordion">
+      <div class="accordion-item">
+        <button class="accordion-header" type="button" onclick="toggleCortisolTechniquesAccordion()">
+          Técnicas asignadas <span style="color:var(--ink-soft);font-weight:400;">— ${techniques.length}</span>
+          <span class="accordion-toggle">Ver</span>
+        </button>
+        <div class="accordion-content ${cortisolUI.techniquesOpen ? 'active' : ''}">
+          ${techniques.length ? techniques.map(t => cortisolUI.editingTechniqueId === t.id ? renderTechniqueEditForm(t) : `
+            <div class="list-row">
+              <div>
+                <strong>${t.title}</strong> ${t.type ? `<span class="badge">${t.type}</span>` : ''}
+                <div style="color:var(--ink-soft);font-size:13px;margin-top:4px;">${t.duration || ''}</div>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="small-btn" onclick="toggleEditTechnique('${t.id}')">Editar</button>
+                <button class="small-btn" onclick="deleteTechnique('${t.id}')">Eliminar</button>
+              </div>
+            </div>
+          `).join('') : '<div class="empty-state">Aún no hay técnicas asignadas.</div>'}
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 // ---------------- Módulo: Descanso ----------------
 // Versión simple: la única cifra real hoy es "horas de sueño" del último
 // check-in de Mi Evolución (evolution_checkins.sleep_hours). Calidad de sueño
 // y hora de dormir aún no se registran en ningún lado — se muestran como "—"
-// en vez de inventar un dato. El checklist es solo de la sesión actual (no se
-// persiste) y los sonidos son un placeholder visual, tal como se acordó
-// ("lógica simple, funcionalidad completa después").
-const REST_CHECKLIST_ITEMS = [
-  { id: 'screens', label: 'Pantallas apagadas 30 minutos antes de dormir' },
-  { id: 'breathing', label: 'Respiración antes de dormir' },
-  { id: 'environment', label: 'Ambiente oscuro y fresco' },
-  { id: 'log', label: 'Registrar tu sueño en Mi Evolución' },
-];
-let restChecklistState = {};
+// en vez de inventar un dato.
 function formatSleepHours(hours) {
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
@@ -3512,26 +3674,31 @@ function toggleRestJournal() {
 
 async function renderRest(el) {
   const isAdmin = state.role === 'admin';
-  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Descanso', 'Selecciona un cliente para ver su recuperación nocturna.', 'rest');
   const clientId = currentClientId();
   stopRestToolTimer();
   try {
-    if (isAdmin) await ensureClientsLoaded();
-    const { checkins } = await api(`/api/clients/${clientId}/evolution`);
-    const last = checkins[checkins.length - 1] || {};
-    const sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
-    el.innerHTML = `
-      ${isAdmin ? `<div class="card"><div class="card-title">Cliente</div>${renderAdminClientSwitcher('rest')}</div>` : ''}
-      ${renderIdentityHeader('Descanso', 'Tu recuperación nocturna.', pickMantra('rest'))}
-      <div class="hero" style="background:linear-gradient(135deg, #241C30, #332740);">
-        <div class="hero-glow"></div>
-        <p class="hero-eyebrow" style="color:#C6B4E0;">ANOCHE DORMISTE</p>
-        <p class="hero-figure">${sleepLabel || '—'}</p>
-        <p class="hero-meta">${sleepLabel ? 'Calidad de sueño y hora de dormir: próximamente' : 'Registra un check-in en Mi Evolución para ver tus horas de sueño aquí.'}</p>
-      </div>
+    let sleepLabel = null;
+    let sleepProtocol = null;
+    if (isAdmin && !clientId) {
+      await ensureClientsLoaded();
+    } else {
+      if (isAdmin) await ensureClientsLoaded();
+      const [{ checkins }, protocolRes] = await Promise.all([
+        api(`/api/clients/${clientId}/evolution`),
+        api(`/api/clients/${clientId}/sleep-protocol`).catch(() => ({ protocol: null })),
+      ]);
+      const last = checkins[checkins.length - 1] || {};
+      sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
+      sleepProtocol = protocolRes.protocol || null;
+    }
+    const clientType = currentClientType();
+    const esClienteActivo = clientType === 'coaching_1_1' || clientType === 'coaching_online';
+    const heroFallback = `<button class="hero-btn" style="margin-top:4px;" onclick="setView('evolution')">Hacer tu check-in de hoy</button>`;
+    const genericProtocolHtml = `
       <div style="margin-bottom:20px;">
         <p class="section-label" style="font-size:16px;margin-bottom:2px;">Tu protocolo de sueño</p>
         <p style="font-size:11px;color:#8A8377;margin:0 0 14px;">Los 4 pilares que más impacto tienen en tu descanso, según biohacking de sueño.</p>
+        ${isAdmin ? `<div class="card">${renderAdminClientSwitcher('rest')}${!clientId ? '<div class="empty-state">Selecciona un cliente para ver sus horas de sueño.</div>' : ''}</div>` : ''}
         <div class="grid-2" style="gap:12px;">
           ${REST_PILLARS.map(p => `
             <div style="background:#FBF7EC;border:1px solid #E7DFC9;border-radius:14px;padding:14px 16px;">
@@ -3541,16 +3708,27 @@ async function renderRest(el) {
             </div>
           `).join('')}
         </div>
+      </div>`;
+    const protocolHtml = esClienteActivo
+      ? (isAdmin ? renderSleepProtocolAdminForm(sleepProtocol) : renderPersonalizedSleepProtocol(sleepProtocol))
+      : genericProtocolHtml;
+    const conversionCtaHtml = (!isAdmin && clientType === 'lead_wellness') ? `
+      <div class="card" style="text-align:center;padding:26px 22px;">
+        <div style="font-size:26px;margin-bottom:8px;">🌙</div>
+        <p style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:0 0 6px;">Imagina un protocolo de sueño diseñado 100% para ti</p>
+        <p style="font-size:12.5px;color:var(--ink-soft);margin:0 0 16px;">Tu mentor puede escribir un protocolo personalizado basado en tus check-ins reales, con ventana de sueño y suplemento sugerido.</p>
+        <button class="btn" style="width:auto;background:#2B2621;color:#F3EFE6;" onclick="openWhatsappCta()">Hablar con un coach</button>
       </div>
-      <div class="card">
-        <div class="card-title">Rutina nocturna</div>
-        ${REST_CHECKLIST_ITEMS.map(item => `
-          <div class="checklist-row ${restChecklistState[item.id] ? 'checked' : ''}">
-            <button class="check-circle ${restChecklistState[item.id] ? 'checked' : ''}" onclick="toggleRestChecklistItem('${item.id}')" aria-label="${item.label}">${restChecklistState[item.id] ? '✓' : ''}</button>
-            <span class="label">${item.label}</span>
-          </div>
-        `).join('')}
-      </div>
+    ` : '';
+    el.innerHTML = `
+      ${renderIdentityHeader('Descanso', 'Tu recuperación nocturna.', pickMantra('rest'))}
+      ${!isAdmin ? `<div class="hero" style="background:linear-gradient(135deg, #241C30, #332740);">
+        <div class="hero-glow"></div>
+        <p class="hero-eyebrow" style="color:#C6B4E0;">ANOCHE DORMISTE</p>
+        <p class="hero-figure">${sleepLabel || '—'}</p>
+        ${sleepLabel ? '<p class="hero-meta">Calidad de sueño y hora de dormir: próximamente</p>' : heroFallback}
+      </div>` : ''}
+      ${protocolHtml}
       <div class="card">
         <div class="card-title">Herramientas para dormir</div>
         ${REST_TOOLS.map(t => `
@@ -3572,34 +3750,162 @@ async function renderRest(el) {
       <div style="text-align:center;">
         <span class="source-pill" style="margin-bottom:0;">Magnesio nocturno · Nutrición</span>
       </div>
+      ${conversionCtaHtml}
     `;
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
-function toggleRestChecklistItem(id) {
-  restChecklistState[id] = !restChecklistState[id];
-  renderMain();
+// Tarjeta de solo-lectura para clientes con plan activo — mutuamente
+// excluyente con el protocolo genérico de 4 pilares (nunca se muestran
+// juntos). Cada campo lo escribe el mentor por cliente; si un campo está
+// vacío se omite su fila/columna en vez de mostrar un placeholder vacío.
+function renderPersonalizedSleepProtocol(protocol) {
+  if (!protocol || (!protocol.protocol_text && !protocol.sleep_window && !protocol.supplement)) {
+    return `
+      <div class="card" style="background:#F1EAF7;border:1px solid #E1D5EE;">
+        <p style="font-size:10px;text-transform:uppercase;font-weight:700;color:#8A5FA0;margin:0 0 8px;letter-spacing:.04em;">ESCRITO POR TU MENTOR</p>
+        <div class="empty-state">Tu mentor está preparando tu protocolo personalizado.</div>
+      </div>
+    `;
+  }
+  const finalRow = [
+    protocol.sleep_window ? { label: 'Tu ventana ideal', value: protocol.sleep_window } : null,
+    protocol.supplement ? { label: 'Suplemento sugerido', value: protocol.supplement } : null,
+  ].filter(Boolean);
+  return `
+    <div style="margin-bottom:20px;">
+      <p class="section-label" style="font-size:16px;margin-bottom:14px;">Tu protocolo personalizado</p>
+      <div style="background:#F1EAF7;border:1px solid #E1D5EE;border-radius:16px;padding:20px 22px;">
+        <p style="font-size:10px;text-transform:uppercase;font-weight:700;color:#8A5FA0;margin:0 0 8px;letter-spacing:.04em;">ESCRITO POR TU MENTOR</p>
+        ${protocol.protocol_text ? `<p style="font-family:'Fraunces',serif;font-style:italic;font-size:13.5px;color:#3A2F47;margin:0;white-space:pre-wrap;${finalRow.length ? 'margin-bottom:16px;' : ''}">${protocol.protocol_text}</p>` : ''}
+        ${finalRow.length ? `<div style="display:flex;gap:20px;border-top:1px solid #E1D5EE;padding-top:16px;">
+          ${finalRow.map(f => `
+            <div><p style="font-size:9px;text-transform:uppercase;font-weight:700;color:#8A5FA0;margin:0 0 3px;letter-spacing:.03em;">${f.label}</p><p style="font-family:'Fraunces',serif;font-weight:600;font-size:14px;margin:0;color:#2B2621;">${f.value}</p></div>
+          `).join('')}
+        </div>` : ''}
+      </div>
+    </div>
+  `;
 }
-
+function renderSleepProtocolAdminForm(protocol) {
+  const p = protocol || {};
+  return `
+    <div class="card">
+      <div class="card-title">Protocolo personalizado (admin)</div>
+      ${renderAdminClientSwitcher('rest')}
+      <div class="field"><label>Protocolo — escribe libremente lo que quieras que vea este cliente</label><textarea id="sp-protocol-text" rows="6">${p.protocol_text || ''}</textarea></div>
+      <div class="grid-2">
+        <div class="field"><label>Ventana de sueño ideal (opcional)</label><input id="sp-sleep-window" value="${p.sleep_window || ''}" placeholder="Ej. 10:30pm – 6:15am"></div>
+        <div class="field"><label>Suplemento sugerido (opcional)</label><input id="sp-supplement" value="${p.supplement || ''}" placeholder="Ej. Magnesio · 45 min antes"></div>
+      </div>
+      <button class="btn btn-primary" style="width:auto" onclick="saveSleepProtocol()">Guardar protocolo</button>
+    </div>
+  `;
+}
+async function saveSleepProtocol() {
+  const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
+  const payload = {
+    protocol_text: document.getElementById('sp-protocol-text').value,
+    sleep_window: document.getElementById('sp-sleep-window').value,
+    supplement: document.getElementById('sp-supplement').value,
+  };
+  try {
+    await api(`/api/clients/${clientId}/sleep-protocol`, { method: 'PUT', body: JSON.stringify(payload) });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
 // ---------------- Módulo: Comunidad (Eventos + Terapias) ----------------
 
 let communityTab = 'events';
 
-// Ícono de fila para Terapias — tono terracota para calzar con la paleta
-// propia del hero de Comunidad (distinto del morado de Cortisol/Descanso).
-function renderTherapyRow(t, interactive) {
+// Formato de fecha/hora legible para eventos: "21 jul, 10:21am" — nunca el
+// timestamp crudo de la base de datos. Se usa en cualquier parte de la app
+// donde se muestre fecha/hora de un evento (hero, tarjeta, listas).
+function formatEventDateTime(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const MONTHS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  let h = d.getHours();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  h = h % 12; if (h === 0) h = 12;
+  const min = String(d.getMinutes()).padStart(2, '0');
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${h}:${min}${ampm}`;
+}
+// Ícono representativo por categoría — heurística sobre el título ya que el
+// esquema no tiene un campo de categoría dedicado. Si nada calza, ícono genérico.
+function eventCategoryIcon(title) {
+  const t = (title || '').toLowerCase();
+  if (/hielo|ice\b|frío|frio/.test(t)) return '🧊';
+  if (/medita|mindful|respira|yoga/.test(t)) return '🧘';
+  if (/circuito|entrena|fuerza|cardio|running|correr|hiit/.test(t)) return '🏃';
+  if (/sauna|calor/.test(t)) return '🔥';
+  if (/comunidad|social|cena|desayuno|brunch/.test(t)) return '🤝';
+  return '📅';
+}
+function therapyCategoryIcon(title) {
+  const t = (title || '').toLowerCase();
+  if (/masaje|spa/.test(t)) return '💆';
+  if (/fisio/.test(t)) return '🩺';
+  if (/nutri/.test(t)) return '🥗';
+  if (/biodescod|psicolog|terapia|coach|mental/.test(t)) return '🧠';
+  return '📅';
+}
+// Franja de asistencia compartida entre eventos y terapias: avatares reales
+// (nunca placeholders vacíos), conteo real, y pill de cupos solo si aplica
+// (community_events.capacity; las terapias no tienen concepto de cupo).
+function renderAttendanceStrip(count, capacity) {
+  const avatarColors = ['#D9A441', '#5B7A4E', '#8A5FA0'];
+  const avatarCount = Math.min(count, 3);
+  const avatarsHtml = Array.from({ length: avatarCount }, (_, i) => `<div class="attendance-avatar" style="background:${avatarColors[i]};"></div>`).join('');
+  const spotsLeft = capacity ? Math.max(capacity - count, 0) : null;
   return `
-    <div class="list-row">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <span style="width:34px;height:34px;border-radius:50%;background:#F1E4DC;color:#8A5A3A;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M9 2c3 4 5 7 5 10a5 5 0 1 1-10 0c0-3 2-6 5-10Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
-        </span>
+    <div class="attendance-strip">
+      ${avatarsHtml ? `<div class="attendance-avatars">${avatarsHtml}</div>` : ''}
+      <span class="attendance-count">${count} persona${count === 1 ? '' : 's'} confirmada${count === 1 ? '' : 's'}</span>
+      ${spotsLeft !== null ? `<span class="attendance-spots">Quedan ${spotsLeft} lugar${spotsLeft === 1 ? '' : 'es'}</span>` : ''}
+    </div>
+  `;
+}
+function renderEventCard(ev) {
+  return `
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="detail-card-icon">${eventCategoryIcon(ev.title)}</div>
         <div>
-          <strong style="font-family:'Fraunces',serif;font-weight:600;font-size:14px;">${t.title}</strong> ${t.discount_pct ? `<span class="badge" style="background:#2B2621;color:#D9BE8C;">-${t.discount_pct}%</span>` : ''}
-          <div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${t.description || ''}</div>
-          ${t.provider ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:1px;">Proveedor: ${t.provider}</div>` : ''}
+          <p class="detail-card-title">${ev.title}</p>
+          ${ev.description ? `<p class="detail-card-desc">${ev.description}</p>` : ''}
         </div>
       </div>
-      ${interactive ? `<button class="btn btn-secondary" style="width:auto;flex-shrink:0;" onclick="reserveTherapy('${t.id}')">Reservar</button>` : ''}
+      <div class="detail-card-info">
+        <div><p class="detail-card-info-label">Fecha</p><p class="detail-card-info-value">${formatEventDateTime(ev.event_date)}</p></div>
+        <div><p class="detail-card-info-label">Lugar</p><p class="detail-card-info-value">${ev.location || '-'}</p></div>
+      </div>
+      ${renderAttendanceStrip(ev.confirmed_count || 0, ev.capacity)}
+      <div class="detail-card-action">
+        <button class="btn" onclick="reserveEvent('${ev.id}')">Reservar mi lugar</button>
+      </div>
+    </div>`;
+}
+// Misma estructura de tarjeta que Eventos, adaptada a Terapias: la info
+// rápida pasa a ser Proveedor/Descuento en vez de Fecha/Lugar, y no hay pill
+// de cupos porque las terapias no tienen un campo de capacidad en el esquema.
+function renderTherapyRow(t, interactive) {
+  return `
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="detail-card-icon">${therapyCategoryIcon(t.title)}</div>
+        <div>
+          <p class="detail-card-title">${t.title} ${t.discount_pct ? `<span class="badge" style="background:#2B2621;color:#D9BE8C;">-${t.discount_pct}%</span>` : ''}</p>
+          ${t.description ? `<p class="detail-card-desc">${t.description}</p>` : ''}
+        </div>
+      </div>
+      <div class="detail-card-info">
+        <div><p class="detail-card-info-label">Proveedor</p><p class="detail-card-info-value">${t.provider || '-'}</p></div>
+        <div><p class="detail-card-info-label">Descuento</p><p class="detail-card-info-value">${t.discount_pct ? `-${t.discount_pct}%` : '-'}</p></div>
+      </div>
+      ${renderAttendanceStrip(t.confirmed_count || 0, null)}
+      ${interactive ? `<div class="detail-card-action"><button class="btn" onclick="reserveTherapy('${t.id}')">Reservar mi lugar</button></div>` : ''}
     </div>`;
 }
 
@@ -3616,21 +3922,16 @@ async function renderCommunity(el) {
       api('/api/community/therapies').catch(() => ({ therapies: [] })),
     ]);
     const nextEvent = events[0];
+    const nextEventConfirmed = nextEvent ? (nextEvent.confirmed_count || 0) : 0;
     el.innerHTML = `
       ${renderIdentityHeader('La tribu esta semana', 'Presencia, no competencia.', pickMantra('community'))}
       <div class="hero" style="background:linear-gradient(135deg, #3A2418, #4A311F);">
         <div class="hero-glow"></div>
-        <div class="hero-split">
-          <div class="hero-avatars" aria-hidden="true">
-            <div class="hero-avatar"></div>
-            <div class="hero-avatar"></div>
-            <div class="hero-avatar"></div>
-          </div>
-          <div style="flex:1;">
-            <p class="hero-eyebrow" style="color:#E0B08C;">${nextEvent ? 'PRÓXIMO EVENTO' : 'COMUNIDAD'}</p>
-            <p class="hero-title">${nextEvent ? nextEvent.title : 'Aún no hay eventos programados'}</p>
-            <p class="hero-meta">${nextEvent ? `${nextEvent.event_date ? new Date(nextEvent.event_date).toLocaleString() : ''}${nextEvent.location ? ' · ' + nextEvent.location : ''}` : 'Tu coach publicará el próximo evento pronto.'}</p>
-          </div>
+        <div>
+          <p class="hero-eyebrow" style="color:#E0B08C;">${nextEvent ? 'PRÓXIMO EVENTO' : 'COMUNIDAD'}</p>
+          <p class="hero-title">${nextEvent ? nextEvent.title : 'Aún no hay eventos programados'}</p>
+          <p class="hero-meta">${nextEvent ? `${formatEventDateTime(nextEvent.event_date)}${nextEvent.location ? ' · ' + nextEvent.location : ''}` : 'Tu coach publicará el próximo evento pronto.'}</p>
+          ${nextEventConfirmed > 0 ? `<p style="font-size:11px;font-weight:600;color:#E8B99A;margin:6px 0 0;">🔥 ${nextEventConfirmed} persona${nextEventConfirmed === 1 ? '' : 's'} ya confirmaron su lugar</p>` : ''}
         </div>
       </div>
       <div style="margin-bottom:20px;">
@@ -3639,239 +3940,341 @@ async function renderCommunity(el) {
       </div>
       ${communityTab === 'events' ? `
         <div class="grid-2">
-          ${events.length ? events.map(ev => `
-            <div class="card">
-              <div class="card-title">${ev.title}</div>
-              <p style="color:var(--ink-soft);font-size:14px;">${ev.description || ''}</p>
-              <p style="font-size:13px;"><strong>Fecha:</strong> ${ev.event_date ? new Date(ev.event_date).toLocaleString() : '-'}<br><strong>Lugar:</strong> ${ev.location || '-'}</p>
-              <button class="btn btn-secondary" style="width:auto" onclick="reserveEvent('${ev.id}')">Reservar</button>
-            </div>`).join('') : '<div class="empty-state">No hay eventos disponibles por ahora.</div>'}
+          ${events.length ? events.map(ev => renderEventCard(ev)).join('') : '<div class="empty-state">No hay eventos disponibles por ahora.</div>'}
         </div>` : therapiesUnlocked ? `
-        <div class="card">
-          ${therapies.length ? therapies.map(t => renderTherapyRow(t, true)).join('') : '<div class="empty-state">No hay terapias disponibles por ahora.</div>'}
-        </div>` : renderLockedOverlay(`
-          <div class="card">
-            ${therapies.length ? therapies.slice(0, 3).map(t => renderTherapyRow(t, false)).join('') : '<div class="empty-state">No hay terapias disponibles por ahora.</div>'}
-          </div>
+        ${therapies.length ? therapies.map(t => renderTherapyRow(t, true)).join('') : '<div class="empty-state">No hay terapias disponibles por ahora.</div>'}
+        ` : renderLockedOverlay(`
+          ${therapies.length ? therapies.slice(0, 3).map(t => renderTherapyRow(t, false)).join('') : '<div class="empty-state">No hay terapias disponibles por ahora.</div>'}
         `, {
           title: 'Beneficios solo para clientes activos',
           subtitle: 'Activa un plan de Coaching con tu mentor para desbloquear descuentos reales en spa, terapia, fisioterapia y más.',
-          ctaLabel: 'Ver planes',
+          ctaLabel: 'Hablar con un coach',
           ctaStyle: 'background:#2B2621;color:#F3EFE6;',
+          ctaAction: 'openWhatsappCta()',
         })}
     `;
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 function setCommunityTab(tab) { communityTab = tab; renderMain(); }
 async function reserveEvent(id) {
-  try { await api(`/api/community/events/${id}/reserve`, { method: 'POST' }); alert('Reserva confirmada.'); }
+  try { await api(`/api/community/events/${id}/reserve`, { method: 'POST' }); alert('Reserva confirmada.'); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
 }
 async function reserveTherapy(id) {
-  try { await api(`/api/community/therapies/${id}/reserve`, { method: 'POST' }); alert('Reserva confirmada.'); }
+  try { await api(`/api/community/therapies/${id}/reserve`, { method: 'POST' }); alert('Reserva confirmada.'); renderMain(); }
   catch (e) { alert('Error: ' + e.message); }
 }
 
 // ---------------- Módulo: Mi Evolución ----------------
 
-function renderConstancyCalendar(completions) {
-  const now = new Date();
-  const year = now.getFullYear(), month = now.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const completedDates = new Set(completions.map(c => c.completed_date));
-  const todayStr = now.toISOString().slice(0, 10);
-  const cells = [];
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    const done = completedDates.has(dateStr);
-    const isToday = dateStr === todayStr;
-    cells.push(`<div class="constancy-cal-day ${done ? 'done' : ''} ${isToday ? 'today' : ''}">${d}</div>`);
-  }
+// Bienestar general: dos indicadores de autoservicio (Descanso + Cortisol),
+// nunca bloqueados — se calculan de datos reales, y muestran "—" en vez de
+// "0" o un placeholder de error cuando el dato aún no existe.
+function calculateSleepQualityAvg(checkins) {
+  const recent = checkins.filter(c => c.sleep_hours != null).slice(-7);
+  if (!recent.length) return null;
+  return recent.reduce((sum, c) => sum + Number(c.sleep_hours), 0) / recent.length;
+}
+function renderBienestarGeneral(sleepAvg, weeklyRegulation) {
   return `
-    <div class="constancy-cal-grid">${cells.join('')}</div>
-    <div class="constancy-cal-legend">
-      <span><i class="ccl-dot done"></i>Con actividad</span>
-      <span><i class="ccl-dot none"></i>Sin actividad</span>
-      <span><i class="ccl-dot today"></i>Hoy</span>
+    <div style="margin-bottom:20px;">
+      <p class="section-label" style="font-size:16px;margin-bottom:2px;">Bienestar general</p>
+      <p style="font-size:11px;color:#8A8377;margin:0 0 14px;">Un resumen rápido — el detalle completo vive en sus propios módulos.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:150px;background:#fff;border:1px solid #E7DFC9;border-radius:14px;padding:16px 18px;">
+          <p style="font-size:9.5px;text-transform:uppercase;font-weight:700;color:#8A8377;margin:0 0 6px;display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#8A5FA0;display:inline-block;"></span>Descanso</p>
+          <p style="font-family:'Fraunces',serif;font-weight:700;font-size:24px;margin:0;">${sleepAvg != null ? formatSleepHours(sleepAvg) : '—'}</p>
+          <p style="font-size:10.5px;color:#8A8377;margin:2px 0 0;">Calidad de sueño promedio</p>
+        </div>
+        <div style="flex:1;min-width:150px;background:#fff;border:1px solid #E7DFC9;border-radius:14px;padding:16px 18px;">
+          <p style="font-size:9.5px;text-transform:uppercase;font-weight:700;color:#8A8377;margin:0 0 6px;display:flex;align-items:center;gap:6px;"><span style="width:6px;height:6px;border-radius:50%;background:#5B7A4E;display:inline-block;"></span>Gestión de Cortisol</p>
+          <p style="font-family:'Fraunces',serif;font-weight:700;font-size:24px;margin:0;">${weeklyRegulation != null ? weeklyRegulation : '—'}</p>
+          <p style="font-size:10.5px;color:#8A8377;margin:2px 0 0;">Momentos de regulación esta semana</p>
+        </div>
+      </div>
     </div>
   `;
 }
-function toggleConstancyCalendar() {
-  const acc = document.getElementById('constancy-accordion');
-  const btn = document.getElementById('constancy-more-btn');
-  const label = document.getElementById('constancy-more-label');
-  if (!acc || !btn || !label) return;
-  const isOpen = acc.classList.toggle('open');
-  btn.classList.toggle('open', isOpen);
-  label.textContent = isOpen ? 'Ocultar calendario' : 'Ver calendario';
+// Flecha de tendencia: el color depende de la dirección deseada de cada
+// métrica (goodDirection: 'down' o 'up'), no siempre "menos es mejor".
+function renderTrendArrow(delta, unit, goodDirection) {
+  if (delta == null) return '';
+  const isGood = goodDirection === 'down' ? delta < 0 : delta > 0;
+  const color = delta === 0 ? '#8A8377' : (isGood ? '#5B7A4E' : '#B8935A');
+  const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+  return `<p style="font-size:10.5px;font-weight:700;color:${color};margin:4px 0 0;">${arrow} ${Math.abs(delta).toFixed(1)}${unit}</p>`;
 }
-
-// lead_wellness sí puede hacer su check-in del día (autoservicio, igual que
-// Cortisol/Descanso), pero sin historial de racha, comparativas ni gráficas
-// — esas requieren semanas de datos que solo se acumulan con un plan.
-async function renderEvolutionLocked(el) {
+function renderEvolutionKpiCard(label, value, unit, delta, goodDirection) {
+  return `
+    <div style="background:#FBF7EC;border:1px solid #E7DFC9;border-radius:14px;padding:16px 14px;text-align:center;">
+      <p style="font-family:'Fraunces',serif;font-weight:700;font-size:22px;margin:0;">${value != null ? value + unit : '—'}</p>
+      <p style="font-size:9.5px;text-transform:uppercase;font-weight:700;color:#8A8377;margin:4px 0;letter-spacing:.03em;">${label}</p>
+      ${renderTrendArrow(delta, unit, goodDirection)}
+    </div>
+  `;
+}
+function renderMedidaTile(label, value, firstValue) {
+  const delta = (value != null && firstValue != null) ? Number(value) - Number(firstValue) : null;
+  return `
+    <div style="background:#FBF7EC;border:1px solid #E7DFC9;border-radius:12px;padding:12px 10px;text-align:center;">
+      <p style="font-family:'Fraunces',serif;font-weight:700;font-size:16px;margin:0;">${value ?? '—'}</p>
+      <p style="font-size:9px;text-transform:uppercase;font-weight:700;color:#8A8377;margin:3px 0;">${label}</p>
+      ${delta != null ? `<span style="font-size:10px;color:#8A8377;">${delta > 0 ? '+' : ''}${delta.toFixed(1)}</span>` : ''}
+    </div>
+  `;
+}
+// Gráfica de evolución con SVG a mano (no hay React/recharts en este
+// proyecto — es Express + JS vanilla). Cada línea se normaliza dentro de su
+// propio rango para que las pendientes se lean bien aunque las escalas de
+// peso/grasa/masa muscular sean muy distintas; la leyenda muestra el valor
+// real más reciente de cada una.
+function renderEvolutionLineChart(containerId, series) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const allMonths = Array.from(new Set(series.flatMap(s => s.points.map(p => p.month)))).sort((a, b) => a - b).slice(-6);
+  if (!allMonths.length) { container.innerHTML = '<div class="empty-state">Sin datos suficientes.</div>'; return; }
+  const w = 320, h = 150, padL = 8, padR = 8, padT = 12, padB = 20;
+  const xStep = allMonths.length > 1 ? (w - padL - padR) / (allMonths.length - 1) : 0;
+  const xFor = (month) => padL + xStep * allMonths.indexOf(month);
+  const pathsSvg = series.map(s => {
+    const pts = allMonths.map(m => s.points.find(p => p.month === m)).filter(Boolean);
+    if (!pts.length) return '';
+    const values = pts.map(p => p.value);
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = (max - min) || 1;
+    const yFor = (v) => (h - padB) - ((v - min) / range) * (h - padT - padB);
+    const d = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xFor(p.month).toFixed(1)} ${yFor(p.value).toFixed(1)}`).join(' ');
+    const dots = pts.map(p => `<circle cx="${xFor(p.month).toFixed(1)}" cy="${yFor(p.value).toFixed(1)}" r="3" fill="${s.color}"/>`).join('');
+    return `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${dots}`;
+  }).join('');
+  const xLabels = allMonths.map(m => `<text x="${xFor(m).toFixed(1)}" y="${h - 4}" font-size="8" text-anchor="middle" fill="#8A8377">M${m}</text>`).join('');
+  container.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" width="100%" style="overflow:visible;">${pathsSvg}${xLabels}</svg>
+    <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
+      ${series.map(s => {
+        const pts = allMonths.map(m => s.points.find(p => p.month === m)).filter(Boolean);
+        const latest = pts.length ? pts[pts.length - 1].value : null;
+        return `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#8A8377;">
+          <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;"></span>
+          ${s.name}: <strong style="color:#2B2621;">${latest != null ? latest + (s.unit || '') : '—'}</strong>
+        </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+function renderPersonalRecordsList(records, isAdmin) {
+  if (!records.length) return '<div class="empty-state">Aún no hay récords registrados.</div>';
+  return records.map(r => `
+    <div class="list-row">
+      <div><strong>${r.exercise_name}</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${r.initial_value || '—'} → <strong style="color:#5B7A4E;">${r.current_value || '—'}</strong></div></div>
+      ${isAdmin ? `<button class="small-btn" onclick="deletePersonalRecord('${r.id}')">Eliminar</button>` : ''}
+    </div>
+  `).join('');
+}
+function renderPersonalRecordsAdminForm() {
+  return `
+    <div class="grid-3" style="margin-bottom:12px;">
+      <div class="field"><label>Ejercicio</label><input id="pr-new-exercise"></div>
+      <div class="field"><label>Valor inicial</label><input id="pr-new-initial" placeholder="Ej. 40 kg"></div>
+      <div class="field"><label>Valor actual</label><input id="pr-new-current" placeholder="Ej. 60 kg"></div>
+    </div>
+    <button type="button" class="btn btn-ghost" style="width:auto;margin-bottom:16px;" onclick="addPersonalRecord()">+ Agregar récord</button>
+  `;
+}
+async function addPersonalRecord() {
+  const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
+  const exercise_name = document.getElementById('pr-new-exercise').value.trim();
+  if (!exercise_name) return alert('Escribe el nombre del ejercicio.');
+  const payload = {
+    exercise_name,
+    initial_value: document.getElementById('pr-new-initial').value,
+    current_value: document.getElementById('pr-new-current').value,
+  };
   try {
-    const { checkins } = await api(`/api/clients/${currentClientId()}/evolution`).catch(() => ({ checkins: [] }));
-    const last = checkins[checkins.length - 1] || {};
-    el.innerHTML = `
-      ${renderIdentityHeader('Mi Evolución', 'Tu proceso, en cifras.', '')}
-      <div class="card">
-        <div class="card-title">Check-in del mes</div>
-        <div class="grid-3">
-          <div class="field"><label>Horas de sueño promedio</label><input type="number" step="0.5" min="0" id="ev-sleep" value="${last.sleep_hours ?? ''}"></div>
-          <div class="field"><label>Adherencia al plan (%)</label><input type="number" min="0" max="100" id="ev-adherence" value="${last.adherence_pct ?? ''}"></div>
-          <div class="field"><label>Nivel de estrés (1-10)</label><input type="number" min="1" max="10" id="ev-stress" value="${last.stress_score ?? ''}"></div>
-          <div class="field"><label>¿Dolor o molestias físicas?</label><select id="ev-pain-flag" onchange="document.getElementById('ev-pain-notes-wrap').classList.toggle('conditional-hidden', this.value !== 'Sí')">
-            <option value="">Selecciona…</option><option value="Sí">Sí</option><option value="No">No</option>
-          </select></div>
-          <div class="field conditional-hidden" id="ev-pain-notes-wrap" style="grid-column:1 / -1;"><label>Describe el dolor o molestia</label><input type="text" id="ev-pain-notes"></div>
-        </div>
-        <button class="btn btn-primary" style="width:auto" onclick="saveCheckin()">Guardar check-in</button>
+    await api(`/api/clients/${clientId}/personal-records`, { method: 'POST', body: JSON.stringify(payload) });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function deletePersonalRecord(id) {
+  const clientId = currentClientId();
+  try {
+    await api(`/api/clients/${clientId}/personal-records/${id}`, { method: 'DELETE' });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function saveNextCheckinDate() {
+  const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
+  const value = document.getElementById('ev-next-checkin').value;
+  try {
+    await api(`/api/clients/${clientId}/next-checkin-date`, { method: 'PATCH', body: JSON.stringify({ next_checkin_date: value || null }) });
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function toggleCheckinAccordion() {
+  const acc = document.getElementById('checkin-accordion');
+  const btn = document.getElementById('checkin-toggle-btn');
+  if (acc) acc.classList.toggle('open');
+  if (btn) btn.classList.toggle('open');
+}
+// "Tu evolución física" — todo lo que el mentor registra en sesión (KPIs,
+// medidas, récords). Es la única sección de Mi Evolución que se bloquea
+// para lead_wellness, porque depende de que exista un mentor tomando datos.
+function renderEvolucionFisicaContent(anthropometrics, inbody, personalRecords, isAdmin, client) {
+  const firstAnthro = anthropometrics[0] || {};
+  const lastAnthro = anthropometrics[anthropometrics.length - 1] || {};
+  const firstInbody = inbody[0] || {};
+  const lastInbody = inbody[inbody.length - 1] || {};
+  const pesoVal = lastInbody.peso_total ?? lastAnthro.peso ?? null;
+  const pesoFirst = firstInbody.peso_total ?? firstAnthro.peso ?? null;
+  const pesoDelta = (pesoVal != null && pesoFirst != null) ? Number(pesoVal) - Number(pesoFirst) : null;
+  const grasaDelta = (lastInbody.grasa_pct != null && firstInbody.grasa_pct != null) ? Number(lastInbody.grasa_pct) - Number(firstInbody.grasa_pct) : null;
+  const smmDelta = (lastInbody.smm != null && firstInbody.smm != null) ? Number(lastInbody.smm) - Number(firstInbody.smm) : null;
+  const lastMeasurementDate = [lastAnthro.fecha, lastInbody.fecha].filter(Boolean).sort().pop();
+  const nextLabel = client && client.next_checkin_date ? ` · Próxima: ${client.next_checkin_date} con tu mentor` : '';
+
+  return `
+    <div style="margin:20px 0 20px;">
+      <p class="section-label" style="font-size:16px;margin-bottom:2px;">Tu evolución física</p>
+    </div>
+    ${isAdmin ? `<div class="card">
+      <div class="card-title">Próxima medición (admin)</div>
+      <div class="field" style="max-width:220px;"><label>Fecha de la próxima medición</label><input type="date" id="ev-next-checkin" value="${(client && client.next_checkin_date) || ''}"></div>
+      <button class="btn btn-ghost" style="width:auto" onclick="saveNextCheckinDate()">Guardar fecha</button>
+    </div>` : ''}
+    <div class="card">
+      <div class="card-title">KPIs principales</div>
+      <div class="grid-3" style="gap:12px;">
+        ${renderEvolutionKpiCard('Peso', pesoVal, ' kg', pesoDelta, 'down')}
+        ${renderEvolutionKpiCard('Grasa corporal', lastInbody.grasa_pct, '%', grasaDelta, 'down')}
+        ${renderEvolutionKpiCard('Masa muscular', lastInbody.smm, ' kg', smmDelta, 'up')}
       </div>
-      ${renderLockedOverlay(`
-        <div class="card">
-          <div class="card-title">KPIs más recientes</div>
-          <div class="kpi-row">
-            <div class="kpi-tile"><div class="val">7h 30m</div><div class="lbl">Horas de sueño</div></div>
-            <div class="kpi-tile"><div class="val">85%</div><div class="lbl">Adherencia</div></div>
-            <div class="kpi-tile"><div class="val">4</div><div class="lbl">Estrés</div></div>
-            <div class="kpi-tile"><div class="val">No</div><div class="lbl">Dolor/molestias</div></div>
-          </div>
+      <p style="font-size:10.5px;color:#8A8377;text-align:center;margin:12px 0 0;">${lastMeasurementDate ? `Última medición: ${lastMeasurementDate}` : 'Sin mediciones aún'}${nextLabel}</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Evolución (últimos meses)</div>
+      <div id="ev-line-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Medidas corporales</div>
+      <div class="grid-4" style="gap:10px;">
+        ${renderMedidaTile('Cintura', lastAnthro.cintura, firstAnthro.cintura)}
+        ${renderMedidaTile('Cadera', lastAnthro.gluteo, firstAnthro.gluteo)}
+        ${renderMedidaTile('Brazo', lastAnthro.brazos, firstAnthro.brazos)}
+        ${renderMedidaTile('Pierna', lastAnthro.piernas, firstAnthro.piernas)}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Récords personales</div>
+      ${isAdmin ? renderPersonalRecordsAdminForm() : ''}
+      ${renderPersonalRecordsList(personalRecords, isAdmin)}
+    </div>
+  `;
+}
+function renderEvolucionFisicaLocked() {
+  return `
+    <div style="margin:20px 0 20px;">
+      <p class="section-label" style="font-size:16px;margin-bottom:2px;">Tu evolución física</p>
+    </div>
+    ${renderLockedOverlay(`
+      <div class="card">
+        <div class="card-title">KPIs principales</div>
+        <div class="grid-3" style="gap:12px;">
+          ${renderEvolutionKpiCard('Peso', 68, ' kg', -1.2, 'down')}
+          ${renderEvolutionKpiCard('Grasa corporal', 22, '%', -2.1, 'down')}
+          ${renderEvolutionKpiCard('Masa muscular', 28, ' kg', 0.8, 'up')}
         </div>
-      `, {
-        title: 'Tu historial completo y gráficas de progreso',
-        subtitle: 'Racha, comparativas y evolución mes a mes se desbloquean con un plan — habla con un coach.',
-        ctaLabel: 'Ver planes',
-      })}
-    `;
-  } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+      </div>
+      <div class="card">
+        <div class="card-title">Medidas corporales</div>
+        <div class="grid-4" style="gap:10px;">
+          ${renderMedidaTile('Cintura', 78, 80)}
+          ${renderMedidaTile('Cadera', 96, 98)}
+          ${renderMedidaTile('Brazo', 32, 31)}
+          ${renderMedidaTile('Pierna', 54, 53)}
+        </div>
+      </div>
+    `, {
+      title: 'Tu evolución física se mide en sesión',
+      subtitle: 'Peso, medidas, % de grasa, masa muscular y récords personales los registra tu mentor en cada seguimiento — actívate con un coach para empezar a verlos aquí.',
+      ctaLabel: 'Ver planes',
+      ctaStyle: 'background:#2B2621;color:#F3EFE6;',
+      icon: '📏',
+    })}
+  `;
+}
+function renderCheckinAccordion(isAdmin) {
+  return `
+    <div class="card">
+      <button type="button" class="menu-more-btn" id="checkin-toggle-btn" style="width:100%;justify-content:space-between;background:transparent;border:none;padding:0;cursor:pointer;text-align:left;" onclick="toggleCheckinAccordion()">
+        <span style="font-family:'Fraunces',serif;font-weight:600;font-size:14.5px;">Check-in rápido del mes</span>
+        <span class="menu-more-chevron">⌄</span>
+      </button>
+      <div class="menu-accordion" id="checkin-accordion">
+        <div style="padding-top:16px;">
+          ${isAdmin ? renderAdminClientSwitcher('evolution') : ''}
+          <div class="grid-3">
+            <div class="field"><label>Horas de sueño promedio</label><input type="number" step="0.5" min="0" id="ev-sleep"></div>
+            <div class="field"><label>Adherencia al plan (%)</label><input type="number" min="0" max="100" id="ev-adherence"></div>
+            <div class="field"><label>Nivel de estrés (1-10)</label><input type="number" min="1" max="10" id="ev-stress"></div>
+            <div class="field"><label>¿Dolor o molestias físicas?</label><select id="ev-pain-flag" onchange="document.getElementById('ev-pain-notes-wrap').classList.toggle('conditional-hidden', this.value !== 'Sí')">
+              <option value="">Selecciona…</option><option value="Sí">Sí</option><option value="No">No</option>
+            </select></div>
+            <div class="field conditional-hidden" id="ev-pain-notes-wrap" style="grid-column:1 / -1;"><label>Describe el dolor o molestia</label><input type="text" id="ev-pain-notes"></div>
+          </div>
+          <button class="btn btn-primary" style="width:auto" onclick="saveCheckin()">Guardar check-in</button>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 async function renderEvolution(el) {
   const isAdmin = state.role === 'admin';
-  if (isAdmin && !currentClientId()) return renderAdminModulePicker(el, 'Mi Evolución', 'Selecciona un cliente para ver su proceso.', 'evolution');
+  if (isAdmin && !currentClientId()) {
+    await ensureClientsLoaded();
+    el.innerHTML = `
+      ${renderIdentityHeader('Mi Evolución', 'Tu proceso, en cifras.', '')}
+      ${renderCheckinAccordion(true)}
+      <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;text-align:center;">Bienestar general, evolución física y récords aparecen aquí una vez selecciones un cliente.</p>
+    `;
+    return;
+  }
   const clientId = currentClientId();
-  if (!isAdmin && state.clientType === 'lead_wellness') return renderEvolutionLocked(el);
   try {
     if (isAdmin) await ensureClientsLoaded();
-    const [{ checkins, anthropometrics, inbody }, { photos }, { completions: trainingCompletions }, { completions: cortisolCompletions }] = await Promise.all([
+    const clientType = currentClientType();
+    const accesoEvolucionFisica = clientType !== 'lead_wellness';
+    const [{ checkins, anthropometrics, inbody }, { completions: cortisolCompletions }, { client: fullClient }, personalRecordsRes] = await Promise.all([
       api(`/api/clients/${clientId}/evolution`),
-      api(`/api/clients/${clientId}/photos`),
-      api(`/api/clients/${clientId}/training-completions`).catch(() => ({ completions: [] })),
       api(`/api/clients/${clientId}/cortisol-completions`).catch(() => ({ completions: [] })),
+      api(`/api/clients/${clientId}`).catch(() => ({ client: {} })),
+      accesoEvolucionFisica ? api(`/api/clients/${clientId}/personal-records`).catch(() => ({ records: [] })) : Promise.resolve({ records: [] }),
     ]);
-    const last = checkins[checkins.length - 1] || {};
-    const firstAnthro = anthropometrics[0] || {};
-    const lastAnthro = anthropometrics[anthropometrics.length - 1] || {};
-    const firstInbody = inbody[0] || {};
-    const lastInbody = inbody[inbody.length - 1] || {};
-    const photosByAngle = angle => photos.filter(p => p.angle === angle).sort((a, b) => (Number(a.mes_num) || 0) - (Number(b.mes_num) || 0));
-    const streak = calculateStreak(trainingCompletions);
-    const cortisolStats = calculateCortisolMonthlyStats(cortisolCompletions);
-    const weightChange = (firstAnthro.peso != null && lastAnthro.peso != null) ? (lastAnthro.peso - firstAnthro.peso) : null;
+    const sleepAvg = calculateSleepQualityAvg(checkins);
+    const weeklyRegulation = calculateCortisolWeeklyStats(cortisolCompletions).count;
     el.innerHTML = `
       ${renderIdentityHeader('Mi Evolución', 'Tu proceso, en cifras.', pickMantra('evolution'))}
-      <div class="hero" style="background:linear-gradient(135deg, #4A3510, #5C4318);">
-        <div class="hero-glow"></div>
-        <p class="hero-eyebrow" style="color:#E8C97D;">TU RACHA</p>
-        <p class="hero-figure">${streak} día${streak === 1 ? '' : 's'}</p>
-        <p class="hero-meta">${trainingCompletions.length} sesión${trainingCompletions.length === 1 ? '' : 'es'} en total${weightChange != null ? ` · ${weightChange > 0 ? '+' : ''}${weightChange.toFixed(1)} kg desde tu primer registro` : ''}</p>
-      </div>
-      <div class="card">
-        <div class="card-title">Check-in del mes</div>
-        ${isAdmin ? renderAdminClientSwitcher('evolution') : ''}
-        <div class="grid-3">
-          <div class="field"><label>Horas de sueño promedio</label><input type="number" step="0.5" min="0" id="ev-sleep"></div>
-          <div class="field"><label>Adherencia al plan (%)</label><input type="number" min="0" max="100" id="ev-adherence"></div>
-          <div class="field"><label>Nivel de estrés (1-10)</label><input type="number" min="1" max="10" id="ev-stress"></div>
-          <div class="field"><label>¿Dolor o molestias físicas?</label><select id="ev-pain-flag" onchange="document.getElementById('ev-pain-notes-wrap').classList.toggle('conditional-hidden', this.value !== 'Sí')">
-            <option value="">Selecciona…</option><option value="Sí">Sí</option><option value="No">No</option>
-          </select></div>
-          <div class="field conditional-hidden" id="ev-pain-notes-wrap" style="grid-column:1 / -1;"><label>Describe el dolor o molestia</label><input type="text" id="ev-pain-notes"></div>
-        </div>
-        <button class="btn btn-primary" style="width:auto" onclick="saveCheckin()">Guardar check-in</button>
-      </div>
-      <div class="card" style="padding:22px 24px;">
-        <span class="source-pill">Momento de regulación · Gestión de Cortisol</span>
-        <div class="progress-card-row">
-          ${renderMiniRing(cortisolStats.pct, 46)}
-          <div style="flex:1;">
-            <p style="font-family:'Fraunces',serif;font-weight:600;font-size:16px;margin:0;color:var(--ink);">Técnicas de regulación este mes</p>
-            <p style="font-size:12.5px;color:var(--ink-soft);margin:3px 0 0;">${cortisolStats.doneDays} de ${cortisolStats.expected} días con actividad</p>
-          </div>
-          <span style="font-size:13.5px;font-weight:700;color:#5B7A4E;flex-shrink:0;">${cortisolStats.pct}%</span>
-        </div>
-        <button type="button" class="menu-more-btn" id="constancy-more-btn" style="width:auto;height:36px;background:transparent;border:1px solid #E7DFC9;border-radius:100px;font-size:12.5px;font-weight:700;color:#2B2621;padding:0 16px;margin-top:14px;" onclick="toggleConstancyCalendar()">
-          <span id="constancy-more-label">Ver calendario</span>
-          <span class="menu-more-chevron">⌄</span>
-        </button>
-        <div class="menu-accordion" id="constancy-accordion" style="margin-top:14px;">
-          ${renderConstancyCalendar(cortisolCompletions)}
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">KPIs más recientes</div>
-        <div class="kpi-row">
-          <div class="kpi-tile"><div class="val">${last.sleep_hours ?? '-'}</div><div class="lbl">Horas de sueño</div></div>
-          <div class="kpi-tile"><div class="val">${last.adherence_pct != null ? last.adherence_pct + '%' : '-'}</div><div class="lbl">Adherencia</div></div>
-          <div class="kpi-tile"><div class="val">${last.stress_score ?? '-'}</div><div class="lbl">Estrés</div></div>
-          <div class="kpi-tile"><div class="val">${last.pain_flag == null ? '-' : (last.pain_flag ? 'Sí' : 'No')}</div><div class="lbl">Dolor/molestias</div></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Comparativa antropométrica</div>
-        <table><thead><tr><th></th><th>Primera medición</th><th>Última medición</th><th>Diferencia</th></tr></thead>
-        <tbody>
-          ${['peso','cintura','brazos','hombros','piernas','gluteo'].map(k => `
-            <tr><td>${k}</td><td>${firstAnthro[k] ?? '-'}</td><td>${lastAnthro[k] ?? '-'}</td>
-            <td>${(firstAnthro[k] != null && lastAnthro[k] != null) ? (lastAnthro[k]-firstAnthro[k]).toFixed(1) : '-'}</td></tr>
-          `).join('')}
-        </tbody></table>
-      </div>
-      <div class="card">
-        <div class="card-title">Comparativa InBody</div>
-        ${inbody.length ? `<table><thead><tr><th></th><th>Primera medición</th><th>Última medición</th><th>Diferencia</th></tr></thead>
-        <tbody>
-          ${[['peso_total','Peso total'],['smm','Masa muscular esquelética'],['grasa_pct','% Grasa corporal'],['peso_objetivo','Peso objetivo'],['grasa_visceral','Grasa visceral'],['bmr','Metabolismo basal (BMR)'],['angulo_fase','Ángulo de fase'],['ecw_tbw','Agua corporal total'],['masa_osea','Masa ósea'],['altura','Estatura'],['imc','IMC']].map(([k, label]) => `
-            <tr><td>${label}</td><td>${firstInbody[k] ?? '-'}</td><td>${lastInbody[k] ?? '-'}</td>
-            <td>${(firstInbody[k] != null && lastInbody[k] != null) ? (lastInbody[k]-firstInbody[k]).toFixed(1) : '-'}</td></tr>
-          `).join('')}
-        </tbody></table>` : '<div class="empty-state">Aún no hay registros InBody para comparar.</div>'}
-      </div>
-      <div class="card">
-        <div class="card-title">Comparativa de fotos</div>
-        ${photos.length ? `<div class="grid-3">
-          ${PHOTO_ANGLES.map(a => {
-            const list = photosByAngle(a.key);
-            if (!list.length) return '';
-            const firstP = list[0];
-            const lastP = list[list.length - 1];
-            return `<div>
-              <p style="font-size:13px;font-weight:600;margin:0 0 6px;">${a.label}</p>
-              <div style="display:flex;gap:8px;">
-                <div style="flex:1;"><img class="photo-thumb" src="${firstP.photo_url}" onclick="openPhotoPreview('${firstP.photo_url}','${a.label} · ${firstP.fecha}')"><p style="text-align:center;font-size:11px;color:var(--ink-soft);">${firstP.mes_num ? `Mes ${firstP.mes_num}` : firstP.fecha}</p></div>
-                ${list.length > 1 ? `<div style="flex:1;"><img class="photo-thumb" src="${lastP.photo_url}" onclick="openPhotoPreview('${lastP.photo_url}','${a.label} · ${lastP.fecha}')"><p style="text-align:center;font-size:11px;color:var(--ink-soft);">${lastP.mes_num ? `Mes ${lastP.mes_num}` : lastP.fecha}</p></div>` : ''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>` : '<div class="empty-state">Aún no hay fotos para comparar.</div>'}
-      </div>
-      <div class="card">
-        <div class="card-title">Evolución mes a mes</div>
-        <div class="grid-3">
-          <div><p style="font-size:13px;font-weight:600;margin:0 0 6px;">Peso total</p><div id="ev-chart-peso"></div></div>
-          <div><p style="font-size:13px;font-weight:600;margin:0 0 6px;">% Grasa</p><div id="ev-chart-grasa"></div></div>
-          <div><p style="font-size:13px;font-weight:600;margin:0 0 6px;">Masa muscular</p><div id="ev-chart-smm"></div></div>
-        </div>
-      </div>
+      ${isAdmin ? `<div class="card"><div class="card-title">Cliente</div>${renderAdminClientSwitcher('evolution')}</div>` : ''}
+      ${renderBienestarGeneral(sleepAvg, weeklyRegulation)}
+      ${accesoEvolucionFisica
+        ? renderEvolucionFisicaContent(anthropometrics, inbody, personalRecordsRes.records || [], isAdmin, fullClient)
+        : renderEvolucionFisicaLocked()}
+      ${renderCheckinAccordion(false)}
     `;
-    renderSimpleBarChart('ev-chart-peso', inbody.filter(r => r.mes_num && r.peso_total != null).map(r => ({ month: r.mes_num, value: Number(r.peso_total) })), { unit: ' kg' });
-    renderSimpleBarChart('ev-chart-grasa', inbody.filter(r => r.mes_num && r.grasa_pct != null).map(r => ({ month: r.mes_num, value: Number(r.grasa_pct) })), { unit: '%' });
-    renderSimpleBarChart('ev-chart-smm', inbody.filter(r => r.mes_num && r.smm != null).map(r => ({ month: r.mes_num, value: Number(r.smm) })), { unit: ' kg' });
+    if (accesoEvolucionFisica) {
+      renderEvolutionLineChart('ev-line-chart', [
+        { name: 'Peso', color: '#2B2621', unit: ' kg', points: inbody.filter(r => r.mes_num && r.peso_total != null).map(r => ({ month: r.mes_num, value: Number(r.peso_total) })) },
+        { name: 'Grasa', color: '#5B7A4E', unit: '%', points: inbody.filter(r => r.mes_num && r.grasa_pct != null).map(r => ({ month: r.mes_num, value: Number(r.grasa_pct) })) },
+        { name: 'Masa muscular', color: '#B8935A', unit: ' kg', points: inbody.filter(r => r.mes_num && r.smm != null).map(r => ({ month: r.mes_num, value: Number(r.smm) })) },
+      ]);
+    }
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 async function saveCheckin() {
   const clientId = currentClientId();
+  if (!clientId) return alert('Selecciona un cliente primero.');
   const painFlagVal = document.getElementById('ev-pain-flag').value;
   const payload = {
     fecha: new Date().toISOString().slice(0,10),
@@ -4175,50 +4578,117 @@ async function markNotificationRead(id) {
 
 // ---------------- Módulo admin: Biblioteca de frases de mentalidad ----------------
 
-async function renderAdminQuotes(el) {
-  try {
-    const { quotes } = await api('/api/admin/quotes');
-    state.quotes = quotes;
-    el.innerHTML = `
-      <div class="page-header"><h2>Frases de mentalidad</h2><p>Aparecen en el menú principal del módulo Entrenamiento, precedidas de "Hola [nombre], repite después de mí:". Escríbelas como afirmaciones en primera persona.</p></div>
-      <div class="card">
-        <div class="card-title">Nueva frase</div>
-        <div class="field"><label>Frase</label><textarea id="qt-new-quote" rows="2" placeholder="Ej: Estoy trabajando en mi cuerpo con amor y disciplina"></textarea></div>
-        <div class="field" style="max-width:280px;"><label>Autor (opcional)</label><input id="qt-new-author"></div>
-        <button class="btn btn-primary" style="width:auto" onclick="createQuote()">Agregar</button>
+let quotesUI = { editingId: null, libraryOpen: false };
+function renderQuoteEditForm(q) {
+  return `
+    <div class="list-row" style="display:block;">
+      <div class="field"><label>Frase</label><textarea id="qt-edit-quote-${q.id}" rows="2">${q.quote}</textarea></div>
+      <div class="field" style="max-width:280px;"><label>Autor (opcional)</label><input id="qt-edit-author-${q.id}" value="${q.author || ''}"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="width:auto" onclick="updateQuote('${q.id}')">Guardar</button>
+        <button class="btn btn-ghost" style="width:auto" onclick="toggleEditQuote(null)">Cancelar</button>
       </div>
-      <div class="card">
-        ${quotes.length ? quotes.map(q => `
+    </div>
+  `;
+}
+function renderQuotesLibraryCard(quotes) {
+  return `
+    <div class="accordion-item" id="quotes-library-card">
+      <button class="accordion-header" type="button" onclick="toggleQuotesLibraryAccordion()">
+        Frases en la biblioteca <span style="color:var(--ink-soft);font-weight:400;">— ${quotes.length}</span>
+        <span class="accordion-toggle">Ver</span>
+      </button>
+      <div class="accordion-content ${quotesUI.libraryOpen ? 'active' : ''}">
+        ${quotes.length ? quotes.map(q => quotesUI.editingId === q.id ? renderQuoteEditForm(q) : `
           <div class="list-row" style="${q.active ? '' : 'opacity:.5;'}">
             <div>
               <p style="margin:0;">"${q.quote}"</p>
               ${q.author ? `<div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">— ${q.author}</div>` : ''}
             </div>
             <div style="display:flex;gap:8px;">
-              <button class="small-btn" onclick="toggleQuoteActive('${q.id}', ${!q.active})">${q.active ? 'Desactivar' : 'Activar'}</button>
+              <button class="small-btn" onclick="toggleEditQuote('${q.id}')">Editar</button>
               <button class="small-btn" onclick="deleteQuote('${q.id}')">Eliminar</button>
             </div>
           </div>
         `).join('') : '<div class="empty-state">Aún no hay frases en la biblioteca.</div>'}
       </div>
+    </div>
+  `;
+}
+async function renderAdminQuotes(el) {
+  try {
+    const { quotes } = await api('/api/admin/quotes');
+    state.quotes = quotes;
+    window._adminQuotes = quotes;
+    el.innerHTML = `
+      <div class="page-header"><h2>Frases de mentalidad</h2><p>Aparecen en el menú principal del módulo Entrenamiento, precedidas de "Hola [nombre], repite después de mí:". Escríbelas como afirmaciones en primera persona.</p></div>
+      <div class="card">
+        <div class="accordion">
+          <div class="accordion-item">
+            <button class="accordion-header" type="button" onclick="toggleAccordion(this)">
+              Nueva frase
+              <span class="accordion-toggle">Ver</span>
+            </button>
+            <div class="accordion-content">
+              <div class="field"><label>Frase</label><textarea id="qt-new-quote" rows="2" placeholder="Ej: Estoy trabajando en mi cuerpo con amor y disciplina"></textarea></div>
+              <div class="field" style="max-width:280px;"><label>Autor (opcional)</label><input id="qt-new-author"></div>
+              <button class="btn btn-primary" style="width:auto" onclick="createQuote()">Agregar</button>
+            </div>
+          </div>
+          ${renderQuotesLibraryCard(quotes)}
+        </div>
+      </div>
     `;
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+function toggleEditQuote(id) {
+  quotesUI.editingId = id;
+  const container = document.getElementById('quotes-library-card');
+  if (container) container.outerHTML = renderQuotesLibraryCard(window._adminQuotes || []);
+}
+function toggleQuotesLibraryAccordion() {
+  quotesUI.libraryOpen = !quotesUI.libraryOpen;
+  const container = document.getElementById('quotes-library-card');
+  if (container) container.outerHTML = renderQuotesLibraryCard(window._adminQuotes || []);
+}
+async function refetchAdminQuotes() {
+  const container = document.getElementById('quotes-library-card');
+  if (!container) return;
+  const { quotes } = await api('/api/admin/quotes');
+  state.quotes = quotes;
+  window._adminQuotes = quotes;
+  container.outerHTML = renderQuotesLibraryCard(quotes);
+}
+async function updateQuote(id) {
+  const quote = document.getElementById(`qt-edit-quote-${id}`).value.trim();
+  const author = document.getElementById(`qt-edit-author-${id}`).value.trim();
+  if (!quote) return alert('Escribe una frase.');
+  try {
+    await api(`/api/admin/quotes/${id}`, { method: 'PATCH', body: JSON.stringify({ quote, author: author || null }) });
+    quotesUI.editingId = null;
+    await refetchAdminQuotes();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 async function createQuote() {
   const quote = document.getElementById('qt-new-quote').value.trim();
   const author = document.getElementById('qt-new-author').value.trim();
   if (!quote) return alert('Escribe una frase.');
-  try { await api('/api/admin/quotes', { method: 'POST', body: JSON.stringify({ quote, author: author || null }) }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
-}
-async function toggleQuoteActive(id, active) {
-  try { await api(`/api/admin/quotes/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api('/api/admin/quotes', { method: 'POST', body: JSON.stringify({ quote, author: author || null }) });
+    if (document.getElementById('quotes-library-card')) {
+      document.getElementById('qt-new-quote').value = '';
+      document.getElementById('qt-new-author').value = '';
+      await refetchAdminQuotes();
+    } else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 async function deleteQuote(id) {
   if (!confirm('¿Eliminar esta frase?')) return;
-  try { await api(`/api/admin/quotes/${id}`, { method: 'DELETE' }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api(`/api/admin/quotes/${id}`, { method: 'DELETE' });
+    if (document.getElementById('quotes-library-card')) await refetchAdminQuotes();
+    else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 
 let adminCommunityPreviewType = 'coaching_1_1';
@@ -4242,8 +4712,9 @@ async function renderAdminCommunity(el) {
           {
             title: 'Beneficios solo para clientes activos',
             subtitle: 'Activa un plan de Coaching con tu mentor para desbloquear descuentos reales en spa, terapia, fisioterapia y más.',
-            ctaLabel: 'Ver planes',
+            ctaLabel: 'Hablar con un coach',
             ctaStyle: 'background:#2B2621;color:#F3EFE6;',
+            ctaAction: 'openWhatsappCta()',
           }
         );
     el.innerHTML = `
@@ -4280,7 +4751,7 @@ async function renderAdminCommunity(el) {
         <div class="card-title">Eventos publicados</div>
         ${events.map(e => `
           <div class="list-row" style="${e.active === false ? 'opacity:.5;' : ''}">
-            <div><strong>${e.title}</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${e.event_date ? new Date(e.event_date).toLocaleString() : 'Sin fecha'}${e.location ? ' · ' + e.location : ''}</div></div>
+            <div><strong>${e.title}</strong><div style="font-size:12px;color:var(--ink-soft);margin-top:2px;">${e.event_date ? formatEventDateTime(e.event_date) : 'Sin fecha'}${e.location ? ' · ' + e.location : ''}</div></div>
             <div style="display:flex;gap:8px;">
               <button class="small-btn" onclick="toggleEventActive('${e.id}', ${e.active === false})">${e.active === false ? 'Activar' : 'Desactivar'}</button>
               <button class="small-btn" onclick="deleteEvent('${e.id}')">Eliminar</button>
@@ -4337,7 +4808,7 @@ async function renderAdminCommunityReservations(el) {
     const eventAccordionHtml = eventGroups.length
       ? eventGroups.map((group) => {
           const first = group[0];
-          const dateLabel = first.eventDate ? new Date(first.eventDate).toLocaleString() : 'Sin fecha';
+          const dateLabel = first.eventDate ? formatEventDateTime(first.eventDate) : 'Sin fecha';
           return `
             <div class="accordion-item">
               <button class="accordion-header" type="button" onclick="toggleAccordion(this)">

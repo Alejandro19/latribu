@@ -1267,7 +1267,11 @@ app.delete('/api/admin/cortisol-tips/:tipId', authMiddleware, adminOnly, async (
 app.get('/api/community/events', authMiddleware, requireEventsAccess, async (req, res) => {
   try {
     const events = await dbGet('community_events', { active: true }, { order: { column: 'event_date', ascending: true } });
-    return ok(res, { events });
+    const reservations = events.length ? await dbGet('event_reservations', { status: 'confirmada' }) : [];
+    const countByEvent = {};
+    reservations.forEach((r) => { countByEvent[r.event_id] = (countByEvent[r.event_id] || 0) + 1; });
+    const eventsWithCounts = events.map((e) => ({ ...e, confirmed_count: countByEvent[e.id] || 0 }));
+    return ok(res, { events: eventsWithCounts });
   } catch (e) {
     console.error(e);
     return err(res, 'Error al obtener eventos.', 500);
@@ -1348,7 +1352,11 @@ app.get('/api/clients/:id/event-reservations', authMiddleware, ownerOrAdmin, req
 app.get('/api/community/therapies', authMiddleware, requireEventsAccess, async (req, res) => {
   try {
     const therapies = await dbGet('community_therapies', { active: true }, { order: { column: 'sort_order', ascending: true } });
-    return ok(res, { therapies });
+    const reservations = therapies.length ? await dbGet('therapy_reservations', { status: 'confirmada' }) : [];
+    const countByTherapy = {};
+    reservations.forEach((r) => { countByTherapy[r.therapy_id] = (countByTherapy[r.therapy_id] || 0) + 1; });
+    const therapiesWithCounts = therapies.map((t) => ({ ...t, confirmed_count: countByTherapy[t.id] || 0 }));
+    return ok(res, { therapies: therapiesWithCounts });
   } catch (e) {
     console.error(e);
     return err(res, 'Error al obtener terapias.', 500);
@@ -1489,6 +1497,31 @@ app.get('/api/community/reservations', authMiddleware, adminOnly, async (req, re
 });
 
 // ------------------------------------------------------------
+// Descanso: protocolo de sueño personalizado (solo coaching_1_1/online)
+// ------------------------------------------------------------
+
+app.get('/api/clients/:id/sleep-protocol', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const protocol = await dbGetOne('sleep_protocols', { client_id: req.params.id });
+    return ok(res, { protocol: protocol || null });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener el protocolo de sueño.', 500);
+  }
+});
+
+app.put('/api/clients/:id/sleep-protocol', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const { protocol_text, sleep_window, supplement } = req.body;
+    const protocol = await dbUpsertByClient('sleep_protocols', req.params.id, { protocol_text, sleep_window, supplement });
+    return ok(res, { protocol });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al guardar el protocolo de sueño.', 500);
+  }
+});
+
+// ------------------------------------------------------------
 // Mi Evolución: KPIs de progreso
 // ------------------------------------------------------------
 
@@ -1516,6 +1549,56 @@ app.post('/api/clients/:id/evolution', authMiddleware, ownerOrAdmin, requireOnbo
   } catch (e) {
     console.error(e);
     return err(res, 'Error al guardar check-in de evolución.', 500);
+  }
+});
+
+app.get('/api/clients/:id/personal-records', authMiddleware, ownerOrAdmin, requireOnboardingComplete, async (req, res) => {
+  try {
+    const records = await dbGet('personal_records', { client_id: req.params.id }, { order: { column: 'sort_order', ascending: true } });
+    return ok(res, { records });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener récords personales.', 500);
+  }
+});
+
+app.post('/api/clients/:id/personal-records', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const record = await dbInsert('personal_records', { client_id: req.params.id, ...req.body });
+    return ok(res, { record }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al crear récord personal.', 500);
+  }
+});
+
+app.put('/api/clients/:id/personal-records/:recordId', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const record = await dbUpdate('personal_records', req.params.recordId, req.body);
+    return ok(res, { record });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al actualizar récord personal.', 500);
+  }
+});
+
+app.delete('/api/clients/:id/personal-records/:recordId', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    await dbDelete('personal_records', req.params.recordId);
+    return ok(res, { message: 'Récord eliminado.' });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al eliminar récord personal.', 500);
+  }
+});
+
+app.patch('/api/clients/:id/next-checkin-date', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const client = await dbUpdate('clients', req.params.id, { next_checkin_date: req.body.next_checkin_date || null });
+    return ok(res, { client });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al actualizar la próxima medición.', 500);
   }
 });
 
