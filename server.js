@@ -871,6 +871,63 @@ app.delete('/api/admin/quotes/:qid', authMiddleware, adminOnly, async (req, res)
   }
 });
 
+// Herramientas para dormir (Descanso) — banco global, no por cliente.
+const DEFAULT_REST_TOOLS = [
+  { name: 'Sonidos para dormir', meta: 'Ruido blanco + respiración guiada · 20 min', action: 'play', minutes: 20 },
+  { name: 'NSDR · Descanso profundo sin dormir', meta: '10 min · para siestas o resets a media tarde', action: 'play', minutes: 10 },
+  { name: 'Diario de descarga mental', meta: 'Escribe lo que ronda tu cabeza antes de apagar la luz', action: 'write', minutes: null },
+];
+app.get('/api/rest-tools', authMiddleware, async (req, res) => {
+  try {
+    let all = await dbGet('rest_tools', {});
+    if (!all.length) {
+      await Promise.all(DEFAULT_REST_TOOLS.map((t, i) => dbInsert('rest_tools', { ...t, sort_order: i })));
+      all = await dbGet('rest_tools', {});
+    }
+    const tools = all.filter((t) => t.active).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+    return ok(res, { tools });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener herramientas para dormir.', 500);
+  }
+});
+app.get('/api/admin/rest-tools', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const tools = await dbGet('rest_tools', {}, { order: { column: 'sort_order', ascending: true } });
+    return ok(res, { tools });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener herramientas para dormir.', 500);
+  }
+});
+app.post('/api/admin/rest-tools', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const tool = await dbInsert('rest_tools', req.body);
+    return ok(res, { tool }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al crear la herramienta.', 500);
+  }
+});
+app.put('/api/admin/rest-tools/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    const tool = await dbUpdate('rest_tools', req.params.id, req.body);
+    return ok(res, { tool });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al actualizar la herramienta.', 500);
+  }
+});
+app.delete('/api/admin/rest-tools/:id', authMiddleware, adminOnly, async (req, res) => {
+  try {
+    await dbDelete('rest_tools', req.params.id);
+    return ok(res, { message: 'Herramienta eliminada.' });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al eliminar la herramienta.', 500);
+  }
+});
+
 app.get('/api/clients/:id/notifications', authMiddleware, ownerOrAdmin, async (req, res) => {
   try {
     const notifications = await dbGet('client_notifications', { client_id: req.params.id }, { order: { column: 'created_at', ascending: false } });

@@ -271,3 +271,22 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS next_checkin_date DATE;
+
+-- Herramientas para dormir (Descanso): banco global editable por el admin,
+-- reemplaza el array hardcodeado REST_TOOLS. Se auto-siembra con los 3
+-- valores por defecto la primera vez que se pide (ver GET /api/rest-tools).
+CREATE TABLE IF NOT EXISTS rest_tools (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  meta TEXT,
+  action TEXT NOT NULL DEFAULT 'play' CHECK (action IN ('play','write')),
+  minutes INT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+ALTER TABLE rest_tools ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON rest_tools USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

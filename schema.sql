@@ -279,6 +279,20 @@ CREATE TABLE cortisol_tips (
 );
 
 -- ------------------------------------------------------------
+-- Herramientas para dormir (Descanso): banco global editable por el admin
+-- (no por cliente), igual que mindset_quotes/cortisol_tips. "play" usa el
+-- temporizador real (minutes); "write" abre el diario de descarga mental.
+CREATE TABLE rest_tools (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  meta TEXT,
+  action TEXT NOT NULL DEFAULT 'play' CHECK (action IN ('play','write')),
+  minutes INT,
+  active BOOLEAN NOT NULL DEFAULT true,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Descanso: protocolo de sueño personalizado, escrito por el mentor.
 -- Solo aplica a clientes con plan activo (coaching_1_1 / coaching_online) —
 -- para lead_wellness se muestra siempre el protocolo genérico de 4 pilares,

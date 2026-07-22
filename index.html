@@ -3616,19 +3616,15 @@ function restPillarIcon(key) {
   return `<svg width="26" height="26" viewBox="0 0 26 26" fill="none">${REST_PILLAR_ICONS[key] || ''}</svg>`;
 }
 
-// Herramientas priorizadas, mismo criterio que los pilares: pocas, de alto
-// impacto, no una lista exhaustiva de "todo lo que existe".
-const REST_TOOLS = [
-  { id: 'sounds', name: 'Sonidos para dormir', meta: 'Ruido blanco + respiración guiada · 20 min', minutes: 20, action: 'play' },
-  { id: 'nsdr', name: 'NSDR · Descanso profundo sin dormir', meta: '10 min · para siestas o resets a media tarde', minutes: 10, action: 'play' },
-  { id: 'journal', name: 'Diario de descarga mental', meta: 'Escribe lo que ronda tu cabeza antes de apagar la luz', action: 'write' },
-];
+// Herramientas para dormir: banco global editable por el admin desde el
+// propio módulo (tabla rest_tools, se auto-siembra con 3 valores por
+// defecto la primera vez — ver GET /api/rest-tools).
 const REST_TOOL_ICONS = {
   sound: '<path d="M4 12h2M8 8v8M12 5v14M16 8v8M20 12h-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
   journal: '<path d="M6 4h12a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.4" fill="none"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>',
 };
-function renderRestToolIcon(id) {
-  const path = id === 'journal' ? REST_TOOL_ICONS.journal : REST_TOOL_ICONS.sound;
+function renderRestToolIcon(action) {
+  const path = action === 'write' ? REST_TOOL_ICONS.journal : REST_TOOL_ICONS.sound;
   return `<span style="width:34px;height:34px;border-radius:50%;background:#F1EAF7;color:#8A5FA0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none">${path}</svg></span>`;
 }
 let restToolState = { activeTimer: null, journalOpen: false };
@@ -3676,21 +3672,29 @@ async function renderRest(el) {
   const isAdmin = state.role === 'admin';
   const clientId = currentClientId();
   stopRestToolTimer();
+  if (isAdmin && !clientId) {
+    await ensureClientsLoaded();
+    const { tools } = await api('/api/admin/rest-tools').catch(() => ({ tools: [] }));
+    el.innerHTML = `
+      ${renderIdentityHeader('Descanso', 'Selecciona un cliente para ver y asignar su protocolo.', '')}
+      ${renderSleepProtocolAdminForm(null)}
+      ${renderRestToolsCard(tools, true)}
+    `;
+    return;
+  }
   try {
     let sleepLabel = null;
     let sleepProtocol = null;
-    if (isAdmin && !clientId) {
-      await ensureClientsLoaded();
-    } else {
-      if (isAdmin) await ensureClientsLoaded();
-      const [{ checkins }, protocolRes] = await Promise.all([
-        api(`/api/clients/${clientId}/evolution`),
-        api(`/api/clients/${clientId}/sleep-protocol`).catch(() => ({ protocol: null })),
-      ]);
-      const last = checkins[checkins.length - 1] || {};
-      sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
-      sleepProtocol = protocolRes.protocol || null;
-    }
+    if (isAdmin) await ensureClientsLoaded();
+    const [{ checkins }, protocolRes, toolsRes] = await Promise.all([
+      api(`/api/clients/${clientId}/evolution`),
+      api(`/api/clients/${clientId}/sleep-protocol`).catch(() => ({ protocol: null })),
+      api(isAdmin ? '/api/admin/rest-tools' : '/api/rest-tools').catch(() => ({ tools: [] })),
+    ]);
+    const last = checkins[checkins.length - 1] || {};
+    sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
+    sleepProtocol = protocolRes.protocol || null;
+    const restTools = toolsRes.tools || [];
     const clientType = currentClientType();
     const esClienteActivo = clientType === 'coaching_1_1' || clientType === 'coaching_online';
     const heroFallback = `<button class="hero-btn" style="margin-top:4px;" onclick="setView('evolution')">Hacer tu check-in de hoy</button>`;
@@ -3698,7 +3702,7 @@ async function renderRest(el) {
       <div style="margin-bottom:20px;">
         <p class="section-label" style="font-size:16px;margin-bottom:2px;">Tu protocolo de sueño</p>
         <p style="font-size:11px;color:#8A8377;margin:0 0 14px;">Los 4 pilares que más impacto tienen en tu descanso, según biohacking de sueño.</p>
-        ${isAdmin ? `<div class="card">${renderAdminClientSwitcher('rest')}${!clientId ? '<div class="empty-state">Selecciona un cliente para ver sus horas de sueño.</div>' : ''}</div>` : ''}
+        ${isAdmin ? `<div class="card">${renderAdminClientSwitcher('rest')}</div>` : ''}
         <div class="grid-2" style="gap:12px;">
           ${REST_PILLARS.map(p => `
             <div style="background:#FBF7EC;border:1px solid #E7DFC9;border-radius:14px;padding:14px 16px;">
@@ -3729,30 +3733,134 @@ async function renderRest(el) {
         ${sleepLabel ? '<p class="hero-meta">Calidad de sueño y hora de dormir: próximamente</p>' : heroFallback}
       </div>` : ''}
       ${protocolHtml}
-      <div class="card">
-        <div class="card-title">Herramientas para dormir</div>
-        ${REST_TOOLS.map(t => `
-          <div class="list-row">
-            <div style="display:flex;align-items:center;gap:12px;">
-              ${renderRestToolIcon(t.id)}
-              <div>
-                <strong style="font-family:'Fraunces',serif;font-weight:600;font-size:14px;">${t.name}</strong>
-                <div style="font-size:11px;color:#8A8377;margin-top:2px;">${t.meta}</div>
-              </div>
-            </div>
-            ${t.action === 'write'
-              ? `<button class="small-btn" style="height:34px;" onclick="toggleRestJournal()">Escribir</button>`
-              : `<button class="small-btn" style="height:34px;" onclick="startRestToolTimer('${t.id}', ${t.minutes})">Reproducir</button>`}
-          </div>
-        `).join('')}
-        <div id="rest-tool-panel" style="margin-top:12px;"></div>
-      </div>
+      ${renderRestToolsCard(restTools, isAdmin)}
       <div style="text-align:center;">
         <span class="source-pill" style="margin-bottom:0;">Magnesio nocturno · Nutrición</span>
       </div>
       ${conversionCtaHtml}
     `;
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
+}
+let restToolsUI = { editingId: null };
+function renderRestToolEditForm(t) {
+  return `
+    <div class="list-row" style="display:block;">
+      <div class="grid-3">
+        <div class="field"><label>Nombre</label><input id="rt-edit-name-${t.id}" value="${t.name || ''}"></div>
+        <div class="field"><label>Tipo</label><select id="rt-edit-action-${t.id}" onchange="document.getElementById('rt-edit-minutes-wrap-${t.id}').style.display = this.value === 'play' ? '' : 'none'">
+          <option value="play" ${t.action === 'play' ? 'selected' : ''}>Reproducir (con temporizador)</option>
+          <option value="write" ${t.action === 'write' ? 'selected' : ''}>Escribir (diario)</option>
+        </select></div>
+        <div class="field" id="rt-edit-minutes-wrap-${t.id}" style="${t.action === 'write' ? 'display:none;' : ''}"><label>Minutos</label><input type="number" id="rt-edit-minutes-${t.id}" value="${t.minutes ?? ''}"></div>
+      </div>
+      <div class="field"><label>Descripción</label><input id="rt-edit-meta-${t.id}" value="${t.meta || ''}"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="width:auto" onclick="updateRestTool('${t.id}')">Guardar</button>
+        <button class="btn btn-ghost" style="width:auto" onclick="toggleEditRestTool(null)">Cancelar</button>
+      </div>
+    </div>
+  `;
+}
+function toggleEditRestTool(id) {
+  restToolsUI.editingId = id;
+  refreshRestToolsList();
+}
+function refreshRestToolsList() {
+  const container = document.getElementById('rest-tools-list');
+  if (!container) return;
+  container.innerHTML = renderRestToolsListInner(window._restTools || [], true);
+}
+async function refetchRestTools() {
+  const container = document.getElementById('rest-tools-list');
+  if (!container) return;
+  const { tools } = await api('/api/admin/rest-tools');
+  window._restTools = tools;
+  container.innerHTML = renderRestToolsListInner(tools, true);
+}
+async function createRestTool() {
+  const name = document.getElementById('rt-new-name').value.trim();
+  if (!name) return alert('Escribe un nombre.');
+  const action = document.getElementById('rt-new-action').value;
+  const payload = {
+    name,
+    meta: document.getElementById('rt-new-meta').value,
+    action,
+    minutes: action === 'play' ? (document.getElementById('rt-new-minutes').value || null) : null,
+  };
+  try {
+    await api('/api/admin/rest-tools', { method: 'POST', body: JSON.stringify(payload) });
+    ['rt-new-name', 'rt-new-meta', 'rt-new-minutes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    await refetchRestTools();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function updateRestTool(id) {
+  const action = document.getElementById(`rt-edit-action-${id}`).value;
+  const payload = {
+    name: document.getElementById(`rt-edit-name-${id}`).value,
+    meta: document.getElementById(`rt-edit-meta-${id}`).value,
+    action,
+    minutes: action === 'play' ? (document.getElementById(`rt-edit-minutes-${id}`).value || null) : null,
+  };
+  try {
+    await api(`/api/admin/rest-tools/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    restToolsUI.editingId = null;
+    await refetchRestTools();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function toggleRestToolActive(id, active) {
+  try {
+    await api(`/api/admin/rest-tools/${id}`, { method: 'PUT', body: JSON.stringify({ active }) });
+    await refetchRestTools();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function deleteRestTool(id) {
+  try {
+    await api(`/api/admin/rest-tools/${id}`, { method: 'DELETE' });
+    await refetchRestTools();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function renderRestToolsListInner(tools, isAdmin) {
+  if (!tools.length) return '<div class="empty-state">Aún no hay herramientas.</div>';
+  return tools.map(t => restToolsUI.editingId === t.id ? renderRestToolEditForm(t) : `
+    <div class="list-row" style="${t.active === false ? 'opacity:.5;' : ''}">
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${renderRestToolIcon(t.action)}
+        <div>
+          <strong style="font-family:'Fraunces',serif;font-weight:600;font-size:14px;">${t.name}</strong>
+          <div style="font-size:11px;color:#8A8377;margin-top:2px;">${t.meta || ''}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        ${isAdmin
+          ? `<button class="small-btn" onclick="toggleEditRestTool('${t.id}')">Editar</button><button class="small-btn" onclick="toggleRestToolActive('${t.id}', ${t.active === false})">${t.active === false ? 'Activar' : 'Desactivar'}</button><button class="small-btn" onclick="deleteRestTool('${t.id}')">Eliminar</button>`
+          : (t.action === 'write'
+            ? `<button class="small-btn" style="height:34px;" onclick="toggleRestJournal()">Escribir</button>`
+            : `<button class="small-btn" style="height:34px;" onclick="startRestToolTimer('${t.id}', ${t.minutes})">Reproducir</button>`)}
+      </div>
+    </div>
+  `).join('');
+}
+function renderRestToolsCard(tools, isAdmin) {
+  window._restTools = tools;
+  return `
+    <div class="card">
+      <div class="card-title">Herramientas para dormir</div>
+      ${isAdmin ? `
+        <div class="grid-3" style="margin-bottom:12px;">
+          <div class="field"><label>Nombre</label><input id="rt-new-name"></div>
+          <div class="field"><label>Tipo</label><select id="rt-new-action" onchange="document.getElementById('rt-new-minutes-wrap').style.display = this.value === 'play' ? '' : 'none'">
+            <option value="play">Reproducir (con temporizador)</option>
+            <option value="write">Escribir (diario)</option>
+          </select></div>
+          <div class="field" id="rt-new-minutes-wrap"><label>Minutos</label><input type="number" id="rt-new-minutes"></div>
+        </div>
+        <div class="field"><label>Descripción</label><input id="rt-new-meta"></div>
+        <button type="button" class="btn btn-ghost" style="width:auto;margin-bottom:16px;" onclick="createRestTool()">+ Agregar herramienta</button>
+      ` : ''}
+      <div id="rest-tools-list">${renderRestToolsListInner(tools, isAdmin)}</div>
+      <div id="rest-tool-panel" style="margin-top:12px;"></div>
+    </div>
+  `;
 }
 // Tarjeta de solo-lectura para clientes con plan activo — mutuamente
 // excluyente con el protocolo genérico de 4 pilares (nunca se muestran

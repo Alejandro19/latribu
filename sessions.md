@@ -392,3 +392,11 @@ Todo verificado con `node -e "new Function(...)"` sobre cada bloque `<script>` d
 **Nuevas tablas**: `personal_records` (récords personales por cliente, CRUD admin: crear + listar + eliminar, sin edición en línea por alcance) y columna `clients.next_checkin_date`.
 
 Todo verificado en vivo contra Supabase real con servidores de prueba desechables (crear → leer → eliminar/revertir) antes de dar cualquier cambio por confirmado, siguiendo la disciplina de todas las sesiones anteriores.
+
+## 2026-07-22 (cont.) — Descanso: cards de admin visibles desde el primer clic, y "Herramientas para dormir" editable por el admin
+
+**Fix del flujo "sin cliente seleccionado" en Descanso**: al entrar al módulo sin elegir cliente, seguía cayendo en la rama de contenido genérico (protocolo de 4 pilares) en vez de mostrar solo las cards de carga de datos, igual que ya pasaba en Entrenamiento/Nutrición/Cortisol. Se separó en una rama explícita al inicio de `renderRest` que muestra directamente el formulario completo "Protocolo personalizado (admin)" (en blanco, sin depender de un cliente) más "Herramientas para dormir" — sin hero, sin mantra, sin el protocolo genérico de referencia, que ya no aplican hasta saber el tipo de cliente.
+
+**"Herramientas para dormir" pasó de un array fijo en el código a un banco global editable por el admin** (tabla nueva `rest_tools`, mismo patrón que `mindset_quotes`/`cortisol_tips` — global, no por cliente). `GET /api/rest-tools` se auto-siembra con las 3 herramientas que ya existían la primera vez que se consulta, para no perder contenido real en la migración. El admin puede crear, editar en línea, activar/desactivar y eliminar cada herramienta (Nombre, Tipo — Reproducir con temporizador o Escribir diario —, Minutos, Descripción); el cliente sigue viendo exactamente el mismo comportamiento de siempre (temporizador real, diario de descarga mental), solo que los datos ya no están hardcodeados.
+
+Probado en vivo end-to-end contra Supabase real (auto-siembra → crear → editar → desactivar → verificar que desaparece de la vista cliente → eliminar), sin dejar datos de prueba.
