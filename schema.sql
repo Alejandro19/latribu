@@ -14,6 +14,7 @@ CREATE TABLE admins (
   name TEXT NOT NULL DEFAULT 'Administrador',
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
+  google_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -32,7 +33,8 @@ CREATE TABLE clients (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
+  google_id TEXT,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
   plan TEXT NOT NULL DEFAULT 'Miembro',
   client_type TEXT NOT NULL DEFAULT 'lead_wellness' CHECK (client_type IN ('coaching_1_1','coaching_online','lead_wellness')),
@@ -238,10 +240,14 @@ CREATE TABLE cortisol_techniques (
   title TEXT NOT NULL,
   type TEXT CHECK (type IN ('Respiración','Breathwork','Meditación','Mindfulness')),
   duration TEXT,
+  duration_minutes INT,
+  duration_seconds INT,
   description TEXT,
   video_url TEXT,
   video_name TEXT,
   youtube_url TEXT,
+  audio_url TEXT,
+  audio_name TEXT,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -288,6 +294,9 @@ CREATE TABLE rest_tools (
   meta TEXT,
   action TEXT NOT NULL DEFAULT 'play' CHECK (action IN ('play','write')),
   minutes INT,
+  seconds INT,
+  audio_url TEXT,
+  audio_name TEXT,
   active BOOLEAN NOT NULL DEFAULT true,
   sort_order INT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()

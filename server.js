@@ -11,6 +11,7 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { createClient } = require('@supabase/supabase-js');
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require('google-auth-library');
 
 let pdfParse;
 try { pdfParse = require('pdf-parse'); } catch (e) { pdfParse = null; }
@@ -22,6 +23,18 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_change_in_production';
 const JWT_EXPIRES = process.env.JWT_EXPIRES_IN || '8h';
 const BUCKET = process.env.SUPABASE_BUCKET || 'latribu-files';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null;
+const googleOAuthClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+// Borra el archivo anterior del storage cuando se reemplaza (ej. "Reemplazar
+// audio"), para que no se acumulen copias huérfanas del mismo archivo.
+async function deleteOldStorageFile(publicUrl) {
+  if (!publicUrl) return;
+  const marker = `/storage/v1/object/public/${BUCKET}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return;
+  const path = decodeURIComponent(publicUrl.slice(idx + marker.length));
+  await supabase.storage.from(BUCKET).remove([path]).catch(() => {});
+}
 
 const PRIORITY_ISO = ['CO', 'MX', 'ES', 'AR', 'CL', 'PE', 'VE', 'EC', 'US', 'BO', 'PY', 'UY', 'CR', 'GT', 'HN', 'SV', 'NI', 'PA', 'CU', 'DO'];
 let _countriesCache = null;
@@ -47,7 +60,14 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 });
 
 const app = express();
-app.use(helmet({ contentSecurityPolicy: false, referrerPolicy: { policy: 'strict-origin-when-cross-origin' } }));
+// crossOriginOpenerPolicy en 'same-origin-allow-popups': el valor por defecto
+// de helmet ('same-origin') bloquea la comunicación del popup de Google
+// Sign-In con esta página, dejándolo en blanco sin completar el login.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+}));
 app.use(cors({ origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname), {
@@ -369,6 +389,76 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.get('/api/config', (req, res) => {
+  return ok(res, { googleClientId: GOOGLE_CLIENT_ID });
+});
+
+// Login/registro con Google. El frontend manda el ID token que entrega
+// Google Identity Services; aquí se verifica contra Google y el email
+// verificado es lo único que se usa para emparejar con una cuenta existente
+// (admin o cliente) — google_id solo queda guardado como referencia.
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    if (!googleOAuthClient) return err(res, 'Login con Google no está configurado en el servidor.', 503);
+    const { credential } = req.body;
+    if (!credential) return err(res, 'Falta el token de Google.', 400);
+
+    let payload;
+    try {
+      const ticket = await googleOAuthClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID });
+      payload = ticket.getPayload();
+    } catch (e) {
+      return err(res, 'Token de Google inválido.', 401);
+    }
+    if (!payload || !payload.email_verified) return err(res, 'Tu cuenta de Google no tiene el email verificado.', 401);
+
+    const emailLower = payload.email.toLowerCase().trim();
+    const googleId = payload.sub;
+    const displayName = payload.name || emailLower;
+
+    const [admin, client] = await Promise.all([
+      dbGetOne('admins', { email: emailLower }),
+      dbGetOne('clients', { email: emailLower })
+    ]);
+
+    if (admin) {
+      if (!admin.google_id) await dbUpdate('admins', admin.id, { google_id: googleId });
+      const token = jwt.sign({ id: admin.id, role: 'admin', name: admin.name, email: admin.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+      return ok(res, { token, role: 'admin', user: { id: admin.id, name: admin.name, email: admin.email } });
+    }
+
+    if (client) {
+      if (client.status === 'inactive') return err(res, 'Tu cuenta está inactiva. Contacta al administrador.', 403);
+      if (!client.google_id) await dbUpdate('clients', client.id, { google_id: googleId });
+      const token = jwt.sign({ id: client.id, role: 'cliente', name: client.name, email: client.email, plan: client.plan }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+      const info = await dbGetOne('personal_info', { client_id: client.id });
+      return ok(res, {
+        token,
+        role: 'cliente',
+        user: { id: client.id, name: client.name, email: client.email, plan: client.plan },
+        permissions: client.permissions || {},
+        clientType: client.client_type || null,
+        planExpired: isPlanExpired(client),
+        planEndDate: client.plan_end_date || null,
+        onboardingComplete: !!(info && info.completed_at)
+      });
+    }
+
+    // Ninguna cuenta existente con ese email: mismo comportamiento que el
+    // registro manual — se crea inactiva y queda pendiente de aprobación.
+    const newClient = await dbInsert('clients', { name: displayName, email: emailLower, google_id: googleId, status: 'inactive' });
+    await dbInsert('admin_notifications', {
+      client_id: newClient.id,
+      type: 'new_registration',
+      message: `${displayName} se registró con Google en la plataforma.`
+    });
+    return ok(res, { pending: true, message: 'Tu cuenta fue creada y quedará activa cuando el administrador la confirme.' }, 201);
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al iniciar sesión con Google.', 500);
+  }
+});
+
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
     if (req.user.role === 'admin') {
@@ -409,7 +499,7 @@ app.post('/api/auth/register', async (req, res) => {
       type: 'new_registration',
       message: `${name} se registró en la plataforma.`
     });
-    return ok(res, { pending: true, message: 'Tu cuenta fue creada y quedará activa cuando el equipo la confirme.' }, 201);
+    return ok(res, { pending: true, message: 'Tu cuenta fue creada y quedará activa cuando el administrador la confirme.' }, 201);
   } catch (e) {
     console.error(e);
     return err(res, 'Error al registrar.', 500);
@@ -911,6 +1001,10 @@ app.post('/api/admin/rest-tools', authMiddleware, adminOnly, async (req, res) =>
 });
 app.put('/api/admin/rest-tools/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
+    if (req.body.audio_url === null) {
+      const existing = await dbGetOne('rest_tools', { id: req.params.id });
+      if (existing) await deleteOldStorageFile(existing.audio_url);
+    }
     const tool = await dbUpdate('rest_tools', req.params.id, req.body);
     return ok(res, { tool });
   } catch (e) {
@@ -920,11 +1014,29 @@ app.put('/api/admin/rest-tools/:id', authMiddleware, adminOnly, async (req, res)
 });
 app.delete('/api/admin/rest-tools/:id', authMiddleware, adminOnly, async (req, res) => {
   try {
+    const existing = await dbGetOne('rest_tools', { id: req.params.id });
     await dbDelete('rest_tools', req.params.id);
+    if (existing) await deleteOldStorageFile(existing.audio_url);
     return ok(res, { message: 'Herramienta eliminada.' });
   } catch (e) {
     console.error(e);
     return err(res, 'Error al eliminar la herramienta.', 500);
+  }
+});
+app.post('/api/admin/rest-tools/:id/upload-audio', authMiddleware, adminOnly, upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) return err(res, 'No se recibió ningún audio.');
+    const existing = await dbGetOne('rest_tools', { id: req.params.id });
+    const filename = `rest-tools/${req.params.id}/${uuidv4()}_${req.file.originalname}`;
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+    const tool = await dbUpdate('rest_tools', req.params.id, { audio_url: pub.publicUrl, audio_name: req.file.originalname });
+    if (existing) await deleteOldStorageFile(existing.audio_url);
+    return ok(res, { tool });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al subir el audio.', 500);
   }
 });
 
@@ -1178,6 +1290,10 @@ app.post('/api/clients/:id/cortisol-techniques', authMiddleware, adminOnly, asyn
 
 app.put('/api/clients/:id/cortisol-techniques/:techId', authMiddleware, adminOnly, async (req, res) => {
   try {
+    if (req.body.audio_url === null) {
+      const existing = await dbGetOne('cortisol_techniques', { id: req.params.techId });
+      if (existing) await deleteOldStorageFile(existing.audio_url);
+    }
     const technique = await dbUpdate('cortisol_techniques', req.params.techId, req.body);
     return ok(res, { technique });
   } catch (e) {
@@ -1188,7 +1304,9 @@ app.put('/api/clients/:id/cortisol-techniques/:techId', authMiddleware, adminOnl
 
 app.delete('/api/clients/:id/cortisol-techniques/:techId', authMiddleware, adminOnly, async (req, res) => {
   try {
+    const existing = await dbGetOne('cortisol_techniques', { id: req.params.techId });
     await dbDelete('cortisol_techniques', req.params.techId);
+    if (existing) await deleteOldStorageFile(existing.audio_url);
     return ok(res, { message: 'Técnica eliminada.' });
   } catch (e) {
     console.error(e);
@@ -1208,6 +1326,23 @@ app.post('/api/clients/:id/cortisol-techniques/:techId/upload', authMiddleware, 
   } catch (e) {
     console.error(e);
     return err(res, 'Error al subir el video.', 500);
+  }
+});
+
+app.post('/api/clients/:id/cortisol-techniques/:techId/upload-audio', authMiddleware, adminOnly, upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) return err(res, 'No se recibió ningún audio.');
+    const existing = await dbGetOne('cortisol_techniques', { id: req.params.techId });
+    const filename = `${req.params.id}/cortisol/${uuidv4()}_${req.file.originalname}`;
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(filename, req.file.buffer, { contentType: req.file.mimetype });
+    if (upErr) throw upErr;
+    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filename);
+    const technique = await dbUpdate('cortisol_techniques', req.params.techId, { audio_url: pub.publicUrl, audio_name: req.file.originalname });
+    if (existing) await deleteOldStorageFile(existing.audio_url);
+    return ok(res, { technique });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al subir el audio.', 500);
   }
 });
 

@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>La Tribu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><style>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
 :root{
   --cream:#FBF7F1; --paper:#FFFFFF; --ink:#2B2420; --ink-soft:#6B6058;
   --terracota:#C1662F; --terracota-soft:#F1DDCB; --sage:#6B8F71; --sage-soft:#E3EDE3;
@@ -331,6 +333,10 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .login-form-panel .foot-note{color:var(--lf-foot);transition:color .6s ease;}
 .login-form-panel .link-btn{color:var(--lf-link);font-weight:700;transition:color .6s ease;}
 @media(max-width:760px){#login-view{padding:0;}.login-shell{flex-direction:column;border-radius:0;min-height:100vh;max-width:100%;}.login-hero{padding:32px 24px;}.login-form-panel{width:100%;}}
+.login-divider{display:flex;align-items:center;gap:10px;margin:18px 0;}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--lf-input-border);transition:background .6s ease;}
+.login-divider span{font-size:11px;color:var(--lf-foot);text-transform:uppercase;letter-spacing:.04em;transition:color .6s ease;}
+#google-signin-btn{display:flex;justify-content:center;}
 </style>
 </head>
 <body>
@@ -357,6 +363,8 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
         <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="tucorreo@ejemplo.com" onkeydown="if(event.key==='Enter'){event.preventDefault();handleLogin();}"></div>
         <div class="field"><label>Contraseña</label><input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter'){event.preventDefault();handleLogin();}"></div>
         <button class="btn btn-primary" onclick="handleLogin()">Ingresar</button>
+        <div class="login-divider"><span>o</span></div>
+        <div id="google-signin-btn"></div>
         <p class="foot-note" style="text-align:center;margin-top:18px;font-size:14px;">
           ¿Aún no tienes cuenta? <button class="link-btn" onclick="showRegister()">Regístrate</button>
         </p>
@@ -449,6 +457,34 @@ async function handleRegister() {
   }
 }
 
+async function initGoogleSignIn(retriesLeft = 20) {
+  const container = document.getElementById('google-signin-btn');
+  if (!container) return;
+  if (typeof google === 'undefined' || !google.accounts) {
+    if (retriesLeft > 0) setTimeout(() => initGoogleSignIn(retriesLeft - 1), 250);
+    return;
+  }
+  try {
+    const { googleClientId } = await api('/api/config');
+    if (!googleClientId) return;
+    google.accounts.id.initialize({ client_id: googleClientId, callback: handleGoogleCredentialResponse });
+    google.accounts.id.renderButton(container, { theme: 'filled_black', size: 'large', shape: 'pill', width: 280, text: 'continue_with' });
+  } catch (e) { /* login con Google no disponible, se omite el botón */ }
+}
+async function handleGoogleCredentialResponse(response) {
+  const errBox = document.getElementById('login-error');
+  errBox.innerHTML = '';
+  try {
+    const data = await api('/api/auth/google', { method: 'POST', body: JSON.stringify({ credential: response.credential }) });
+    if (data.pending) {
+      errBox.innerHTML = `<div class="success-msg">${data.message}</div>`;
+      return;
+    }
+    onAuthSuccess(data);
+  } catch (e) {
+    errBox.innerHTML = `<div class="error-msg">${e.message}</div>`;
+  }
+}
 function onAuthSuccess(data) {
   state.token = data.token;
   state.role = data.role;
@@ -1051,7 +1087,7 @@ function renderPersonalInfoBody(el) {
     <div class="wizard-steps">
       ${ONBOARDING_MODULES.map(m => `<div class="wizard-dot ${m.n < step ? 'done' : ''} ${m.n === step ? 'current' : ''}" onclick="setStep(${m.n})">${m.n}</div>`).join('')}
     </div>
-    <div class="card">
+    <div class="card" id="module-wizard-card">
       <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
       <div class="grid-2" id="module-fields">
         ${mod.fields.map(f => renderField(f)).join('')}
@@ -1069,7 +1105,7 @@ function renderPersonalInfoBody(el) {
   initFieldDependencies(step);
   restorePendingFileInputs(step);
 
-  document.querySelectorAll('#module-fields .field input, #module-fields .field select, #module-fields .field textarea').forEach(el => {
+  document.querySelectorAll('#module-wizard-card .field input, #module-wizard-card .field select, #module-wizard-card .field textarea').forEach(el => {
     el.addEventListener('input', () => clearFieldError(el));
     el.addEventListener('change', () => clearFieldError(el));
   });
@@ -1097,8 +1133,7 @@ function renderModuleAnswerRows(mod, personalInfo, report) {
       return [f.label, value];
     });
   }
-  rows = rows.filter(([_, value]) => value !== undefined && value !== null && value !== '');
-  return rows.length ? `<table><tbody>${rows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value}</td></tr>`).join('')}</tbody></table>` : '<div class="empty-state">Sin respuestas registradas.</div>';
+  return `<table><tbody>${rows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value !== undefined && value !== null && value !== '' ? value : '—'}</td></tr>`).join('')}</tbody></table>`;
 }
 async function renderPersonalInfoAdminView(el) {
   if (!currentClientId()) {
@@ -1113,7 +1148,11 @@ async function renderPersonalInfoAdminView(el) {
       <div class="card">
         <div class="card-title">Módulo ${mod.n} · ${mod.title}</div>
         ${renderAdminClientSwitcher('personal-info')}
-        <div class="empty-state">Selecciona un cliente para ver sus respuestas.</div>
+        ${mod.n === 3 ? renderModule3AdminDetail({}, [], [], []) : renderModuleAnswerRows(mod, {}, {})}
+        <div style="display:flex;justify-content:space-between;margin-top:24px;">
+          <button class="btn btn-ghost" ${step === 1 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step - 1})">Anterior</button>
+          <button class="btn btn-ghost" ${step === 9 ? 'disabled style="opacity:.4"' : ''} onclick="setStep(${step + 1})">Siguiente</button>
+        </div>
       </div>
     `;
     return;
@@ -1577,8 +1616,21 @@ function m1OnCountryChange(sel) {
   m1LoadCities(iso);
 }
 
+function validateModule1() {
+  let valid = validateStep(1);
+  ['m1-pais', 'm1-city', 'm1-phone-num'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const wrapper = el.closest('.field');
+    const isEmpty = String(el.value || '').trim() === '';
+    if (isEmpty) { valid = false; if (wrapper) wrapper.classList.add('invalid'); }
+    else if (wrapper) wrapper.classList.remove('invalid');
+  });
+  return valid;
+}
 function saveModule1() {
   syncStepFieldsFromDOM(1);
+  if (!validateModule1()) return;
   const phoneCode = document.getElementById('m1-phone-code').value;
   const phoneNum = document.getElementById('m1-phone-num').value;
   onboardingData.country = document.getElementById('m1-pais').value;
@@ -1830,11 +1882,38 @@ async function commitModule3Draft(clientId) {
   window._m3DraftClientId = null;
 }
 
+// Obligatorios en Composición Corporal — se excluyen a propósito "Ángulo de
+// fase" (m3-angulo-fase) y toda la sección "Medidas antropométricas" (am-*),
+// que quedan opcionales por decisión explícita.
+const MODULE3_REQUIRED_FIELDS = [
+  'field-weight', 'field-height', 'field-body_fat',
+  'm3-peso-total', 'm3-smm', 'm3-grasa-pct', 'm3-peso-objetivo',
+  'm3-grasa-visceral', 'm3-bmr', 'm3-ecw-tbw', 'm3-masa-osea', 'm3-height',
+];
+function validateModule3() {
+  let valid = true;
+  MODULE3_REQUIRED_FIELDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const wrapper = el.closest('.field');
+    const isEmpty = String(el.value || '').trim() === '';
+    if (isEmpty) {
+      valid = false;
+      if (wrapper) wrapper.classList.add('invalid');
+      const accContent = el.closest('.accordion-content');
+      if (accContent) accContent.classList.add('active');
+    } else if (wrapper) {
+      wrapper.classList.remove('invalid');
+    }
+  });
+  return valid;
+}
 function saveModule3() {
   if (window._m3UploadInProgress) {
     alert('Espera a que termine de subirse el archivo InBody antes de continuar.');
     return;
   }
+  if (!validateModule3()) return;
   // Nada se guarda en el servidor aquí — solo queda como borrador en memoria hasta
   // que se haga clic en "Finalizar" (ver saveOnboardingStep / commitModule3Draft).
   captureModule3Draft();
@@ -2619,7 +2698,7 @@ function renderTrainingPlayer(el, exercises, client, isAdmin) {
     <div class="card">
       ${embedUrl ? `<div style="position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000;">
         <iframe src="${embedUrl}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="${ex.title}"></iframe>
-      </div>` : ex.video_url ? `<video src="${ex.video_url}" controls style="width:100%;border-radius:14px;background:#000;"></video>` : '<div class="empty-state">Sin video asignado.</div>'}
+      </div>` : ex.video_url ? `<video src="${ex.video_url}" controls ${isAdmin ? '' : 'controlsList="nodownload" oncontextmenu="return false;"'} style="width:100%;border-radius:14px;background:#000;"></video>` : '<div class="empty-state">Sin video asignado.</div>'}
       <div class="grid-3" style="margin-top:16px;">
         ${isCardio ? `
           <div class="kpi-tile"><div class="val">${ex.duration || '-'}</div><div class="lbl">Duración</div></div>
@@ -3235,7 +3314,7 @@ function downloadSupplementsPdf() {
 
 // ---------------- Módulo: Gestión de Cortisol ----------------
 
-let cortisolUI = { activeId: null, editingTechniqueId: null, techniquesOpen: false };
+let cortisolUI = { activeId: null, editingTechniqueId: null, techniquesOpen: false, playingId: null };
 
 // Catálogo base de técnicas — se siembra automáticamente (una sola vez, solo
 // cuando el admin abre el módulo) para que la librería siempre esté completa
@@ -3306,7 +3385,7 @@ async function renderCortisol(el) {
     if (isAdmin) adminTips = (await api('/api/admin/cortisol-tips').catch(() => ({ tips: [] }))).tips || [];
     if (cortisolUI.activeId) {
       const active = techniques.find(t => t.id === cortisolUI.activeId);
-      if (active) return renderCortisolPlayer(el, active, completions);
+      if (active) return renderCortisolPlayer(el, active, completions, isAdmin);
       cortisolUI.activeId = null;
     }
     return renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, adminTips);
@@ -3336,6 +3415,7 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
 
   if (isAdmin) {
     window._cortisolTechniques = techniques;
+    window._cortisolTips = adminTips || [];
     el.innerHTML = `
       <div class="card">
         <div class="card-title">Asignar técnica</div>
@@ -3343,9 +3423,17 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
         <div class="grid-3">
           <div class="field"><label>Título</label><input id="ct-title"></div>
           <div class="field"><label>Tipo</label><select id="ct-type">${['Respiración','Breathwork','Meditación','Mindfulness'].map(o=>`<option>${o}</option>`).join('')}</select></div>
-          <div class="field"><label>Duración</label><input id="ct-duration"></div>
-          <div class="field"><label>Video (YouTube)</label><input id="ct-youtube"></div>
+          <div class="field">
+            <label>Duración (min : seg)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" min="0" id="ct-duration-minutes" placeholder="min" style="width:100%;">
+              <span style="color:#8A8377;">:</span>
+              <input type="number" min="0" max="59" id="ct-duration-seconds" placeholder="seg" style="width:100%;">
+            </div>
+          </div>
         </div>
+        <div class="field"><label>Video (YouTube)</label><input id="ct-youtube"></div>
+        <div class="field"><label>Audio propio (opcional)</label><input type="file" accept="audio/*" id="ct-audio"></div>
         <div class="field"><label>Descripción</label><textarea id="ct-desc" rows="2"></textarea></div>
         <button class="btn btn-primary" style="width:auto" onclick="createTechnique()">Asignar</button>
       </div>
@@ -3361,17 +3449,7 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
               <p style="font-size:13px;color:var(--ink-soft);margin:0 0 14px;">Se muestran al azar entre los que estén activos, uno por visita al módulo.</p>
               <div class="field"><label>Nuevo tip</label><textarea id="ctp-new-content" rows="2" placeholder="Ej: la luz solar en los primeros 30 minutos del día ayuda a regular tu ritmo de cortisol natural."></textarea></div>
               <button class="btn btn-primary" style="width:auto" onclick="createCortisolTip()">Agregar</button>
-              <div style="margin-top:16px;">
-                ${(adminTips || []).length ? adminTips.map(t => `
-                  <div class="list-row" style="${t.active ? '' : 'opacity:.5;'}">
-                    <p style="margin:0;">${t.content}</p>
-                    <div style="display:flex;gap:8px;flex-shrink:0;">
-                      <button class="small-btn" onclick="toggleCortisolTipActive('${t.id}', ${!t.active})">${t.active ? 'Desactivar' : 'Activar'}</button>
-                      <button class="small-btn" onclick="deleteCortisolTip('${t.id}')">Eliminar</button>
-                    </div>
-                  </div>
-                `).join('') : '<div class="empty-state">Aún no hay tips en el banco.</div>'}
-              </div>
+              <div id="cortisol-tips-list" style="margin-top:16px;">${renderCortisolTipsListInner(adminTips || [])}</div>
             </div>
           </div>
         </div>
@@ -3380,6 +3458,7 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
     return;
   }
 
+  window._myTechniques = techniques;
   el.innerHTML = `
     ${renderIdentityHeader('Gestión de Cortisol', 'Es momento de bajar el ritmo.')}
     <div class="card" style="padding:18px 20px;">
@@ -3399,19 +3478,7 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
     </div>
     <div class="card">
       <div class="card-title">Tus técnicas</div>
-      ${techniques.length ? techniques.map(t => `
-        <div class="list-row">
-          <div style="display:flex;align-items:center;gap:12px;">
-            ${supplementIcon(t.type)}
-            <div>
-              <strong>${t.title}</strong> ${t.type ? `<span class="badge">${t.type}</span>` : ''}
-              <div style="font-size:13px;color:var(--ink-soft);">${t.duration || ''}</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            ${t.youtube_url || t.video_url ? `<button class="small-btn" onclick="openCortisolTechnique('${t.id}')">Reproducir</button>` : ''}
-          </div>
-        </div>`).join('') : '<div class="empty-state">Aún no tienes técnicas asignadas.</div>'}
+      <div id="cortisol-my-techniques">${renderMyTechniquesList(techniques)}</div>
     </div>
     ${techniques.length ? `<div class="card">
       <div class="card-title">Momento de regulación</div>
@@ -3426,6 +3493,37 @@ function renderCortisolHome(el, techniques, isAdmin, completions, checkin, tip, 
   `;
 }
 
+function renderMyTechniquesList(techniques) {
+  if (!techniques.length) return '<div class="empty-state">Aún no tienes técnicas asignadas.</div>';
+  return techniques.map(t => {
+    const hasVideo = !!(t.youtube_url || t.video_url);
+    const hasAudio = !!t.audio_url;
+    const isPlaying = cortisolUI.playingId === t.id;
+    return `
+        <div class="list-row" style="${isPlaying ? 'flex-wrap:wrap;' : ''}">
+          <div style="display:flex;align-items:center;gap:12px;">
+            ${supplementIcon(t.type)}
+            <div>
+              <strong>${t.title}</strong> ${t.type ? `<span class="badge">${t.type}</span>` : ''}
+              <div style="font-size:13px;color:var(--ink-soft);">${t.duration || ''}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            ${hasVideo
+              ? `<button class="small-btn" onclick="openCortisolTechnique('${t.id}')">Reproducir</button>`
+              : hasAudio
+                ? `<button class="small-btn" onclick="toggleTechniquePlay('${t.id}')">${isPlaying ? 'Ocultar' : 'Reproducir'}</button>`
+                : ''}
+          </div>
+          ${isPlaying && hasAudio ? `<audio controls autoplay controlsList="nodownload" oncontextmenu="return false;" src="${t.audio_url}" style="width:100%;margin-top:10px;order:3;"></audio>` : ''}
+        </div>`;
+  }).join('');
+}
+function toggleTechniquePlay(id) {
+  cortisolUI.playingId = cortisolUI.playingId === id ? null : id;
+  const container = document.getElementById('cortisol-my-techniques');
+  if (container) container.innerHTML = renderMyTechniquesList(window._myTechniques || []);
+}
 function openCortisolTechnique(id) {
   if (!id) return;
   cortisolUI.activeId = id;
@@ -3435,10 +3533,11 @@ function backToCortisolHome() {
   cortisolUI.activeId = null;
   renderMain();
 }
-function renderCortisolPlayer(el, technique, completions) {
+function renderCortisolPlayer(el, technique, completions, isAdmin) {
   const embedUrl = youtubeEmbedUrl(technique.youtube_url);
   const todayStr = new Date().toISOString().slice(0, 10);
   const doneToday = completions.some(c => c.completed_date === todayStr);
+  const noDownloadAttrs = isAdmin ? '' : 'controlsList="nodownload" oncontextmenu="return false;"';
   el.innerHTML = `
     <div class="page-header">
       <button class="back-link" onclick="backToCortisolHome()">← Gestión de Cortisol</button>
@@ -3448,7 +3547,11 @@ function renderCortisolPlayer(el, technique, completions) {
     <div class="card">
       ${embedUrl ? `<div style="position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000;">
         <iframe src="${embedUrl}" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen title="${technique.title}"></iframe>
-      </div>` : technique.video_url ? `<video src="${technique.video_url}" controls style="width:100%;border-radius:14px;background:#000;"></video>` : '<div class="empty-state">Sin video asignado.</div>'}
+      </div>` : technique.video_url ? `<video src="${technique.video_url}" controls ${noDownloadAttrs} style="width:100%;border-radius:14px;background:#000;"></video>`
+        : technique.audio_url ? `<div style="background:#F1EAF7;border-radius:14px;padding:24px;text-align:center;">
+            <audio src="${technique.audio_url}" controls ${noDownloadAttrs} style="width:100%;"></audio>
+          </div>`
+        : '<div class="empty-state">Sin video ni audio asignado.</div>'}
       ${technique.description ? `<p style="margin-top:16px;">${technique.description}</p>` : ''}
       <div style="display:flex;justify-content:center;gap:10px;margin-top:20px;">
         ${doneToday
@@ -3466,35 +3569,96 @@ async function markCortisolComplete(techniqueId) {
     renderMain();
   } catch (e) { alert('Error: ' + e.message); }
 }
+let cortisolTipsUI = { editingId: null };
+function renderCortisolTipEditForm(t) {
+  return `
+    <div class="list-row" style="display:block;">
+      <div class="field"><label>Tip</label><textarea id="ctp-edit-content-${t.id}" rows="2">${t.content || ''}</textarea></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="width:auto" onclick="updateCortisolTip('${t.id}')">Guardar</button>
+        <button class="btn btn-ghost" style="width:auto" onclick="toggleEditCortisolTip(null)">Cancelar</button>
+      </div>
+    </div>
+  `;
+}
+function renderCortisolTipsListInner(tips) {
+  if (!tips.length) return '<div class="empty-state">Aún no hay tips en el banco.</div>';
+  return tips.map(t => cortisolTipsUI.editingId === t.id ? renderCortisolTipEditForm(t) : `
+    <div class="list-row" style="${t.active ? '' : 'opacity:.5;'}">
+      <p style="margin:0;">${t.content}</p>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button class="small-btn" onclick="toggleEditCortisolTip('${t.id}')">Editar</button>
+        <button class="small-btn" onclick="deleteCortisolTip('${t.id}')">Eliminar</button>
+      </div>
+    </div>
+  `).join('');
+}
+function toggleEditCortisolTip(id) {
+  cortisolTipsUI.editingId = id;
+  const container = document.getElementById('cortisol-tips-list');
+  if (container) container.innerHTML = renderCortisolTipsListInner(window._cortisolTips || []);
+}
+async function refetchCortisolTips() {
+  const container = document.getElementById('cortisol-tips-list');
+  if (!container) return;
+  const { tips } = await api('/api/admin/cortisol-tips');
+  window._cortisolTips = tips;
+  container.innerHTML = renderCortisolTipsListInner(tips);
+}
 async function createCortisolTip() {
   const content = document.getElementById('ctp-new-content').value.trim();
   if (!content) return alert('Escribe un tip.');
-  try { await api('/api/admin/cortisol-tips', { method: 'POST', body: JSON.stringify({ content }) }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api('/api/admin/cortisol-tips', { method: 'POST', body: JSON.stringify({ content }) });
+    document.getElementById('ctp-new-content').value = '';
+    await refetchCortisolTips();
+  } catch (e) { alert('Error: ' + e.message); }
 }
-async function toggleCortisolTipActive(id, active) {
-  try { await api(`/api/admin/cortisol-tips/${id}`, { method: 'PATCH', body: JSON.stringify({ active }) }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+async function updateCortisolTip(id) {
+  const content = document.getElementById(`ctp-edit-content-${id}`).value.trim();
+  if (!content) return alert('El tip no puede quedar vacío.');
+  try {
+    await api(`/api/admin/cortisol-tips/${id}`, { method: 'PATCH', body: JSON.stringify({ content }) });
+    cortisolTipsUI.editingId = null;
+    await refetchCortisolTips();
+  } catch (e) { alert('Error: ' + e.message); }
 }
 async function deleteCortisolTip(id) {
   if (!confirm('¿Eliminar este tip?')) return;
-  try { await api(`/api/admin/cortisol-tips/${id}`, { method: 'DELETE' }); renderMain(); }
-  catch (e) { alert('Error: ' + e.message); }
+  try {
+    await api(`/api/admin/cortisol-tips/${id}`, { method: 'DELETE' });
+    await refetchCortisolTips();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function formatDurationLabel(minutes, seconds) {
+  const m = Number(minutes) || 0, s = Number(seconds) || 0;
+  if (!m && !s) return '';
+  return `${m}:${String(s).padStart(2, '0')} min`;
 }
 async function createTechnique() {
   const clientId = currentClientId();
   if (!clientId) return alert('Selecciona un cliente primero.');
+  const durationMinutes = document.getElementById('ct-duration-minutes').value || null;
+  const durationSeconds = document.getElementById('ct-duration-seconds').value || null;
   const payload = {
     title: document.getElementById('ct-title').value,
     type: document.getElementById('ct-type').value,
-    duration: document.getElementById('ct-duration').value,
+    duration: formatDurationLabel(durationMinutes, durationSeconds),
+    duration_minutes: durationMinutes,
+    duration_seconds: durationSeconds,
     youtube_url: document.getElementById('ct-youtube').value,
     description: document.getElementById('ct-desc').value,
   };
   try {
-    await api(`/api/clients/${clientId}/cortisol-techniques`, { method: 'POST', body: JSON.stringify(payload) });
+    const { technique } = await api(`/api/clients/${clientId}/cortisol-techniques`, { method: 'POST', body: JSON.stringify(payload) });
+    const audioInput = document.getElementById('ct-audio');
+    if (audioInput && audioInput.files[0]) {
+      const fd = new FormData();
+      fd.append('audio', audioInput.files[0]);
+      await api(`/api/clients/${clientId}/cortisol-techniques/${technique.id}/upload-audio`, { method: 'POST', body: fd });
+    }
     if (document.getElementById('cortisol-techniques-list')) {
-      ['ct-title', 'ct-duration', 'ct-youtube', 'ct-desc'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      ['ct-title', 'ct-duration-minutes', 'ct-duration-seconds', 'ct-youtube', 'ct-desc', 'ct-audio'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
       await refetchCortisolTechniques();
     } else renderMain();
   } catch (e) { alert('Error: ' + e.message); }
@@ -3513,8 +3677,26 @@ function renderTechniqueEditForm(t) {
       <div class="grid-3">
         <div class="field"><label>Título</label><input id="ct-edit-title-${t.id}" value="${t.title || ''}"></div>
         <div class="field"><label>Tipo</label><select id="ct-edit-type-${t.id}">${['Respiración','Breathwork','Meditación','Mindfulness'].map(o=>`<option ${t.type === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>
-        <div class="field"><label>Duración</label><input id="ct-edit-duration-${t.id}" value="${t.duration || ''}"></div>
-        <div class="field"><label>Video (YouTube)</label><input id="ct-edit-youtube-${t.id}" value="${t.youtube_url || ''}"></div>
+        <div class="field">
+          <label>Duración (min : seg)</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" min="0" id="ct-edit-duration-minutes-${t.id}" value="${t.duration_minutes ?? ''}" placeholder="min" style="width:100%;">
+            <span style="color:#8A8377;">:</span>
+            <input type="number" min="0" max="59" id="ct-edit-duration-seconds-${t.id}" value="${t.duration_seconds ?? ''}" placeholder="seg" style="width:100%;">
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Video (YouTube)</label><input id="ct-edit-youtube-${t.id}" value="${t.youtube_url || ''}"></div>
+      <div class="field">
+        <label>Audio propio</label>
+        ${t.audio_url ? `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+            <audio controls src="${t.audio_url}" style="height:32px;max-width:260px;"></audio>
+            <span style="font-size:12px;color:#8A8377;">${t.audio_name || ''}</span>
+            <button type="button" class="small-btn" onclick="removeTechniqueAudio('${t.id}')">Quitar audio</button>
+          </div>
+        ` : ''}
+        <input type="file" accept="audio/*" id="ct-edit-audio-${t.id}">
       </div>
       <div class="field"><label>Descripción</label><textarea id="ct-edit-desc-${t.id}" rows="2">${t.description || ''}</textarea></div>
       <div style="display:flex;gap:8px;">
@@ -3528,17 +3710,35 @@ function toggleEditTechnique(id) {
   cortisolUI.editingTechniqueId = id;
   refreshCortisolTechniquesList();
 }
+async function removeTechniqueAudio(id) {
+  if (!confirm('¿Quitar el audio de esta técnica?')) return;
+  const clientId = currentClientId();
+  try {
+    await api(`/api/clients/${clientId}/cortisol-techniques/${id}`, { method: 'PUT', body: JSON.stringify({ audio_url: null, audio_name: null }) });
+    await refetchCortisolTechniques();
+  } catch (e) { alert('Error: ' + e.message); }
+}
 async function updateTechnique(id) {
   const clientId = currentClientId();
+  const durationMinutes = document.getElementById(`ct-edit-duration-minutes-${id}`).value || null;
+  const durationSeconds = document.getElementById(`ct-edit-duration-seconds-${id}`).value || null;
   const payload = {
     title: document.getElementById(`ct-edit-title-${id}`).value,
     type: document.getElementById(`ct-edit-type-${id}`).value,
-    duration: document.getElementById(`ct-edit-duration-${id}`).value,
+    duration: formatDurationLabel(durationMinutes, durationSeconds),
+    duration_minutes: durationMinutes,
+    duration_seconds: durationSeconds,
     youtube_url: document.getElementById(`ct-edit-youtube-${id}`).value,
     description: document.getElementById(`ct-edit-desc-${id}`).value,
   };
   try {
     await api(`/api/clients/${clientId}/cortisol-techniques/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    const audioInput = document.getElementById(`ct-edit-audio-${id}`);
+    if (audioInput && audioInput.files[0]) {
+      const fd = new FormData();
+      fd.append('audio', audioInput.files[0]);
+      await api(`/api/clients/${clientId}/cortisol-techniques/${id}/upload-audio`, { method: 'POST', body: fd });
+    }
     cortisolUI.editingTechniqueId = null;
     await refetchCortisolTechniques();
   } catch (e) { alert('Error: ' + e.message); }
@@ -3627,26 +3827,32 @@ function renderRestToolIcon(action) {
   const path = action === 'write' ? REST_TOOL_ICONS.journal : REST_TOOL_ICONS.sound;
   return `<span style="width:34px;height:34px;border-radius:50%;background:#F1EAF7;color:#8A5FA0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none">${path}</svg></span>`;
 }
-let restToolState = { activeTimer: null, journalOpen: false };
-function startRestToolTimer(id, minutes) {
+let restToolState = { activeTimer: null, journalOpen: false, playingId: null };
+function startRestToolTimer(id, minutes, seconds) {
   stopRestToolTimer();
-  let secondsLeft = minutes * 60;
   restToolState.activeTimer = id;
   const panel = document.getElementById('rest-tool-panel');
   if (!panel) return;
+
+  const totalSeconds = (Number(minutes) || 0) * 60 + (Number(seconds) || 0);
+  const hasCountdown = totalSeconds > 0;
+  let secondsLeft = totalSeconds;
   const paint = () => {
-    const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
     panel.innerHTML = `<div class="card" style="background:#F1EAF7;border:none;text-align:center;">
-      <p style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#8A5FA0;margin:0 0 8px;">${m}:${String(s).padStart(2, '0')}</p>
+      ${hasCountdown
+        ? `<p style="font-family:'Fraunces',serif;font-size:22px;font-weight:700;color:#8A5FA0;margin:0 0 8px;">${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}</p>`
+        : `<p style="font-family:'Fraunces',serif;font-size:15px;font-weight:600;color:#8A5FA0;margin:0 0 8px;">Reproduciendo…</p>`}
       <button class="small-btn" onclick="stopRestToolTimer()">Detener</button>
     </div>`;
   };
   paint();
-  window._restToolInterval = setInterval(() => {
-    secondsLeft--;
-    if (secondsLeft <= 0) { stopRestToolTimer(); return; }
-    paint();
-  }, 1000);
+  if (hasCountdown) {
+    window._restToolInterval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) { stopRestToolTimer(); return; }
+      paint();
+    }, 1000);
+  }
 }
 function stopRestToolTimer() {
   if (window._restToolInterval) clearInterval(window._restToolInterval);
@@ -3697,7 +3903,7 @@ async function renderRest(el) {
     const restTools = toolsRes.tools || [];
     const clientType = currentClientType();
     const esClienteActivo = clientType === 'coaching_1_1' || clientType === 'coaching_online';
-    const heroFallback = `<button class="hero-btn" style="margin-top:4px;" onclick="setView('evolution')">Hacer tu check-in de hoy</button>`;
+    const heroFallback = `<button class="hero-btn" style="margin-top:4px;" onclick="goToCheckinToday()">Hacer tu check-in de hoy</button>`;
     const genericProtocolHtml = `
       <div style="margin-bottom:20px;">
         <p class="section-label" style="font-size:16px;margin-bottom:2px;">Tu protocolo de sueño</p>
@@ -3751,9 +3957,29 @@ function renderRestToolEditForm(t) {
           <option value="play" ${t.action === 'play' ? 'selected' : ''}>Reproducir (con temporizador)</option>
           <option value="write" ${t.action === 'write' ? 'selected' : ''}>Escribir (diario)</option>
         </select></div>
-        <div class="field" id="rt-edit-minutes-wrap-${t.id}" style="${t.action === 'write' ? 'display:none;' : ''}"><label>Minutos</label><input type="number" id="rt-edit-minutes-${t.id}" value="${t.minutes ?? ''}"></div>
+        <div class="field" id="rt-edit-minutes-wrap-${t.id}" style="${t.action === 'write' ? 'display:none;' : ''}">
+          <label>Duración (min : seg)</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input type="number" min="0" id="rt-edit-minutes-${t.id}" value="${t.minutes ?? ''}" placeholder="min" style="width:100%;">
+            <span style="color:#8A8377;">:</span>
+            <input type="number" min="0" max="59" id="rt-edit-seconds-${t.id}" value="${t.seconds ?? ''}" placeholder="seg" style="width:100%;">
+          </div>
+        </div>
       </div>
       <div class="field"><label>Descripción</label><input id="rt-edit-meta-${t.id}" value="${t.meta || ''}"></div>
+      <div class="field">
+        <label>Audio propio</label>
+        ${t.audio_url ? `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+            <audio controls src="${t.audio_url}" style="height:32px;max-width:260px;"></audio>
+            <span style="font-size:12px;color:#8A8377;">${t.audio_name || ''}</span>
+            <button type="button" class="small-btn" onclick="removeRestToolAudio('${t.id}')">Quitar audio</button>
+          </div>
+        ` : ''}
+        <input type="file" accept="audio/*" id="rt-edit-audio-${t.id}">
+        <p style="font-size:11px;color:#8A8377;margin:6px 0 0;">Se sube automáticamente al darle "Guardar". El botón de abajo lo sube ahora mismo, sin esperar.</p>
+        <button type="button" class="small-btn" style="margin-top:8px;" onclick="uploadRestToolAudio('${t.id}')">${t.audio_url ? 'Reemplazar audio' : 'Subir audio'}</button>
+      </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-primary" style="width:auto" onclick="updateRestTool('${t.id}')">Guardar</button>
         <button class="btn btn-ghost" style="width:auto" onclick="toggleEditRestTool(null)">Cancelar</button>
@@ -3786,10 +4012,17 @@ async function createRestTool() {
     meta: document.getElementById('rt-new-meta').value,
     action,
     minutes: action === 'play' ? (document.getElementById('rt-new-minutes').value || null) : null,
+    seconds: action === 'play' ? (document.getElementById('rt-new-seconds').value || null) : null,
   };
   try {
-    await api('/api/admin/rest-tools', { method: 'POST', body: JSON.stringify(payload) });
-    ['rt-new-name', 'rt-new-meta', 'rt-new-minutes'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const { tool } = await api('/api/admin/rest-tools', { method: 'POST', body: JSON.stringify(payload) });
+    const audioInput = document.getElementById('rt-new-audio');
+    if (audioInput && audioInput.files[0]) {
+      const fd = new FormData();
+      fd.append('audio', audioInput.files[0]);
+      await api(`/api/admin/rest-tools/${tool.id}/upload-audio`, { method: 'POST', body: fd });
+    }
+    ['rt-new-name', 'rt-new-meta', 'rt-new-minutes', 'rt-new-seconds', 'rt-new-audio'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     await refetchRestTools();
   } catch (e) { alert('Error: ' + e.message); }
 }
@@ -3800,16 +4033,17 @@ async function updateRestTool(id) {
     meta: document.getElementById(`rt-edit-meta-${id}`).value,
     action,
     minutes: action === 'play' ? (document.getElementById(`rt-edit-minutes-${id}`).value || null) : null,
+    seconds: action === 'play' ? (document.getElementById(`rt-edit-seconds-${id}`).value || null) : null,
   };
   try {
     await api(`/api/admin/rest-tools/${id}`, { method: 'PUT', body: JSON.stringify(payload) });
+    const audioInput = document.getElementById(`rt-edit-audio-${id}`);
+    if (audioInput && audioInput.files[0]) {
+      const fd = new FormData();
+      fd.append('audio', audioInput.files[0]);
+      await api(`/api/admin/rest-tools/${id}/upload-audio`, { method: 'POST', body: fd });
+    }
     restToolsUI.editingId = null;
-    await refetchRestTools();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-async function toggleRestToolActive(id, active) {
-  try {
-    await api(`/api/admin/rest-tools/${id}`, { method: 'PUT', body: JSON.stringify({ active }) });
     await refetchRestTools();
   } catch (e) { alert('Error: ' + e.message); }
 }
@@ -3819,10 +4053,37 @@ async function deleteRestTool(id) {
     await refetchRestTools();
   } catch (e) { alert('Error: ' + e.message); }
 }
+async function uploadRestToolAudio(id) {
+  const input = document.getElementById(`rt-edit-audio-${id}`);
+  if (!input.files[0]) return alert('Selecciona un archivo de audio primero.');
+  const fd = new FormData();
+  fd.append('audio', input.files[0]);
+  try {
+    await api(`/api/admin/rest-tools/${id}/upload-audio`, { method: 'POST', body: fd });
+    await refetchRestTools();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+async function removeRestToolAudio(id) {
+  if (!confirm('¿Quitar el audio de esta herramienta?')) return;
+  try {
+    await api(`/api/admin/rest-tools/${id}`, { method: 'PUT', body: JSON.stringify({ audio_url: null, audio_name: null }) });
+    await refetchRestTools();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+function toggleRestToolPlay(id) {
+  stopRestToolTimer();
+  restToolState.playingId = restToolState.playingId === id ? null : id;
+  const container = document.getElementById('rest-tools-list');
+  if (container) container.innerHTML = renderRestToolsListInner(window._restTools || [], false);
+}
 function renderRestToolsListInner(tools, isAdmin) {
   if (!tools.length) return '<div class="empty-state">Aún no hay herramientas.</div>';
-  return tools.map(t => restToolsUI.editingId === t.id ? renderRestToolEditForm(t) : `
-    <div class="list-row" style="${t.active === false ? 'opacity:.5;' : ''}">
+  return tools.map(t => {
+    if (restToolsUI.editingId === t.id) return renderRestToolEditForm(t);
+    const hasAudio = !isAdmin && !!t.audio_url;
+    const isPlaying = hasAudio && restToolState.playingId === t.id;
+    return `
+    <div class="list-row" style="${t.active === false ? 'opacity:.5;' : ''}${isPlaying ? 'flex-wrap:wrap;' : ''}">
       <div style="display:flex;align-items:center;gap:12px;">
         ${renderRestToolIcon(t.action)}
         <div>
@@ -3832,13 +4093,17 @@ function renderRestToolsListInner(tools, isAdmin) {
       </div>
       <div style="display:flex;gap:8px;">
         ${isAdmin
-          ? `<button class="small-btn" onclick="toggleEditRestTool('${t.id}')">Editar</button><button class="small-btn" onclick="toggleRestToolActive('${t.id}', ${t.active === false})">${t.active === false ? 'Activar' : 'Desactivar'}</button><button class="small-btn" onclick="deleteRestTool('${t.id}')">Eliminar</button>`
+          ? `<button class="small-btn" onclick="toggleEditRestTool('${t.id}')">Editar</button><button class="small-btn" onclick="deleteRestTool('${t.id}')">Eliminar</button>`
           : (t.action === 'write'
             ? `<button class="small-btn" style="height:34px;" onclick="toggleRestJournal()">Escribir</button>`
-            : `<button class="small-btn" style="height:34px;" onclick="startRestToolTimer('${t.id}', ${t.minutes})">Reproducir</button>`)}
+            : hasAudio
+              ? `<button class="small-btn" style="height:34px;" onclick="toggleRestToolPlay('${t.id}')">${isPlaying ? 'Ocultar' : 'Reproducir'}</button>`
+              : `<button class="small-btn" style="height:34px;" onclick="startRestToolTimer('${t.id}', ${t.minutes || 0}, ${t.seconds || 0})">Reproducir</button>`)}
       </div>
+      ${isPlaying ? `<audio controls autoplay controlsList="nodownload" oncontextmenu="return false;" src="${t.audio_url}" style="width:100%;margin-top:10px;order:3;"></audio>` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 function renderRestToolsCard(tools, isAdmin) {
   window._restTools = tools;
@@ -3852,9 +4117,17 @@ function renderRestToolsCard(tools, isAdmin) {
             <option value="play">Reproducir (con temporizador)</option>
             <option value="write">Escribir (diario)</option>
           </select></div>
-          <div class="field" id="rt-new-minutes-wrap"><label>Minutos</label><input type="number" id="rt-new-minutes"></div>
+          <div class="field" id="rt-new-minutes-wrap">
+            <label>Duración (min : seg)</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="number" min="0" id="rt-new-minutes" placeholder="min" style="width:100%;">
+              <span style="color:#8A8377;">:</span>
+              <input type="number" min="0" max="59" id="rt-new-seconds" placeholder="seg" style="width:100%;">
+            </div>
+          </div>
         </div>
         <div class="field"><label>Descripción</label><input id="rt-new-meta"></div>
+        <div class="field"><label>Audio propio (opcional)</label><input type="file" accept="audio/*" id="rt-new-audio"></div>
         <button type="button" class="btn btn-ghost" style="width:auto;margin-bottom:16px;" onclick="createRestTool()">+ Agregar herramienta</button>
       ` : ''}
       <div id="rest-tools-list">${renderRestToolsListInner(tools, isAdmin)}</div>
@@ -4226,6 +4499,18 @@ function toggleCheckinAccordion() {
   if (acc) acc.classList.toggle('open');
   if (btn) btn.classList.toggle('open');
 }
+function goToCheckinToday() {
+  setView('evolution', { openCheckinOnLoad: true });
+}
+function openCheckinAccordionIfRequested() {
+  if (!state.openCheckinOnLoad) return;
+  state.openCheckinOnLoad = false;
+  const acc = document.getElementById('checkin-accordion');
+  const btn = document.getElementById('checkin-toggle-btn');
+  if (acc) acc.classList.add('open');
+  if (btn) btn.classList.add('open');
+  btn?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 // "Tu evolución física" — todo lo que el mentor registra en sesión (KPIs,
 // medidas, récords). Es la única sección de Mi Evolución que se bloquea
 // para lead_wellness, porque depende de que exista un mentor tomando datos.
@@ -4347,6 +4632,7 @@ async function renderEvolution(el) {
       ${renderCheckinAccordion(true)}
       <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;text-align:center;">Bienestar general, evolución física y récords aparecen aquí una vez selecciones un cliente.</p>
     `;
+    openCheckinAccordionIfRequested();
     return;
   }
   const clientId = currentClientId();
@@ -4378,6 +4664,7 @@ async function renderEvolution(el) {
         { name: 'Masa muscular', color: '#B8935A', unit: ' kg', points: inbody.filter(r => r.mes_num && r.smm != null).map(r => ({ month: r.mes_num, value: Number(r.smm) })) },
       ]);
     }
+    openCheckinAccordionIfRequested();
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 async function saveCheckin() {
@@ -4481,7 +4768,7 @@ function renderModule3AdminDetail(personalInfo, inbodyRecords, anthroRecords, ph
     ['Peso (kg)', personalInfo.weight],
     ['Estatura (cm)', personalInfo.height],
     ['% Grasa corporal', personalInfo.body_fat],
-  ].filter(([_, v]) => v !== undefined && v !== null && v !== '');
+  ];
 
   const inbodyHtml = inbodyRecords.length ? inbodyRecords.map(r => `
     <div class="list-row">
@@ -4515,7 +4802,7 @@ function renderModule3AdminDetail(personalInfo, inbodyRecords, anthroRecords, ph
   </div>` : '<div class="empty-state">Sin fotos de progreso.</div>';
 
   return `
-    ${basicRows.length ? `<table><tbody>${basicRows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value}</td></tr>`).join('')}</tbody></table>` : ''}
+    <table><tbody>${basicRows.map(([label, value]) => `<tr><td style="padding:8px;font-weight:700;width:45%;">${label}</td><td style="padding:8px;">${value !== undefined && value !== null && value !== '' ? value : '—'}</td></tr>`).join('')}</tbody></table>
     <p style="font-weight:700;font-size:13px;margin:16px 0 6px;">Análisis InBody</p>
     ${inbodyHtml}
     <p style="font-weight:700;font-size:13px;margin:16px 0 6px;">Medidas antropométricas</p>
@@ -5003,6 +5290,7 @@ async function deleteTherapy(id) {
 }
 
 boot();
+initGoogleSignIn();
 </script>
 </body>
 </html>

@@ -290,3 +290,28 @@ DO $$ BEGIN
   CREATE POLICY deny_all ON rest_tools USING (false);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- Audio propio por herramienta para dormir (el admin sube un archivo real
+-- que se reproduce al darle clic en "Reproducir", en vez del temporizador
+-- silencioso que había antes).
+ALTER TABLE rest_tools ADD COLUMN IF NOT EXISTS audio_url TEXT;
+ALTER TABLE rest_tools ADD COLUMN IF NOT EXISTS audio_name TEXT;
+
+-- Duración exacta del audio (minutos + segundos), ya que muchos audios no
+-- duran un número redondo de minutos.
+ALTER TABLE rest_tools ADD COLUMN IF NOT EXISTS seconds INT;
+
+-- Gestión de Cortisol: mismo campo de audio propio + duración en min:seg
+-- que ya tiene Descanso, aplicado a "Asignar técnica".
+ALTER TABLE cortisol_techniques ADD COLUMN IF NOT EXISTS duration_minutes INT;
+ALTER TABLE cortisol_techniques ADD COLUMN IF NOT EXISTS duration_seconds INT;
+ALTER TABLE cortisol_techniques ADD COLUMN IF NOT EXISTS audio_url TEXT;
+ALTER TABLE cortisol_techniques ADD COLUMN IF NOT EXISTS audio_name TEXT;
+
+-- Login con Google: clientes creados desde Google Sign-In no tienen
+-- contraseña propia, por eso password_hash deja de ser obligatorio en
+-- clients. google_id queda como referencia de vinculación de cuenta en
+-- ambas tablas (no se usa para autenticar, el match real es por email).
+ALTER TABLE clients ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_id TEXT;
+ALTER TABLE admins ADD COLUMN IF NOT EXISTS google_id TEXT;
