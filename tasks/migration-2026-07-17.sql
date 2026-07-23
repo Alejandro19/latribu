@@ -333,3 +333,23 @@ DO $$ BEGIN
   CREATE POLICY deny_all ON sleep_logs USING (false);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
+
+-- Confirmación de asistencia vía NFC + racha semanal + protector (Entrenamiento).
+ALTER TABLE training_completions ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';
+DO $$ BEGIN
+  ALTER TABLE training_completions ADD CONSTRAINT training_completions_source_check CHECK (source IN ('manual','nfc'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS training_protector_uses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  week_start DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, week_start)
+);
+ALTER TABLE training_protector_uses ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON training_protector_uses USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;

@@ -186,6 +186,41 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 .status-pill-live{display:inline-flex;align-items:center;gap:6px;background:#EFF5E8;color:#3E4A34;font-size:11px;font-weight:600;padding:6px 12px;border-radius:999px;margin-top:16px;}
 .status-pill-live::before{content:'';width:6px;height:6px;border-radius:50%;background:#5B7A4E;flex-shrink:0;}
 
+/* ---- Racha semanal de Entrenamiento (badge + protector + confirmación NFC) ---- */
+.streak-badge{display:flex;align-items:center;gap:7px;background:#FFFFFF;border:1px solid #E7DFC9;border-radius:100px;padding:8px 14px;flex-shrink:0;transition:background .3s ease,border-color .3s ease;}
+.streak-badge.risk{background:#FBEFE4;border-color:#F0DAC0;}
+.streak-badge.celebrate{background:#2B2621;border-color:#2B2621;}
+.streak-badge.celebrate .streak-num,.streak-badge.celebrate .streak-txt{color:#F3EFE6;}
+.streak-badge .flame{font-size:16px;}
+.streak-badge .streak-num{font-family:'Fraunces',serif;font-size:15px;font-weight:700;color:#2B2621;}
+.streak-badge .streak-txt{font-size:9.5px;color:#8A8377;}
+.streak-badge.risk .streak-txt{color:#B8794A;font-weight:600;}
+.week-progress-title{font-family:'Fraunces',serif;font-size:14px;font-weight:600;color:#2B2621;margin-bottom:12px;}
+.week-dots{display:flex;gap:10px;align-items:center;}
+.wdot{width:34px;height:34px;border-radius:50%;background:#FBF7EC;border:1.5px solid #E7DFC9;display:flex;align-items:center;justify-content:center;font-size:13px;color:#B0A99C;transition:all .3s ease;flex-shrink:0;}
+.wdot.done{background:#B8935A;border-color:#B8935A;color:#fff;}
+.wdot.pending{border:1.5px dashed #D9A441;color:#B8935A;font-weight:700;}
+.wdot.shield{background:#F1EAF7;border-color:#E1D5EE;color:#8A5FA0;}
+.wdot.new{animation:wdot-pop .5s ease;}
+@keyframes wdot-pop{0%{transform:scale(.6);opacity:0;}60%{transform:scale(1.15);}100%{transform:scale(1);opacity:1;}}
+.week-progress-note{font-size:11px;color:#8A8377;margin-top:12px;}
+.risk-note{background:#FBEFE4;border:1px solid #F0DAC0;border-radius:12px;padding:12px 16px;font-size:11.5px;color:#8C5B34;margin-bottom:16px;}
+.protector-row{display:flex;align-items:center;gap:12px;margin-top:16px;padding-top:16px;border-top:1px solid #E7DFC9;}
+.protector-icon{width:32px;height:32px;border-radius:50%;background:#F1EAF7;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.protector-text{flex:1;}
+.protector-title{font-size:12px;font-weight:600;color:#2B2621;}
+.protector-sub{font-size:10.5px;color:#8A8377;margin-top:2px;}
+.protector-btn{height:32px;padding:0 14px;border-radius:100px;border:1px solid #E1D5EE;background:transparent;color:#8A5FA0;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.protector-btn:disabled{opacity:.4;cursor:default;}
+.app-toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(20px);background:#2B2621;color:#F3EFE6;padding:12px 20px;border-radius:100px;font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:8px;opacity:0;transition:all .35s ease;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.4);z-index:2000;}
+.app-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.nfc-confirm-screen{max-width:400px;margin:0 auto;text-align:center;padding:20px 0 40px;}
+.nfc-tap-badge{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#2B2621,#3A322A);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:26px;}
+.nfc-confirm-screen .title{font-family:'Fraunces',serif;font-size:21px;font-weight:700;color:#2B2621;}
+.nfc-confirm-screen .sub{font-size:12px;color:#8A8377;margin-top:6px;padding:0 20px;line-height:1.5;}
+.nfc-streak-pill{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:#FFFFFF;border:1px solid #E7DFC9;border-radius:100px;padding:10px 18px;margin:20px auto 0;}
+.nfc-confirm-screen .mantra{font-family:'Fraunces',serif;font-style:italic;font-size:13px;color:#2B2621;text-align:center;margin:20px 24px 0;line-height:1.5;}
+
 /* ---- Nutrición: macros de solo lectura, vista de plan en tabla, suplementación ---- */
 .macro-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 @media(max-width:640px){.macro-stat-grid{grid-template-columns:repeat(2,1fr);}}
@@ -585,6 +620,7 @@ async function boot() {
     if (state.role === 'admin') {
       try { const { notifications } = await api('/api/admin/notifications'); state.notifications = notifications; } catch (e) { state.notifications = []; }
     }
+    await consumePendingActionIfAny();
     renderNav();
     renderMain();
     if (state.role === 'cliente') loadClientAlerts();
@@ -825,6 +861,7 @@ function renderMain() {
     'admin-community': renderAdminCommunity,
     'admin-notifications': renderAdminNotifications,
     'admin-quotes': renderAdminQuotes,
+    'nfc-confirm': (mainEl) => renderNfcConfirmationScreen(mainEl, window._nfcConfirmResult),
   };
   (routes[state.view] || renderPersonalInfo)(el);
   el.classList.remove('fade-anim');
@@ -2330,12 +2367,14 @@ async function renderTraining(el) {
       api(`/api/clients/${clientId}`),
       api(`/api/clients/${clientId}/quote-of-the-day`).catch(() => ({ quote: null })),
       api(`/api/clients/${clientId}/training-completions`).catch(() => ({ completions: [] })),
+      !isAdmin ? api(`/api/clients/${clientId}/training/streak`).catch(() => ({ streak: null })) : Promise.resolve({ streak: null }),
     ];
     if (isAdmin) calls.push(api('/api/admin/quotes').catch(() => ({ quotes: [] })));
     if (isAdmin) await ensureClientsLoaded();
-    const [{ exercises }, { client }, { quote }, { completions }, quotesResult] = await Promise.all(calls);
+    const [{ exercises }, { client }, { quote }, { completions }, { streak }, quotesResult] = await Promise.all(calls);
     window._trainingExercises = exercises;
     window._trainingCompletions = completions;
+    window._trainingStreak = streak;
     const adminQuotes = quotesResult ? quotesResult.quotes : [];
 
     if (trainingUI.day && trainingUI.category) return renderTrainingPlayer(el, exercises, client, isAdmin);
@@ -2474,7 +2513,9 @@ function renderTrainingHome(el, exercises, client, isAdmin, quote, adminQuotes, 
   el.innerHTML = `
     ${renderIdentityHeader('Entrenamiento', subtitle, quote ? quote.quote : '', `Hola ${client.name || ''}, repite después de mí:`)}
     ${quote && quote.author ? `<p style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">— ${quote.author}</p>` : ''}
+    ${days ? `<div style="display:flex;justify-content:flex-end;margin:-14px 0 16px;">${renderStreakBadge(window._trainingStreak)}</div>` : ''}
     ${heroHtml}
+    ${days ? renderWeekProgressCard(window._trainingStreak) : ''}
     <div class="card">
       <div class="card-title">Días de entrenamiento</div>
       ${days ? `<div class="grid-3">
@@ -2713,12 +2754,176 @@ function renderTrainingDay(el, exercises, client, isAdmin, completions) {
     ${isAdmin ? renderTrainingAdminExerciseList(dayExercises) : ''}
   `;
 }
-async function markTrainingDayComplete(day) {
+// ---------------- Racha semanal + protector + NFC (Entrenamiento) ----------------
+
+function showToast(msg) {
+  let toast = document.getElementById('app-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'app-toast';
+    toast.className = 'app-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+function renderStreakBadge(streak) {
+  if (!streak) return '';
+  const riskClass = streak.atRisk ? ' risk' : '';
+  const label = streak.atRisk ? 'en riesgo' : 'semanas seguidas';
+  return `<div class="streak-badge${riskClass}" id="streak-badge">
+    <span class="flame">🔥</span>
+    <span class="streak-num" id="streak-num">${streak.streakWeeks}</span>
+    <span class="streak-txt" id="streak-txt">${label}</span>
+  </div>`;
+}
+
+function renderWeekProgressCard(streak) {
+  if (!streak) return '';
+  const { sessionsDoneThisWeek, sessionsRequiredThisWeek, protectorUsedThisWeek, atRisk, streakWeeks } = streak;
+  const dots = [];
+  for (let i = 0; i < sessionsRequiredThisWeek; i++) {
+    if (i < sessionsDoneThisWeek) dots.push('<div class="wdot done">✓</div>');
+    else if (protectorUsedThisWeek) dots.push('<div class="wdot shield">🛡️</div>');
+    else dots.push('<div class="wdot pending">?</div>');
+  }
+  const remaining = sessionsRequiredThisWeek - sessionsDoneThisWeek;
+  let note;
+  if (protectorUsedThisWeek) note = 'Semana protegida — no necesitas completar más sesiones para conservar tu racha.';
+  else if (sessionsDoneThisWeek >= sessionsRequiredThisWeek) note = `¡Semana completa! Tu racha va en ${streakWeeks} semana${streakWeeks === 1 ? '' : 's'} seguida${streakWeeks === 1 ? '' : 's'}.`;
+  else note = `${sessionsDoneThisWeek} de ${sessionsRequiredThisWeek} sesiones completadas — ${remaining === 1 ? 'con una más esta semana mantienes tu racha.' : `te falta${remaining === 1 ? '' : 'n'} ${remaining} esta semana para mantener tu racha.`}`;
+  const riskNote = (atRisk && !protectorUsedThisWeek) ? `<div class="risk-note">Te falta${remaining === 1 ? '' : 'n'} ${remaining} sesión${remaining === 1 ? '' : 'es'} esta semana para mantener tu racha de ${streakWeeks} semana${streakWeeks === 1 ? '' : 's'} — quedan pocos días.</div>` : '';
+  return `
+    <div class="card" id="week-progress-card">
+      ${riskNote}
+      <div class="week-progress-title">Tu semana</div>
+      <div class="week-dots" id="week-dots">${dots.join('')}</div>
+      <div class="week-progress-note" id="week-progress-note">${note}</div>
+      <div class="protector-row">
+        <div class="protector-icon">🛡️</div>
+        <div class="protector-text">
+          <div class="protector-title">${protectorUsedThisWeek ? 'Protector ya usado esta semana' : 'Protector de racha disponible'}</div>
+          <div class="protector-sub">${protectorUsedThisWeek ? 'Vuelve a estar disponible la próxima semana.' : 'Úsalo si esta semana no puedes completar tus sesiones — tu racha no se rompe.'}</div>
+        </div>
+        <button class="protector-btn" id="protector-btn" ${protectorUsedThisWeek ? 'disabled' : ''} onclick="useTrainingProtector()">${protectorUsedThisWeek ? 'Usado' : 'Usar'}</button>
+      </div>
+    </div>
+  `;
+}
+
+async function useTrainingProtector() {
   const clientId = currentClientId();
   try {
-    await api(`/api/clients/${clientId}/training-completions`, { method: 'POST', body: JSON.stringify({ day_number: day }) });
+    const { streak } = await api(`/api/clients/${clientId}/training/use-protector`, { method: 'POST' });
+    window._trainingStreak = streak;
+    showToast('🛡️ Protector usado — tu racha está a salvo esta semana.');
     renderMain();
   } catch (e) { alert('Error: ' + e.message); }
+}
+
+// Función central única — la llama tanto el botón manual dentro del módulo
+// (markTrainingDayComplete) como el flujo de escaneo NFC (consumePendingActionIfAny).
+// source: 'manual' | 'nfc' — solo para analítica, nunca cambia el comportamiento.
+async function confirmarSesionEntrenamiento(source) {
+  const clientId = currentClientId();
+  const { streak, alreadyConfirmedToday } = await api(`/api/clients/${clientId}/training/confirm-session`, { method: 'POST', body: JSON.stringify({ source }) });
+  const prevStreak = window._trainingStreak;
+  const weekJustCompleted = !alreadyConfirmedToday && prevStreak
+    && streak.sessionsDoneThisWeek >= streak.sessionsRequiredThisWeek
+    && prevStreak.sessionsDoneThisWeek < prevStreak.sessionsRequiredThisWeek;
+  window._trainingStreak = streak;
+  return { streak, alreadyConfirmedToday, weekJustCompleted };
+}
+
+async function markTrainingDayComplete(day) {
+  try {
+    const result = await confirmarSesionEntrenamiento('manual');
+    if (result.alreadyConfirmedToday) { /* nada nuevo que confirmar hoy */ }
+    else if (result.weekJustCompleted) showToast(`🎉 ¡Semana completa! Racha: ${result.streak.streakWeeks} semanas seguidas.`);
+    else showToast(`📲 Sesión confirmada — ${result.streak.sessionsDoneThisWeek} de ${result.streak.sessionsRequiredThisWeek} esta semana.`);
+    renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+// Mapa de acciones para deep links (?m=...&a=...) — agregar NFC a otro
+// módulo más adelante es solo una entrada nueva aquí, no una reconstrucción.
+const DEEP_LINK_ACTIONS = {
+  'entrenamiento:confirmar': () => confirmarSesionEntrenamiento('nfc'),
+};
+const PENDING_ACTION_KEY = 'lt_pending_action';
+
+// Se llama una sola vez al cargar el script: si la URL trae un link de NFC
+// (?m=entrenamiento&a=confirmar), lo guarda para ejecutarlo apenas haya
+// sesión (ahora mismo si ya está logueado, o justo después de loguearse) y
+// limpia la URL para que un refresh no lo dispare de nuevo.
+function captureIncomingDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const m = params.get('m');
+  const a = params.get('a');
+  if (!m || !a) return;
+  localStorage.setItem(PENDING_ACTION_KEY, JSON.stringify({ m, a }));
+  history.replaceState(null, '', location.pathname);
+}
+
+// Se llama desde boot() (que corre tanto al abrir la app con sesión activa
+// como justo después de un login exitoso) — el cliente nunca tiene que
+// volver a escanear ni buscar un botón tras loguearse.
+async function consumePendingActionIfAny() {
+  if (state.role !== 'cliente') return false;
+  const raw = localStorage.getItem(PENDING_ACTION_KEY);
+  if (!raw) return false;
+  localStorage.removeItem(PENDING_ACTION_KEY);
+  let action;
+  try { action = JSON.parse(raw); } catch (e) { return false; }
+  const run = DEEP_LINK_ACTIONS[`${action.m}:${action.a}`];
+  if (!run) return false;
+  try {
+    window._nfcConfirmResult = await run();
+    state.view = 'nfc-confirm';
+    return true;
+  } catch (e) {
+    alert('No pudimos confirmar tu sesión: ' + e.message);
+    return false;
+  }
+}
+
+function renderNfcConfirmationScreen(el, result) {
+  if (!result) { el.innerHTML = ''; return; }
+  const { streak, alreadyConfirmedToday } = result;
+  const dots = [];
+  for (let i = 0; i < streak.sessionsRequiredThisWeek; i++) {
+    if (i < streak.sessionsDoneThisWeek) {
+      const isNew = !alreadyConfirmedToday && i === streak.sessionsDoneThisWeek - 1;
+      dots.push(`<div class="wdot done${isNew ? ' new' : ''}">✓</div>`);
+    } else if (streak.protectorUsedThisWeek) dots.push('<div class="wdot shield">🛡️</div>');
+    else dots.push('<div class="wdot pending">?</div>');
+  }
+  el.innerHTML = `
+    <div class="nfc-confirm-screen">
+      <div class="nfc-tap-badge">📲</div>
+      <div class="title">¡Sesión confirmada!</div>
+      <div class="sub">Tocaste tu sticker en el gym — quedó registrada tu sesión de hoy.</div>
+      <div class="nfc-streak-pill">
+        <span class="flame" style="font-size:18px;">🔥</span>
+        <span class="streak-num" style="font-size:17px;">${streak.streakWeeks}</span>
+        <span class="streak-txt" style="font-size:10.5px;">semanas seguidas</span>
+      </div>
+      <div class="card" style="max-width:280px;margin:22px auto 0;">
+        <div class="week-progress-title" style="text-align:center;">Tu semana</div>
+        <div class="week-dots" style="justify-content:center;">${dots.join('')}</div>
+      </div>
+      <p class="mantra">"${pickMantra('training')}"</p>
+      <button class="btn btn-primary" style="max-width:280px;margin:22px auto 0;" onclick="closeNfcConfirmationScreen(true)">Ver rutina de hoy</button>
+      <button class="btn btn-ghost" style="max-width:280px;margin:10px auto 0;" onclick="closeNfcConfirmationScreen(false)">Cerrar</button>
+    </div>
+  `;
+}
+function closeNfcConfirmationScreen(goToTraining) {
+  window._nfcConfirmResult = null;
+  setView(goToTraining ? 'training' : (CLIENT_NAV.find(item => item.visible(state)) || CLIENT_NAV[0]).key);
 }
 
 function getCurrentTrainingList() {
@@ -5388,6 +5593,7 @@ async function deleteTherapy(id) {
   catch (e) { alert('Error: ' + e.message); }
 }
 
+captureIncomingDeepLink();
 boot();
 initGoogleSignIn();
 </script>

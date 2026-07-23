@@ -1085,6 +1085,118 @@ app.post('/api/clients/:id/training-completions', authMiddleware, ownerOrAdmin, 
   }
 });
 
+// ------------------------------------------------------------
+// Racha semanal de Entrenamiento + protector + confirmación de sesión
+// (botón manual y NFC llaman exactamente al mismo endpoint de abajo).
+// ------------------------------------------------------------
+
+// Lunes de la semana calendario que contiene `date` — mismo criterio que
+// getWeekStart() en el frontend, para que "semana" signifique lo mismo
+// en los dos lados.
+function getWeekStartISO(date = new Date()) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() + ((day === 0 ? -6 : 1) - day));
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString().slice(0, 10);
+}
+
+async function computeTrainingStreakState(clientId, trainingDays) {
+  const [completions, protectorUses] = await Promise.all([
+    dbGet('training_completions', { client_id: clientId }),
+    dbGet('training_protector_uses', { client_id: clientId }),
+  ]);
+  const protectorWeeks = new Set(protectorUses.map(p => p.week_start));
+  const weekStart = getWeekStartISO();
+  const sessionsDoneThisWeek = new Set(completions.filter(c => c.completed_date >= weekStart).map(c => c.day_number)).size;
+  const protectorUsedThisWeek = protectorWeeks.has(weekStart);
+
+  let streakWeeks = trainingDays > 0 && (sessionsDoneThisWeek >= trainingDays || protectorUsedThisWeek) ? 1 : 0;
+  const cursor = new Date(weekStart + 'T00:00:00');
+  cursor.setDate(cursor.getDate() - 7);
+  for (let i = 0; i < 208 && trainingDays > 0; i++) {
+    const cStart = cursor.toISOString().slice(0, 10);
+    const cEndExclusive = new Date(cursor); cEndExclusive.setDate(cEndExclusive.getDate() + 7);
+    const cEnd = cEndExclusive.toISOString().slice(0, 10);
+    const doneInWeek = new Set(completions.filter(c => c.completed_date >= cStart && c.completed_date < cEnd).map(c => c.day_number)).size;
+    if (doneInWeek >= trainingDays || protectorWeeks.has(cStart)) {
+      streakWeeks++;
+      cursor.setDate(cursor.getDate() - 7);
+    } else break;
+  }
+
+  const dow = new Date().getDay(); // 0=domingo..6=sábado
+  const daysLeftInWeek = dow === 0 ? 1 : 8 - dow; // días restantes de la semana, incluyendo hoy
+  const atRisk = trainingDays > 0 && !protectorUsedThisWeek && sessionsDoneThisWeek < trainingDays && daysLeftInWeek <= 2;
+
+  return {
+    streakWeeks,
+    sessionsDoneThisWeek,
+    sessionsRequiredThisWeek: trainingDays,
+    protectorAvailable: !protectorUsedThisWeek,
+    protectorUsedThisWeek,
+    atRisk,
+  };
+}
+
+app.get('/api/clients/:id/training/streak', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
+  try {
+    const client = await dbGetOne('clients', { id: req.params.id });
+    if (!client) return err(res, 'Cliente no encontrado.', 404);
+    const streak = await computeTrainingStreakState(req.params.id, client.training_days || 0);
+    return ok(res, { streak });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener la racha.', 500);
+  }
+});
+
+// Función central única: la llama tanto el botón manual dentro del módulo
+// como el flujo de escaneo NFC (ver frontend confirmarSesionEntrenamiento).
+// Detecta sola el día que corresponde confirmar (el siguiente sin
+// completar de la semana) — ni el botón ni el sticker necesitan saber cuál.
+app.post('/api/clients/:id/training/confirm-session', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
+  try {
+    const client = await dbGetOne('clients', { id: req.params.id });
+    if (!client) return err(res, 'Cliente no encontrado.', 404);
+    const trainingDays = client.training_days || 0;
+    if (!trainingDays) return err(res, 'Este cliente no tiene días de entrenamiento asignados.', 400);
+    const source = req.body.source === 'nfc' ? 'nfc' : 'manual';
+    const today = new Date().toISOString().slice(0, 10);
+    const weekStart = getWeekStartISO();
+
+    const completions = await dbGet('training_completions', { client_id: req.params.id });
+    const alreadyConfirmedToday = completions.some(c => c.completed_date === today);
+    if (!alreadyConfirmedToday) {
+      const doneThisWeek = new Set(completions.filter(c => c.completed_date >= weekStart).map(c => c.day_number)).size;
+      const dayNumber = Math.min(trainingDays, doneThisWeek + 1);
+      const existing = await dbGetOne('training_completions', { client_id: req.params.id, day_number: dayNumber, completed_date: today });
+      if (!existing) await dbInsert('training_completions', { client_id: req.params.id, day_number: dayNumber, completed_date: today, source });
+    }
+
+    const streak = await computeTrainingStreakState(req.params.id, trainingDays);
+    return ok(res, { streak, alreadyConfirmedToday });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al confirmar la sesión.', 500);
+  }
+});
+
+app.post('/api/clients/:id/training/use-protector', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
+  try {
+    const client = await dbGetOne('clients', { id: req.params.id });
+    if (!client) return err(res, 'Cliente no encontrado.', 404);
+    const weekStart = getWeekStartISO();
+    const existing = await dbGetOne('training_protector_uses', { client_id: req.params.id, week_start: weekStart });
+    if (!existing) await dbInsert('training_protector_uses', { client_id: req.params.id, week_start: weekStart });
+    const streak = await computeTrainingStreakState(req.params.id, client.training_days || 0);
+    return ok(res, { streak });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al usar el protector.', 500);
+  }
+});
+
 app.get('/api/clients/:id/exercises', authMiddleware, ownerOrAdmin, requirePermission('training'), async (req, res) => {
   try {
     const exercises = await dbGet('exercises', { client_id: req.params.id }, { order: { column: 'sort_order', ascending: true } });

@@ -167,8 +167,23 @@ CREATE TABLE training_completions (
   client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
   day_number INT NOT NULL CHECK (day_number BETWEEN 1 AND 7),
   completed_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  -- 'manual' (botón dentro de la app) o 'nfc' (sticker físico) — solo para
+  -- analítica, nunca cambia cómo se cuenta la racha.
+  source TEXT NOT NULL DEFAULT 'manual' CHECK (source IN ('manual','nfc')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(client_id, day_number, completed_date)
+);
+
+-- Protector de racha: 1 disponible por semana calendario (lunes-domingo),
+-- no acumulable — si no se usa esta semana, no pasa a la siguiente. Usarlo
+-- hace que esa semana cuente como completada para la racha aunque falten
+-- sesiones.
+CREATE TABLE training_protector_uses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  week_start DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(client_id, week_start)
 );
 
 -- ------------------------------------------------------------
@@ -472,7 +487,7 @@ BEGIN
     'admins','clients','personal_info','anthropometric_records','progress_photos',
     'exercises','nutrition_plans','meals','supplements','cortisol_techniques',
     'community_events','event_reservations','community_therapies','therapy_reservations',
-    'evolution_checkins','bio_inbody_records','admin_notifications','mindset_quotes','training_completions','client_notifications','sleep_logs'
+    'evolution_checkins','bio_inbody_records','admin_notifications','mindset_quotes','training_completions','client_notifications','sleep_logs','training_protector_uses'
   ])
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', t);
