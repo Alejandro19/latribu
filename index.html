@@ -437,7 +437,19 @@ td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:14px;}
 const API = '';
 let state = { token: localStorage.getItem('lt_token') || null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, notifications: [], view: 'personal-info', clients: [], currentClientId: null, moduleClientIds: {}, adminHubOpen: false, wizardStep: 1 };
 
+// Caché en memoria de respuestas GET (TTL corto) para que volver a un
+// módulo visto hace poco cargue al instante en vez de esperar otro viaje
+// de red — cualquier mutación (POST/PUT/PATCH/DELETE) limpia toda la
+// caché para no arriesgar mostrar datos desactualizados tras editar algo.
+const _apiCache = new Map();
+const API_CACHE_TTL_MS = 20000;
 async function api(path, opts = {}) {
+  const method = (opts.method || 'GET').toUpperCase();
+  const isGet = method === 'GET';
+  if (isGet) {
+    const cached = _apiCache.get(path);
+    if (cached && Date.now() - cached.time < API_CACHE_TTL_MS) return cached.data;
+  }
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   if (state.token && !(opts.body instanceof FormData)) headers['Authorization'] = `Bearer ${state.token}`;
   else if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
@@ -450,6 +462,8 @@ async function api(path, opts = {}) {
     renderPlanExpiredScreen();
   }
   if (!res.ok || data.success === false) throw new Error(data.error || 'Error de red.');
+  if (isGet) _apiCache.set(path, { data, time: Date.now() });
+  else _apiCache.clear();
   return data;
 }
 
@@ -529,6 +543,7 @@ function onAuthSuccess(data) {
 
 function logout() {
   localStorage.removeItem('lt_token');
+  _apiCache.clear();
   state = { token: null, role: null, user: null, permissions: {}, clientType: null, onboardingComplete: false, planExpired: false, planEndDate: null, notifications: [], view: 'personal-info', clients: [], currentClientId: null, moduleClientIds: {}, adminHubOpen: false, wizardStep: 1 };
   document.getElementById('app-view').classList.remove('active');
   document.getElementById('login-view').style.display = 'flex';
@@ -795,7 +810,6 @@ function closeMobileNav() {
 
 function renderMain() {
   const el = document.getElementById('main-content');
-  el.innerHTML = '<div class="empty-state">Cargando…</div>';
   applyModuleTheme(state.view);
   const routes = {
     'personal-info': renderPersonalInfo,
@@ -1102,7 +1116,7 @@ function renderPersonalInfoBody(el) {
   const formPct = Math.round((step / 9) * 100);
   const formCirc = 2 * Math.PI * 30;
   el.innerHTML = `
-    ${renderIdentityHeader('Información Personal', 'Conocerte nos permite diseñar tu experiencia dentro de La Tribu.', pickMantra('personal-info'))}
+    ${renderIdentityHeader('Información Personal', 'Conocerte nos permite diseñar tu experiencia dentro de La Tribu.')}
     <div class="hero" style="background:linear-gradient(135deg, #2B2621, #3A322A);">
       <div class="hero-glow"></div>
       <div class="hero-split">
@@ -1194,7 +1208,6 @@ async function renderPersonalInfoAdminView(el) {
     return;
   }
   const clientId = currentClientId();
-  el.innerHTML = '<div class="empty-state">Cargando…</div>';
   try {
     const [{ personalInfo }, { records: inbodyRecords }, { records: anthroRecords }, { photos }] = await Promise.all([
       api(`/api/clients/${clientId}/personal-info`),
@@ -3824,10 +3837,6 @@ function renderCortisolTechniquesCard(techniques) {
 }
 
 // ---------------- Módulo: Descanso ----------------
-// Versión simple: la única cifra real hoy es "horas de sueño" del último
-// check-in de Mi Evolución (evolution_checkins.sleep_hours). Calidad de sueño
-// y hora de dormir aún no se registran en ningún lado — se muestran como "—"
-// en vez de inventar un dato.
 function formatSleepHours(hours) {
   const h = Math.floor(hours);
   const m = Math.round((hours - h) * 60);
@@ -3910,6 +3919,82 @@ function toggleRestJournal() {
     : '';
 }
 
+const SLEEP_QUALITY_LEVELS = [
+  { value: 1, emoji: '😣', label: 'muy mala' },
+  { value: 2, emoji: '😐', label: 'regular' },
+  { value: 3, emoji: '🙂', label: 'buena' },
+  { value: 4, emoji: '😌', label: 'muy buena' },
+  { value: 5, emoji: '🤩', label: 'excelente' },
+];
+let sleepLogUI = { editing: false, hours: 7, quality: null };
+function renderSleepHero(log) {
+  const showForm = !log || sleepLogUI.editing;
+  if (!showForm) {
+    const bedtime = new Date(new Date(log.logged_at).getTime() - Number(log.hours) * 3600000);
+    const bedtimeLabel = bedtime.toLocaleTimeString('es-CO', { hour: 'numeric', minute: '2-digit' }).replace(/\s?([ap])\.?\s?m\.?/i, '$1m').toLowerCase();
+    const q = SLEEP_QUALITY_LEVELS.find(l => l.value === log.quality);
+    return `
+      <div class="hero" id="sleep-hero" style="background:linear-gradient(135deg, #241C30, #332740);">
+        <div class="hero-glow"></div>
+        <p class="hero-eyebrow" style="color:#C6B4E0;">ANOCHE DORMISTE</p>
+        <p class="hero-figure">${formatSleepHours(Number(log.hours))}</p>
+        <p class="hero-meta">Calidad: ${q ? q.label : '—'} · te dormiste alrededor de las ${bedtimeLabel}</p>
+        <button type="button" style="background:none;border:none;color:#C6B4E0;font-size:11px;text-decoration:underline;margin-top:6px;cursor:pointer;padding:0;" onclick="editSleepLogToday()">Editar registro de hoy</button>
+      </div>
+    `;
+  }
+  return `
+    <div class="hero" id="sleep-hero" style="background:linear-gradient(135deg, #241C30, #332740);">
+      <div class="hero-glow"></div>
+      <p class="hero-eyebrow" style="color:#C6B4E0;">ANOCHE DORMISTE</p>
+      <p style="font-family:'Fraunces',serif;font-weight:600;font-size:17px;color:#fff;margin:6px 0 2px;">Cuéntanos en 10 segundos</p>
+      <p style="font-size:11.5px;color:#fff;opacity:.7;margin:0 0 16px;">Sin formularios largos — dos toques y queda registrado.</p>
+      <p style="font-size:11.5px;color:#fff;opacity:.8;margin:0 0 8px;">¿Cuántas horas dormiste?</p>
+      <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:18px;">
+        <button type="button" onclick="adjustSleepHoursStepper(-0.5)" style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font-size:16px;cursor:pointer;">−</button>
+        <span id="sleep-hours-stepper-val" style="font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:#fff;min-width:56px;text-align:center;">${sleepLogUI.hours}h</span>
+        <button type="button" onclick="adjustSleepHoursStepper(0.5)" style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font-size:16px;cursor:pointer;">+</button>
+      </div>
+      <p style="font-size:11.5px;color:#fff;opacity:.8;margin:0 0 8px;">¿Cómo dormiste?</p>
+      <div id="sleep-quality-faces" style="display:flex;justify-content:center;gap:10px;margin-bottom:18px;">
+        ${SLEEP_QUALITY_LEVELS.map(l => `<button type="button" onclick="selectSleepQuality(${l.value})" data-quality="${l.value}" style="width:38px;height:38px;border-radius:50%;border:none;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:${sleepLogUI.quality === l.value ? '#C6B4E0' : 'rgba(255,255,255,.08)'};">${l.emoji}</button>`).join('')}
+      </div>
+      <button class="btn" style="width:100%;background:#C6B4E0;color:#241C30;font-weight:700;" onclick="saveSleepQuickLog()">Guardar</button>
+    </div>
+  `;
+}
+function adjustSleepHoursStepper(delta) {
+  sleepLogUI.hours = Math.max(0, Math.min(14, Math.round((sleepLogUI.hours + delta) * 2) / 2));
+  const el = document.getElementById('sleep-hours-stepper-val');
+  if (el) el.textContent = `${sleepLogUI.hours}h`;
+}
+function selectSleepQuality(value) {
+  sleepLogUI.quality = value;
+  document.querySelectorAll('#sleep-quality-faces button').forEach(btn => {
+    btn.style.background = Number(btn.dataset.quality) === value ? '#C6B4E0' : 'rgba(255,255,255,.08)';
+  });
+}
+function editSleepLogToday() {
+  const log = window._sleepLogToday;
+  sleepLogUI.editing = true;
+  sleepLogUI.hours = log ? Number(log.hours) : 7;
+  sleepLogUI.quality = log ? log.quality : null;
+  const container = document.getElementById('sleep-hero');
+  if (container) container.outerHTML = renderSleepHero(log);
+  else renderMain();
+}
+async function saveSleepQuickLog() {
+  if (!sleepLogUI.quality) return alert('Selecciona cómo dormiste.');
+  const clientId = currentClientId();
+  try {
+    const { log } = await api(`/api/clients/${clientId}/sleep-log`, { method: 'POST', body: JSON.stringify({ hours: sleepLogUI.hours, quality: sleepLogUI.quality }) });
+    sleepLogUI.editing = false;
+    window._sleepLogToday = log;
+    const container = document.getElementById('sleep-hero');
+    if (container) container.outerHTML = renderSleepHero(log);
+    else renderMain();
+  } catch (e) { alert('Error: ' + e.message); }
+}
 async function renderRest(el) {
   const isAdmin = state.role === 'admin';
   const clientId = currentClientId();
@@ -3925,21 +4010,18 @@ async function renderRest(el) {
     return;
   }
   try {
-    let sleepLabel = null;
     let sleepProtocol = null;
     if (isAdmin) await ensureClientsLoaded();
-    const [{ checkins }, protocolRes, toolsRes] = await Promise.all([
-      api(`/api/clients/${clientId}/evolution`),
+    const [sleepLogRes, protocolRes, toolsRes] = await Promise.all([
+      !isAdmin ? api(`/api/clients/${clientId}/sleep-log-today`).catch(() => ({ log: null })) : Promise.resolve({ log: null }),
       api(`/api/clients/${clientId}/sleep-protocol`).catch(() => ({ protocol: null })),
       api(isAdmin ? '/api/admin/rest-tools' : '/api/rest-tools').catch(() => ({ tools: [] })),
     ]);
-    const last = checkins[checkins.length - 1] || {};
-    sleepLabel = last.sleep_hours != null ? formatSleepHours(last.sleep_hours) : null;
+    window._sleepLogToday = sleepLogRes.log || null;
     sleepProtocol = protocolRes.protocol || null;
     const restTools = toolsRes.tools || [];
     const clientType = currentClientType();
     const esClienteActivo = clientType === 'coaching_1_1' || clientType === 'coaching_online';
-    const heroFallback = `<button class="hero-btn" style="margin-top:4px;" onclick="goToCheckinToday()">Hacer tu check-in de hoy</button>`;
     const genericProtocolHtml = `
       <div style="margin-bottom:20px;">
         <p class="section-label" style="font-size:16px;margin-bottom:2px;">Tu protocolo de sueño</p>
@@ -3968,12 +4050,7 @@ async function renderRest(el) {
     ` : '';
     el.innerHTML = `
       ${renderIdentityHeader('Descanso', 'Tu recuperación nocturna.', pickMantra('rest'))}
-      ${!isAdmin ? `<div class="hero" style="background:linear-gradient(135deg, #241C30, #332740);">
-        <div class="hero-glow"></div>
-        <p class="hero-eyebrow" style="color:#C6B4E0;">ANOCHE DORMISTE</p>
-        <p class="hero-figure">${sleepLabel || '—'}</p>
-        ${sleepLabel ? '<p class="hero-meta">Calidad de sueño y hora de dormir: próximamente</p>' : heroFallback}
-      </div>` : ''}
+      ${!isAdmin ? renderSleepHero(window._sleepLogToday) : ''}
       ${protocolHtml}
       ${renderRestToolsCard(restTools, isAdmin)}
       <div style="text-align:center;">
@@ -4535,18 +4612,6 @@ function toggleCheckinAccordion() {
   if (acc) acc.classList.toggle('open');
   if (btn) btn.classList.toggle('open');
 }
-function goToCheckinToday() {
-  setView('evolution', { openCheckinOnLoad: true });
-}
-function openCheckinAccordionIfRequested() {
-  if (!state.openCheckinOnLoad) return;
-  state.openCheckinOnLoad = false;
-  const acc = document.getElementById('checkin-accordion');
-  const btn = document.getElementById('checkin-toggle-btn');
-  if (acc) acc.classList.add('open');
-  if (btn) btn.classList.add('open');
-  btn?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
 // "Tu evolución física" — todo lo que el mentor registra en sesión (KPIs,
 // medidas, récords). Es la única sección de Mi Evolución que se bloquea
 // para lead_wellness, porque depende de que exista un mentor tomando datos.
@@ -4668,7 +4733,6 @@ async function renderEvolution(el) {
       ${renderCheckinAccordion(true)}
       <p style="font-size:12px;color:var(--ink-soft);margin:14px 0 0;text-align:center;">Bienestar general, evolución física y récords aparecen aquí una vez selecciones un cliente.</p>
     `;
-    openCheckinAccordionIfRequested();
     return;
   }
   const clientId = currentClientId();
@@ -4700,7 +4764,6 @@ async function renderEvolution(el) {
         { name: 'Masa muscular', color: '#B8935A', unit: ' kg', points: inbody.filter(r => r.mes_num && r.smm != null).map(r => ({ month: r.mes_num, value: Number(r.smm) })) },
       ]);
     }
-    openCheckinAccordionIfRequested();
   } catch (e) { el.innerHTML = `<div class="error-msg">${e.message}</div>`; }
 }
 async function saveCheckin() {

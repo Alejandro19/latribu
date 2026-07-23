@@ -388,6 +388,20 @@ CREATE TABLE evolution_checkins (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Registro rápido de sueño (hero de Descanso) — un toque, sin salir de la
+-- pantalla. Es intencionalmente independiente de evolution_checkins (el
+-- check-in mensual completo de Mi Evolución): aquí una fila por cliente
+-- por día, editable mientras siga siendo "hoy".
+CREATE TABLE sleep_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  hours NUMERIC(3,1) NOT NULL,
+  quality INT NOT NULL CHECK (quality BETWEEN 1 AND 5),
+  logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(client_id, date)
+);
+
 -- Registros InBody, cargados y parseados desde el módulo 3 dentro de
 -- Información Personal (mismo flujo de OCR que BIO360: /api/clients/:id/ocr-vision
 -- + parseo en el frontend), para poder comparar el progreso a futuro.
@@ -458,7 +472,7 @@ BEGIN
     'admins','clients','personal_info','anthropometric_records','progress_photos',
     'exercises','nutrition_plans','meals','supplements','cortisol_techniques',
     'community_events','event_reservations','community_therapies','therapy_reservations',
-    'evolution_checkins','bio_inbody_records','admin_notifications','mindset_quotes','training_completions','client_notifications'
+    'evolution_checkins','bio_inbody_records','admin_notifications','mindset_quotes','training_completions','client_notifications','sleep_logs'
   ])
   LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', t);

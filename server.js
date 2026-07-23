@@ -1713,6 +1713,38 @@ app.put('/api/clients/:id/sleep-protocol', authMiddleware, adminOnly, async (req
   }
 });
 
+// Registro rápido de sueño (hero de Descanso): una fila por cliente por
+// día, upsert sobre (client_id, date) — "hoy" siempre se puede editar,
+// un día distinto crea un registro nuevo.
+app.get('/api/clients/:id/sleep-log-today', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const log = await dbGetOne('sleep_logs', { client_id: req.params.id, date: today });
+    return ok(res, { log: log || null });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al obtener el registro de sueño.', 500);
+  }
+});
+
+app.post('/api/clients/:id/sleep-log', authMiddleware, ownerOrAdmin, async (req, res) => {
+  try {
+    const { hours, quality } = req.body;
+    if (hours == null || quality == null) return err(res, 'Horas y calidad son requeridas.', 400);
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase
+      .from('sleep_logs')
+      .upsert({ client_id: req.params.id, date: today, hours, quality, logged_at: new Date().toISOString() }, { onConflict: 'client_id,date' })
+      .select()
+      .single();
+    if (error) throw error;
+    return ok(res, { log: data });
+  } catch (e) {
+    console.error(e);
+    return err(res, 'Error al guardar el registro de sueño.', 500);
+  }
+});
+
 // ------------------------------------------------------------
 // Mi Evolución: KPIs de progreso
 // ------------------------------------------------------------

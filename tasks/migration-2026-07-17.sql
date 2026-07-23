@@ -315,3 +315,21 @@ ALTER TABLE cortisol_techniques ADD COLUMN IF NOT EXISTS audio_name TEXT;
 ALTER TABLE clients ALTER COLUMN password_hash DROP NOT NULL;
 ALTER TABLE clients ADD COLUMN IF NOT EXISTS google_id TEXT;
 ALTER TABLE admins ADD COLUMN IF NOT EXISTS google_id TEXT;
+
+-- Registro rápido de sueño del hero de Descanso: reemplaza el hero anterior
+-- (que leía sleep_hours del check-in mensual de Mi Evolución) por un
+-- registro diario propio, de un toque, independiente de evolution_checkins.
+CREATE TABLE IF NOT EXISTS sleep_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  hours NUMERIC(3,1) NOT NULL,
+  quality INT NOT NULL CHECK (quality BETWEEN 1 AND 5),
+  logged_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(client_id, date)
+);
+ALTER TABLE sleep_logs ENABLE ROW LEVEL SECURITY;
+DO $$ BEGIN
+  CREATE POLICY deny_all ON sleep_logs USING (false);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
