@@ -2,6 +2,10 @@
   "name": "latribu-portal",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "main": "server.js",
   "engines": {
     "node": ">=20"
@@ -9,6 +13,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "dev:legacy": "nodemon server.js",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {

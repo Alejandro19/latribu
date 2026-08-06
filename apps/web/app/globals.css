@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design System: Custom Properties ─── */
+:root {
+  --cream: #FBF7F1;
+  --paper: #FFFFFF;
+  --ink: #2B2420;
+  --ink-soft: #6B6058;
+  --terracota: #C1662F;
+  --terracota-soft: #F1DDCB;
+  --sage: #6B8F71;
+  --sage-soft: #E3EDE3;
+  --gold: #D9A441;
+  --line: #E9E1D6;
+  --danger: #C1462F;
+  --radius: 16px;
+
+  /* Sidebar ring */
+  --ring-morning: #D9A441;
+  --ring-afternoon: #5B7A4E;
+  --ring-evening: #8A5FA0;
+
+  /* Theme tints */
+  --bg-neutral: #F5F1E9;
+  --line-neutral: #E7DFC9;
+  --accent-neutral: #B8935A;
+  --bg-green: #EFF5E8;
+  --line-green: #D9E4CE;
+  --accent-green: #5B7A4E;
+}
+
+/* ─── Base ─── */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+/* Fraunces serif via next/font — declared in layout.tsx */
+h1, h2, h3, .serif {
+  font-family: 'Fraunces', serif;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* ─── Animations ─── */
+@keyframes module-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-anim {
+  animation: module-in .45s ease;
+}
+
+/* ─── Login: tema día/noche por hora del dispositivo ───
+   La clase se aplica en <html> vía un script inline que corre antes del
+   primer pintado (ver LoginThemeScript), así no hay flash de tema
+   incorrecto ni salto de color al refrescar. */
+html.theme-login-light {
+  --lh-bg: #F5EFDF; --lh-word: #2B2621; --lh-slogan: #6B6459;
+  --lf-bg: #211B17; --lf-title: #F3EFE6; --lf-label: #B0A599; --lf-input-border: #3A2F27;
+  --lf-input-bg: #2B231E; --lf-input-text: #F3EFE6; --lf-btn-bg: #D9BE8C; --lf-btn-text: #241A08;
+  --lf-foot: #B0A599; --lf-link: #D9BE8C;
+}
+html.theme-login-dark {
+  --lh-bg: #211B17; --lh-word: #F3EFE6; --lh-slogan: #C9C2B4;
+  --lf-bg: #FFFDF8; --lf-title: #2B2621; --lf-label: #8A8377; --lf-input-border: #E7DFC9;
+  --lf-input-bg: #FBF7EC; --lf-input-text: #2B2621; --lf-btn-bg: #2B2621; --lf-btn-text: #F3EFE6;
+  --lf-foot: #8A8377; --lf-link: #B8935A;
+}

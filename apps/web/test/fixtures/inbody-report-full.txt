@@ -1,0 +1,37 @@
+InBody 770
+Fecha/Hora: 2026-07-20 10:00
+
+Análisis de Composición Corporal
+Agua Corporal Total (L) 35.4
+Proteínas (kg) 10.2
+Minerales (kg) 3.20
+Masa Grasa Corporal (kg) 15.0
+
+Control de Peso
+Peso Actual 68.5
+Peso Ideal 65.0
+Control de Grasa -8.0
+
+Análisis Músculo-Grasa
+Peso
+68.5
+Masa de Músculo Esquelético
+28.4
+MME
+
+Análisis de Grasa Corporal
+PGC (%)
+21.9
+PGC (%)
+21.9
+
+Puntaje InBody 82
+
+Grasa Visceral
+7 (1~9)
+
+Tasa Metabólica Basal 1450 kcal
+
+Ángulo de Fase 6.35
+
+altura 168 cm
