@@ -1,0 +1,99 @@
+@import "./tema.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design System: Custom Properties ─── */
+:root {
+  --cream: #FBF7F1;
+  --paper: #FFFFFF;
+  --ink: #1A1712;
+  --ink-soft: #6B6058;
+  --terracota: #C1662F;
+  --terracota-soft: #F1DDCB;
+  --sage: #6B8F71;
+  --sage-soft: #E3EDE3;
+  --gold: #D9A441;
+  --line: #E9E1D6;
+  --danger: #C1462F;
+  --radius: 16px;
+
+  /* Sidebar ring */
+  --ring-morning: #D9A441;
+  --ring-afternoon: #5B7A4E;
+  --ring-evening: #8A5FA0;
+
+  /* Theme tints */
+  --bg-neutral: #F5F1E9;
+  --line-neutral: #E7DFC9;
+  --accent-neutral: #B8935A;
+  --bg-green: #EFF5E8;
+  --line-green: #D9E4CE;
+  --accent-green: #5B7A4E;
+
+  /* ─── Sistema de diseño premium (Apple/Oura/Vercel) ─── */
+  --page-bg: #FCFAF6;
+  --hero-espresso: #3D3226;
+  --hero-espresso-text: #F5EFE2;
+  --hero-espresso-text-muted: #B8ABA0;
+  --hero-espresso-accent: #D9B77E;
+  --hero-piedra-start: #E8DFCE;
+  --hero-piedra-end: #C7B9A4;
+  --hero-piedra-text: #2E2618;
+  --hero-piedra-text-muted: #5C513E;
+  --hero-piedra-accent: #6B5C42;
+  --ink-secondary: #8A867C;
+  --border-hairline: #EAE6DC;
+  --border-input: #E4E0D5;
+  --ring-accent: #C9A66B;
+  --radius-hero: 16px;
+  --radius-card: 14px;
+  --radius-control: 9px;
+
+  /* ─── Identidad Ephirox (reskin en curso) ───
+     Conviven con la paleta legacy de arriba hasta que cada pantalla migre.
+     Los tokens --eph-* de color ahora viven en tema.css, escalados por
+     data-theme (dark-brand / dark-carbon / light-premium) — ver
+     docs/EPHIROX-spec-temas.md. Cuando el árbol entero esté migrado, la
+     paleta legacy de arriba se retira en un solo paso. */
+  /* Documentos imprimibles/informes (PDF): únicos que usan claro siempre,
+     fuera del sistema de 3 temas (no dependen de data-theme). */
+  --eph-paper-bg: #EDE6DC;
+  --eph-paper-text: #1C1613;
+}
+
+/* ─── Base ─── */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+/* Fraunces serif via next/font — declared in layout.tsx */
+h1, h2, h3, .serif {
+  font-family: 'Fraunces', serif;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* ─── Animations ─── */
+@keyframes module-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-anim {
+  animation: module-in .45s ease;
+}

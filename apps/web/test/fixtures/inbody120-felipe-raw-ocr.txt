@@ -1,0 +1,213 @@
+InBody
+ID
+1020727443
+(Felipe Torres)
+[InBody120]
+Fecha Hora de la prueba
+Masculino 09.02.2026. 07:13
+@Analiza_tu_cuerpo
+Cel 3124933508
+Altura
+Edad
+Sexo
+171cm
+38
+Análisis de Composición Corporal
+Cantidad total de agua en el cuerpo Agua Corporal Total (L)
+49,436,2-44,2
+)
+Para producir los músculos
+Proteínas
+(kg)
+13,5 (
+9,7 11,8 )
+Para fortalecer los huesos.
+Minerales
+(kg)
+4,62 (3,35-4,09 )
+Para almacenar el exceso de energía Masa Grasa Corporal (kg)
+La suma de lo anterior
+19,6 ( 7,7~15,4
+Puntuación InBody
+85/100 Puntos
+*La puntuación total que refleja la evaluación de la comp
+osición corporal. Una persona musculosa puede superar
+100 puntos.
+Control de Peso
+Peso
+Peso Ideal
+(kg)
+87,154,7-74,0
+79,4 kg
+)
+Control de Peso
+- 7,7 kg
+Control de Grasa
+- 7,7 kg
+Control de Músculo
+0,0 kg
+Análisis de Músculo-Grasa
+Parámetros de Investigación
+Bajo
+Normal
+Alto
+Peso
+55
+70
+85
+100 115
+130
+145
+160 175
+190
+205 %
+(kg)
+87,1
+MME
+70
+80
+90
+100
+110
+120
+130 140 150
+160
+170 %
+(kg)
+Masa de Músculo Esquelético
+38,6
+Masa Grasa
+Masa de Músculo Esquelético
+Masa Libre de Grasa
+Tasa Metabólica Básal
+Relación Cintura-Cadera
+Nivel de Grasa Visceral
+38,6 kg (27,4~33,5 )
+40
+60
+80
+100
+160
+220
+280 340 400
+460
+520 %
+67,5 kg (49,2-60,1)
+1828 kcal (1809-2129)
+0,96 (0,80-0,90 )
+8 ( 1-9 )
+(kg)
+Corporal
+19.6
+Análisis de Obesidad
+IMC
+Indice de Masa Corporal
+PGC
+Bajo
+Normal
+Alto
+(kg/m2)
+10.0 15,0
+18,5 22.0
+25.0
+30.0
+35,0
+40.0 45,0
+50,0
+55,0
+29,8
+(%)
+0.0
+5,0
+10.0
+15.0
+20.0
+25,0 30,0 35,0 40,0
+45,0
+50.0
+22,5
+Porcentaje de Grasa Corporal
+Masa magra
+%
+Evaluación
+Análisis de Masa Magra Segmental
+4,01kg
+4,21kg
+127,8%
+133,2%
+Izquierdo
+Alto
+30,7kg
+116,2%
+Alto
+Alto
+Derecho
+Masa de grasa
+%
+Evaluación
+Análisis de Grasa Segmental
+Izquierdo
+1,1kg
+185,4%
+Alto
+11,2kg
+275,7%
+Alto
+1,0kg
+171,4%
+Alto
+9,31kg
+9,31kg
+96,6%
+96,5%
+2,5kg
+149,2%
+Normal
+Normal
+Normal
+2,5kg
+150,2%
+Normal
+Historial de Composición Corporal
+Peso
+(kg) 87,1
+MME
+(kg) 38,6
+Masa de Músculo Esquelético
+Derecho
+*Se estima la grasa segmental
+Interpretación de los resultados
+Análisis de Músculo-Grasa
+Compara la longitud de las barras de Masa de Músc
+ulo Esquelético y Masa Grasa Corporal. Cuanto más
+larga sea la barra de Masa de Músculo Esquelético,
+más fuerte será el cuerpo.
+Análisis de Obesidad
+IMC es un índice utilizado para determinar obesidad
+utilizando altura y peso.
+PGC es el porcentaje de grasa corporal comparado
+con el peso corporal.
+Análisis de Masa Magra Segmental
+Evalúa si la cantidad de músculo está distribuida adecu
+adamente por todo el cuerpo. Compara masa de múscu
+lo con lo ideal.
+Análisis de Grasa Segmental
+Evalúa si la cantidad de grasa está distribuida adecua
+damente por todo el cuerpo. Compara masa grasa
+con lo ideal.
+Código QR para Interpretación de Resultados
+Escanee el Código QR para
+ver la interpretación de los
+resultados con mayor detalle.
+Impedancia
+BD BI TR PD PI
+Z(2) 20 kHz 251,9 267,8 18,2 241,5 239,7
+100 kHz 219,4 235,0 15,6 207,1 205,7
+PGC
+Porcentaje de Grasa Corporal
+(%) 22,5
+Reciente Total
+09.02.26
+07:13
+Ver LookinBody 120.4.0.0.7- S/N: F32000965
+Copyright©1996-by InBody Co., Ltd. All rights reserved.BR-Spanish(m)-F3/230-B-140219

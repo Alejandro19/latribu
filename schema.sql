@@ -351,7 +351,8 @@ CREATE TABLE rest_tools (
   audio_name TEXT,
   active BOOLEAN NOT NULL DEFAULT true,
   sort_order INT DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Descanso: protocolo de sueño personalizado, escrito por el mentor.

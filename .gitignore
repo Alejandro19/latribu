@@ -1,7 +1,25 @@
 node_modules/
 .env
 .env.test
+.env.local
+.env.dev-local
+.env.*.local
 .DS_Store
 *.log
 .worktrees/
 .superpowers/
+dist/
+.next/
+vendor/
+.claude/worktrees/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+*.tsbuildinfo
+agent-skills/
+
+# Copia de referencia del monolito legacy, solo consulta (ver session-memory.md)
+/BIO360Index.html
+/BIO360server.js
+
+# Datos binarios de Tesseract OCR usados en pruebas locales — no son código fuente
+apps/api/*.traineddata

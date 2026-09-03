@@ -1,0 +1,308 @@
+InBody
+ID
+30327398
+(Maria Jose Jar...)
+Altura
+167cm
+Análisis de Composición Corporal
+[InBody570]
+Fecha / Hora de la prueba
+Edad
+Sexo
+52
+Femenino 26.08.2025. 14:43
+Valor
+Agua Corporal Total Masa Magra Masa Libre de Grasa Peso
+Puntuación InBody-
+Agua Corporal
+Total
+(L)
+30,1
+(29,8-36,4)
+30,1
+Proteina
+(kg)
+8,1
+38,7
+(38,3-46,9)
+(8,0~9,8)
+41,0
+(40,6-49,6)
+73/100 Puntos
+No osco
+Minerales
+2,79
+57,4
+(49,8-67,4)
+(kg)
+(2,76~3,38)
+Masa Grasa
+16,4
+* La puntuación total que refleja la evaluación de la comp
+osición corporal. Una persona musculosa puede superar
+100 puntos.
+Control de Peso
+Corporal
+(kg)
+(11,7-18,8)
+Peso Ideal
+58,6 kg
+Análisis de Músculo-Grasa
+Control de Peso
++1,2 kg
+Control de Grasa
+-2,9 kg
+Bajo
+Normal
+Alto
+Control de Músculo
++ 4,1 kg
+55
+70
+85
+100
+115
+130
+145
+160 175
+190 205 %
+Peso
+(kg)
+57,4
+Evaluación de Nutrición
+70
+80
+90
+MME
+(kg)
+100
+110 120 130
+140 150
+160
+170 %
+Proteinas
+Normal Deficiente
+Masa de Músculo Esqu
+22,4
+Minerales
+Normal Deficiente
+Masa Grasa
+(kg)
+40
+60
+80
+100 160
+220
+280
+340
+400
+460
+520
+Corporal
+16,4
+Grasa Corporal Normal Deficiente Excesivo
+Evaluación de Obesidad
+Análisis de Obesidad
+IMC
+Ligeramente
+Normal Bajo
+Alto
+Alto
+Bajo
+Normal
+Alto
+IMC
+10,0 15,0 18,5
+(kg/m²)
+Indice de Masa Corpora
+21,0 25,0 30,0
+20,6
+35,0
+40,0 45,0
+50,0
+55,0
+PGC
+PGC
+8.0
+13,0 18,0
+(%)
+Porcentaje de G Corpool
+23,0 28,0 33,0
+28,5
+38,0 43.0 48,0
+53,0
+58,0
+Superior
+Inferior
+Análisis de Masa Magra SegmentalBasado en el peso ideal
+Bajo
+Normal
+Basado en el peso actual
+Alto
+Normal Ligeramente Alto
+Alto
+Evaluación de Equilibrio Corporal-
+Ligeramente
+En equilibrio desequilibrado desequilibrado
+Ligeramente
+En equilibrio desequilibrado desequilibrado
+Superior-Inferior En equilibrio Ligeramente Extremadamente
+desequilibrado desequilibrado
+Extremadamente
+Extremadamente
+40
+60
+80
+100
+120 140
+160
+180
+200 220 240 %
+Análisis de Grasa Segmental-
+Brazo Derecho (kg)
+2,01
+95,8
+Brazo Derecho
+(1,0 kg)
+98,3%
+40
+60
+80
+100 120
+140
+160
+180 200
+220 240 %
+Brazo Izquierdo (kg)
+1,82
+Brazo Izquierdo
+(1,1 kg)
+112,2%
+(%)
+86,8
+Tronco
+(7,9 kg)
+-144,2%
+70
+80
+90
+100
+110
+120 130
+140
+150
+160
+170 %
+Tronco
+Pierna Derecha
+(kg)
+18,3
+(2,7 kg)
+107,5%
+(%)
+95,9
+Pierna Izquierda
+(2,7 kg)
+106,9%
+70
+80
+90
+Pierna Derecha (kg)
+(%)
+100 110
+6,79
+102,3
+120 130 140
+150
+160 170 %
+Parámetros de Investigación
+Agua Intracelular
+18,7 L
+(18,5-22,7)
+70
+80
+90
+Pierna Izquierda (kg)
+(%)
+100 110
+6,75
+101,8
+120 130
+140
+150
+160 170 %
+Agua Extracelular
+11,4 L
+(11,3-13,9)
+Bajo
+Normal
+Análisis de Agua Corporal
+0,320 0,340 0,360 0,380 0,390 0,400 0,410 0,420 0,430 0,440 0,450
+Alto
+AEC/ACT
+Tasa Metabólica Básal
+Relación Cintura-Cadera
+Nivel de Grasa Visceral
+Contenido Mineral Óseo
+Masa Celular Corporal
+1256 kcal (1229-1420)
+0,86
+6 ( 1-9 )
+2,34 kg
+26,8 kg
+(0,75-0,85)
+(2,28-2,78)
+(26,5-32,3)
+0,379
+Circunferencia del Brazo
+27,7 cm
+Circunferencia de Músculo del Brazo
+23,9 cm
+Historial de Composición Corporal
+IME
+6,2 kg/m²
+Peso
+(kg) 58,6 58,5 58,3
+59,3 59,3 59,1
+Ingesta calórica recomendada 1954 kcal
+57,7
+57,4
+Impedancia
+MME
+(kg) 22,9
+23,1
+23,0 23,3
+24,0
+23,1
+21,6
+22,4
+Masa de Músculo Esquelético
+32,8
+PGC
+(%) 28,3
+Porcentaje de Grasa Corporal
+27,9 28,0 26,5
+26,1
+28,8 28,5
+BD BI TR PD PI
+Z(2) 5 kHz 456,0 499,1 33,2 333,4 335,2
+50 kHz 405,2 448,2 28,9 298,0 301,4
+500 kHz 341,2 392,1 22,1 260,5 264,7
+AEC/ACT
+0,380 0,379
+0,381 0,381
+0,377 0,376
+0,379
+0,376
+10.07.23.
+Reciente Total 09:13
+18.07.23. 08.08.23 12.04.24. 20.09.24 22.10.24
+10:14
+13:17
+07:42
+09:42
+09:03
+28.06.25 26.08.25
+08:13
+Ver LookinBody 120.4.0.0.7-S/N: G622001674
+Copyright©1996-by InBody Co., Ltd. All rights reserved. BR-Spanish mexico)-D3-C-140128

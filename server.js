@@ -75,7 +75,7 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
-const ALLOWED_ORIGINS = ['https://latribu-oficial.vercel.app', 'http://localhost:3001'];
+const ALLOWED_ORIGINS = ['https://latribu-oficial.vercel.app', 'http://localhost:3000', 'http://localhost:3001'];
 app.use(cors({ origin: ALLOWED_ORIGINS, methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'] }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname), {
@@ -2313,15 +2313,9 @@ app.post('/api/clients/:id/ocr-vision', authMiddleware, ownerOrAdmin, blockForLe
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/') || req.path === '/health') {
-    return res.status(404).json({ success: false, error: 'Ruta no encontrada.' });
-  }
-  res.sendFile(path.join(__dirname, 'index.html'));
+// 404 catch-all — ningún res.sendFile, ningún index.html, ningún redirect
+app.use((req, res) => {
+  res.status(404).json({ error: 'Endpoint no encontrado' });
 });
 
 if (require.main === module) {

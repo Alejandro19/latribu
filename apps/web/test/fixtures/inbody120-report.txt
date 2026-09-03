@@ -1,0 +1,38 @@
+InBody120
+ID 1020727443
+Altura 171cm Edad 38 Sexo Masculino
+Fecha / Hora de la prueba 09.02.2026. 07:13
+
+Análisis de Composición Corporal
+Agua Corporal Total 49,4 ( 36,2-44,2 )
+Proteínas 13,5 ( 9,7-11,8 )
+Minerales 4,62 ( 3,35-4,09 )
+Masa Grasa Corporal 19,6 ( 7,7-15,4 )
+Peso 87,1 ( 54,7-74,0 )
+
+Control de Peso
+Peso Ideal 79,4 kg
+Control de Peso -7,7 kg
+Control de Grasa -7,7 kg
+
+Análisis de Músculo-Grasa
+Peso (kg)
+87,1
+MME
+Masa Muscular Esquelética (kg)
+38,6
+Masa Grasa Corporal (kg)
+19,6
+
+Análisis de Obesidad
+IMC (kg/m2)
+29,8
+PGC (%)
+22,5
+
+Parámetros de Investigación
+Masa de Músculo Esquelético 38,6 ( 27,4~33,5 )
+Masa Libre de Grasa 67,5 ( 49,2~60,1 )
+Tasa Metabólica Basal 1828 ( 1609~2129 )
+Relación Cintura-Cadera 0,96 ( 0,80~0,90 )
+Nivel de Grasa Visceral 8 ( 1~9 )

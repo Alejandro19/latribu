@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+allowBuilds:
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  tesseract.js: set this to true or false
+minimumReleaseAgeExclude:
+  - '@anthropic-ai/sdk@0.122.0'

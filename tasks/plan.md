@@ -14,13 +14,14 @@ Auditar y corregir el backend existente (Express + Supabase) módulo por módulo
 
 ### Phase 1: Foundation (identidad y acceso)
 
-- [ ] Task 1: Auditar auth y gestión de clientes
-- [ ] Task 2: Auditar composición corporal (personal-info, anthropometrics, photos, InBody)
+- [x] Task 1: Auditar auth y gestión de clientes
+- [x] Task 2: Auditar composición corporal (personal-info, anthropometrics, photos, InBody)
 
 ### Checkpoint: Foundation
-- [ ] Login/registro/cambio de contraseña funcionan para admin y cliente
-- [ ] CRUD de clientes (crear, listar, editar, permisos, status) funciona para admin
-- [ ] Los 4 sub-módulos de composición corporal (info personal, medidas, fotos, InBody) guardan y devuelven datos correctamente
+- [x] Login/registro/cambio de contraseña funcionan para admin y cliente
+- [x] Login con Google completamente integrado (frontend Next.js + backend API)
+- [x] CRUD de clientes (crear, listar, editar, permisos, status) funciona para admin
+- [x] Los 4 sub-módulos de composición corporal (info personal, medidas, fotos, InBody) guardan y devuelven datos correctamente
 
 ### Phase 2: Los 6 módulos de contenido
 
